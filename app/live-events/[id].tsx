@@ -1,0 +1,722 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Image, 
+  Pressable, 
+  TextInput,
+  ActivityIndicator,
+  FlatList,
+  Alert,
+  Platform
+} from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLiveEventStore } from '@/store/liveEventStore';
+import { useUserStore } from '@/store/userStore';
+import LiveChallengeCard from '@/components/LiveChallengeCard';
+import Button from '@/components/Button';
+import colors from '@/constants/colors';
+import { 
+  ArrowLeft, 
+  Brain, 
+  DollarSign, 
+  Heart, 
+  MessageCircle, 
+  Send, 
+  Share2, 
+  Users 
+} from 'lucide-react-native';
+import { formatDateTime, formatCurrency } from '@/utils/helpers';
+import { LiveInteraction } from '@/types';
+
+export default function LiveEventDetailScreen() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const { 
+    currentEvent, 
+    fetchEventById, 
+    isLoading, 
+    joinEvent, 
+    interactions,
+    sendInteraction,
+    makeDonation,
+    generateAIChallenge
+  } = useLiveEventStore();
+  const { user } = useUserStore();
+  
+  const [message, setMessage] = useState('');
+  const [donationAmount, setDonationAmount] = useState('5');
+  const [showDonationPanel, setShowDonationPanel] = useState(false);
+  const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
+  
+  // Fix: Properly type the ref to FlatList
+  const scrollViewRef = useRef<FlatList<LiveInteraction>>(null);
+  
+  useEffect(() => {
+    if (id) {
+      fetchEventById(id as string);
+      joinEvent(id as string);
+    }
+  }, [id]);
+  
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
+    
+    const success = await sendInteraction({
+      type: 'comment',
+      user: {
+        id: user?.id || 'guest',
+        username: user?.username || 'Guest',
+        avatar: user?.avatar
+      },
+      content: message
+    });
+    
+    if (success) {
+      setMessage('');
+      // Scroll to bottom of chat
+      if (scrollViewRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    }
+  };
+  
+  const handleDonate = async () => {
+    const amount = parseInt(donationAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid donation amount.');
+      return;
+    }
+    
+    if (currentEvent) {
+      const success = await makeDonation(currentEvent.id, amount, 'Thanks for the great event!');
+      if (success) {
+        setShowDonationPanel(false);
+        Alert.alert('Thank You!', 'Your donation has been received.');
+      }
+    }
+  };
+  
+  const handleGenerateChallenge = async () => {
+    if (!currentEvent) return;
+    
+    setIsGeneratingChallenge(true);
+    
+    try {
+      const challenge = await generateAIChallenge(currentEvent.id, {
+        difficulty: 'medium',
+        duration: 600, // 10 minutes
+        type: 'solo'
+      });
+      
+      if (challenge) {
+        Alert.alert(
+          'Challenge Generated!',
+          `The AI has created a new challenge: "${challenge.title}"`
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate challenge. Please try again.');
+    } finally {
+      setIsGeneratingChallenge(false);
+    }
+  };
+  
+  const renderInteraction = ({ item }: { item: LiveInteraction }) => {
+    switch (item.type) {
+      case 'comment':
+        return (
+          <View style={styles.chatMessage}>
+            <View style={styles.chatAvatar}>
+              {item.user.avatar ? (
+                <Image source={{ uri: item.user.avatar }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitial}>{item.user.username.charAt(0).toUpperCase()}</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.chatContent}>
+              <Text style={styles.chatUsername}>{item.user.username}</Text>
+              <Text style={styles.chatText}>{item.content}</Text>
+            </View>
+          </View>
+        );
+        
+      case 'donation':
+        return (
+          <View style={styles.donationMessage}>
+            <DollarSign size={20} color={colors.primary} />
+            <View style={styles.donationContent}>
+              <Text style={styles.donationText}>
+                <Text style={styles.donationUsername}>{item.user.username}</Text> donated {formatCurrency(item.amount || 0)}
+              </Text>
+              {item.content && <Text style={styles.donationComment}>{item.content}</Text>}
+            </View>
+          </View>
+        );
+        
+      default:
+        return null;
+    }
+  };
+  
+  if (isLoading || !currentEvent) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading event...</Text>
+      </View>
+    );
+  }
+  
+  const isLive = currentEvent.status === 'live';
+  const isUpcoming = currentEvent.status === 'upcoming';
+  
+  return (
+    <View style={styles.container}>
+      <Stack.Screen 
+        options={{
+          headerShown: false,
+        }}
+      />
+      
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft size={24} color={colors.text} />
+        </Pressable>
+        <Text style={styles.headerTitle} numberOfLines={1}>{currentEvent.title}</Text>
+        <Pressable style={styles.shareButton}>
+          <Share2 size={24} color={colors.text} />
+        </Pressable>
+      </View>
+      
+      {/* Event Content */}
+      <View style={styles.content}>
+        {/* Stream View */}
+        <View style={styles.streamContainer}>
+          {isLive ? (
+            currentEvent.streamUrl ? (
+              // In a real app, this would be a video player component
+              <Image 
+                source={{ uri: currentEvent.thumbnailUrl }} 
+                style={styles.streamImage}
+              />
+            ) : (
+              <View style={styles.streamPlaceholder}>
+                <Text style={styles.streamPlaceholderText}>Live stream will appear here</Text>
+              </View>
+            )
+          ) : (
+            <View style={styles.streamPlaceholder}>
+              <Image 
+                source={{ uri: currentEvent.thumbnailUrl }} 
+                style={styles.thumbnailImage}
+              />
+              <View style={styles.upcomingOverlay}>
+                <Text style={styles.upcomingText}>
+                  {isUpcoming ? 'Starting ' + formatDateTime(currentEvent.startTime) : 'Event has ended'}
+                </Text>
+              </View>
+            </View>
+          )}
+          
+          {/* Live Indicator and Viewer Count */}
+          {isLive && (
+            <View style={styles.streamInfo}>
+              <View style={styles.liveIndicator}>
+                <Text style={styles.liveText}>LIVE</Text>
+              </View>
+              <View style={styles.viewerCount}>
+                <Users size={14} color="white" />
+                <Text style={styles.viewerCountText}>{currentEvent.viewerCount}</Text>
+              </View>
+            </View>
+          )}
+        </View>
+        
+        {/* Tabs for Challenges and Chat */}
+        <View style={styles.tabsContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsScrollContent}
+          >
+            <Pressable style={[styles.tab, styles.activeTab]}>
+              <Text style={[styles.tabText, styles.activeTabText]}>Live Chat</Text>
+            </Pressable>
+            <Pressable style={styles.tab}>
+              <Text style={styles.tabText}>Challenges</Text>
+            </Pressable>
+            <Pressable style={styles.tab}>
+              <Text style={styles.tabText}>Participants</Text>
+            </Pressable>
+            <Pressable style={styles.tab}>
+              <Text style={styles.tabText}>About</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+        
+        {/* Chat and Interaction Area */}
+        <View style={styles.interactionArea}>
+          {/* Donation Panel */}
+          {showDonationPanel && (
+            <View style={styles.donationPanel}>
+              <Text style={styles.donationPanelTitle}>Support this event</Text>
+              <Text style={styles.donationPanelDescription}>
+                Your donation helps fund future events and supports the creators.
+              </Text>
+              
+              <View style={styles.donationAmountContainer}>
+                <Pressable 
+                  style={[styles.donationPreset, donationAmount === '1' && styles.donationPresetActive]}
+                  onPress={() => setDonationAmount('1')}
+                >
+                  <Text style={[styles.donationPresetText, donationAmount === '1' && styles.donationPresetTextActive]}>$1</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.donationPreset, donationAmount === '5' && styles.donationPresetActive]}
+                  onPress={() => setDonationAmount('5')}
+                >
+                  <Text style={[styles.donationPresetText, donationAmount === '5' && styles.donationPresetTextActive]}>$5</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.donationPreset, donationAmount === '10' && styles.donationPresetActive]}
+                  onPress={() => setDonationAmount('10')}
+                >
+                  <Text style={[styles.donationPresetText, donationAmount === '10' && styles.donationPresetTextActive]}>$10</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.donationPreset, donationAmount === '20' && styles.donationPresetActive]}
+                  onPress={() => setDonationAmount('20')}
+                >
+                  <Text style={[styles.donationPresetText, donationAmount === '20' && styles.donationPresetTextActive]}>$20</Text>
+                </Pressable>
+                <TextInput
+                  style={styles.donationCustomInput}
+                  value={donationAmount}
+                  onChangeText={setDonationAmount}
+                  keyboardType="number-pad"
+                  placeholder="Custom"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+              
+              <View style={styles.donationActions}>
+                <Button
+                  title="Cancel"
+                  onPress={() => setShowDonationPanel(false)}
+                  variant="outline"
+                  style={styles.donationCancelButton}
+                />
+                <Button
+                  title="Donate"
+                  onPress={handleDonate}
+                  variant="primary"
+                  style={styles.donationButton}
+                />
+              </View>
+            </View>
+          )}
+          
+          {/* Chat Messages */}
+          <FlatList
+            ref={scrollViewRef}
+            data={interactions}
+            renderItem={renderInteraction}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.chatContainer}
+            ListEmptyComponent={
+              <View style={styles.emptyChatContainer}>
+                <Text style={styles.emptyChatText}>No messages yet. Be the first to say hello!</Text>
+              </View>
+            }
+          />
+          
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <Pressable 
+              style={styles.actionButton}
+              onPress={() => setShowDonationPanel(!showDonationPanel)}
+            >
+              <Heart size={20} color={colors.primary} />
+            </Pressable>
+            
+            <Pressable 
+              style={styles.actionButton}
+              onPress={handleGenerateChallenge}
+              disabled={isGeneratingChallenge}
+            >
+              {isGeneratingChallenge ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Brain size={20} color={colors.primary} />
+              )}
+            </Pressable>
+          </View>
+          
+          {/* Message Input */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Send a message..."
+              value={message}
+              onChangeText={setMessage}
+              multiline
+            />
+            <Pressable 
+              style={[
+                styles.sendButton,
+                !message.trim() && styles.disabledSendButton
+              ]}
+              onPress={handleSendMessage}
+              disabled={!message.trim()}
+            >
+              <Send size={20} color="white" />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 16,
+    paddingBottom: 16,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+    marginHorizontal: 16,
+  },
+  shareButton: {
+    padding: 8,
+  },
+  content: {
+    flex: 1,
+  },
+  streamContainer: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#000',
+  },
+  streamImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  streamPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+  },
+  streamPlaceholderText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  upcomingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  upcomingText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  streamInfo: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  liveIndicator: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  liveText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  viewerCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  viewerCountText: {
+    color: 'white',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  tabsContainer: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tabsScrollContent: {
+    paddingHorizontal: 16,
+  },
+  tab: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginRight: 16,
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  activeTabText: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  interactionArea: {
+    flex: 1,
+    position: 'relative',
+  },
+  donationPanel: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  donationPanelTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  donationPanelDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 16,
+  },
+  donationAmountContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  donationPreset: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  donationPresetActive: {
+    backgroundColor: `${colors.primary}20`,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  donationPresetText: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  donationPresetTextActive: {
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  donationCustomInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 12,
+    textAlign: 'center',
+    color: colors.text,
+  },
+  donationActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  donationCancelButton: {
+    marginRight: 8,
+  },
+  donationButton: {
+    minWidth: 100,
+  },
+  chatContainer: {
+    padding: 16,
+    paddingBottom: 80, // Space for input
+  },
+  emptyChatContainer: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyChatText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  chatMessage: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  chatAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  chatContent: {
+    flex: 1,
+  },
+  chatUsername: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  chatText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  donationMessage: {
+    flexDirection: 'row',
+    backgroundColor: `${colors.primary}10`,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  donationContent: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  donationText: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  donationUsername: {
+    fontWeight: 'bold',
+  },
+  donationComment: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  actionButtons: {
+    position: 'absolute',
+    bottom: 80,
+    right: 16,
+    flexDirection: 'column',
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${colors.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  inputContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    maxHeight: 100,
+    color: colors.text,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  disabledSendButton: {
+    backgroundColor: colors.border,
+  },
+});
