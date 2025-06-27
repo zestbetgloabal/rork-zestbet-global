@@ -67,22 +67,23 @@ export default function ProfileScreen() {
         },
         {
           text: "Log Out",
-          onPress: async () => {
-            try {
-              setIsLoggingOut(true);
-              
-              // Call logout function
-              await logout();
-              
-              // Navigate to auth screen
-              router.replace('/(auth)');
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to log out. Please try again.');
-            } finally {
-              // Always reset the loading state
-              setIsLoggingOut(false);
-            }
+          onPress: () => {
+            setIsLoggingOut(true);
+            
+            // Call logout function
+            logout()
+              .then(() => {
+                // Navigate to auth screen
+                router.replace('/(auth)');
+              })
+              .catch((error) => {
+                console.error('Logout error:', error);
+                Alert.alert('Error', 'Failed to log out. Please try again.');
+              })
+              .finally(() => {
+                // Always reset the loading state
+                setIsLoggingOut(false);
+              });
           },
           style: "destructive"
         }

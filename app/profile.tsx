@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Pressable, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useUserStore } from '@/store/userStore';
 import { useMissionStore } from '@/store/missionStore';
 import { useAIStore } from '@/store/aiStore';
+import { useAuthStore } from '@/store/authStore';
 import Button from '@/components/Button';
 import MissionCard from '@/components/MissionCard';
 import ZestCurrency from '@/components/ZestCurrency';
@@ -12,7 +13,8 @@ import { Award, Brain, Edit, Instagram, LogOut, Settings, Twitter } from 'lucide
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useUserStore();
+  const { user } = useUserStore();
+  const { logout, isLoading } = useAuthStore();
   const { missions, fetchMissions } = useMissionStore();
   const { recommendations, fetchRecommendations } = useAIStore();
   
@@ -30,8 +32,30 @@ export default function ProfileScreen() {
   };
   
   const handleLogout = () => {
-    logout();
-    router.replace('/(auth)');
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Log Out",
+          onPress: () => {
+            logout()
+              .then(() => {
+                router.replace('/(auth)');
+              })
+              .catch((error) => {
+                console.error('Logout error:', error);
+                Alert.alert('Error', 'Failed to log out. Please try again.');
+              });
+          },
+          style: "destructive"
+        }
+      ]
+    );
   };
   
   const handleAIPreferences = () => {

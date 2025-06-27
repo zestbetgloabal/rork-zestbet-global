@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { LiveEvent } from '@/types';
 import colors from '@/constants/colors';
 import { Calendar, Clock, Users } from 'lucide-react-native';
-import { formatDate, formatDateTime, getTimeRemaining, formatCompactNumber } from '@/utils/helpers';
+import { formatDate, formatTime, getTimeRemaining, formatCompactNumber } from '@/utils/helpers';
 
 interface LiveEventCardProps {
   event: LiveEvent;
@@ -21,6 +21,11 @@ export default function LiveEventCard({ event, compact = false }: LiveEventCardP
   
   const handlePress = () => {
     router.push(`/live-events/${event.id}`);
+  };
+  
+  // Format date and time manually instead of using formatDateTime
+  const formattedDateTime = (date: Date) => {
+    return `${formatDate(date)} at ${formatTime(date)}`;
   };
   
   if (compact) {
@@ -78,7 +83,7 @@ export default function LiveEventCard({ event, compact = false }: LiveEventCardP
             <>
               <View style={styles.infoItem}>
                 <Calendar size={16} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{formatDateTime(event.startTime)}</Text>
+                <Text style={styles.infoText}>{formattedDateTime(event.startTime)}</Text>
               </View>
               
               {timeRemaining && timeRemaining.total > 0 && (

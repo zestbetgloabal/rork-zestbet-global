@@ -76,21 +76,21 @@ function RootLayoutNav() {
     // If the user is not authenticated and not in the auth group or legal group, redirect to auth
     if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
       setIsNavigating(true);
-      try {
-        router.replace('/(auth)');
-      } finally {
+      router.replace('/(auth)').then(() => {
         setIsNavigating(false);
-      }
+      }).catch(() => {
+        setIsNavigating(false);
+      });
     }
     
     // If the user is authenticated and in the auth group, redirect to tabs
     if (isAuthenticated && isInAuthGroup) {
       setIsNavigating(true);
-      try {
-        router.replace('/(tabs)');
-      } finally {
+      router.replace('/(tabs)').then(() => {
         setIsNavigating(false);
-      }
+      }).catch(() => {
+        setIsNavigating(false);
+      });
     }
   }, [isAuthenticated, isInAuthGroup, isInLegalGroup, initialRoute, isNavigating]);
   

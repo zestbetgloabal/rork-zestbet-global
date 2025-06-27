@@ -20,7 +20,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { bets, fetchBets, likeBet } = useBetStore();
   const { missions, fetchMissions } = useMissionStore();
-  const { user, getRemainingDailyLimit } = useUserStore();
+  const { user, getRemainingDailyLimit, resetDailyBetAmountIfNewDay } = useUserStore();
   const { fetchProjects, weeklyFeaturedProject, getTimeUntilNextProject } = useImpactStore();
   const { fetchRecommendations, recommendations, trackUserBehavior } = useAIStore();
   
@@ -33,6 +33,9 @@ export default function HomeScreen() {
     
     // Track app opened behavior
     trackUserBehavior('app_opened');
+    
+    // Reset daily bet amount if it's a new day
+    resetDailyBetAmountIfNewDay();
     
     // Start tracking time spent in app
     const startTime = Date.now();
