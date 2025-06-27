@@ -1,5 +1,31 @@
 // Add these types to your existing types/index.ts file
 
+export interface User {
+  id: string;
+  username: string;
+  avatar: string;
+  zestBalance: number;
+  points: number;
+  inviteCode: string;
+  dailyBetAmount: number;
+  lastBetDate: string;
+  biography: string;
+  socialMedia: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    linkedin?: string;
+    tiktok?: string;
+    youtube?: string;
+    pinterest?: string;
+    snapchat?: string;
+    website?: string;
+  };
+  agbConsent: boolean;
+  privacyConsent: boolean;
+  consentDate: string;
+}
+
 export interface LiveEvent {
   id: string;
   title: string;
