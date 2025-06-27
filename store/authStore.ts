@@ -83,6 +83,8 @@ export const useAuthStore = create<AuthState>()(
               snapchat: '',
               website: ''
             },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
             agbConsent: true,
             privacyConsent: true,
             consentDate: new Date().toISOString()
@@ -125,6 +127,8 @@ export const useAuthStore = create<AuthState>()(
               snapchat: '',
               website: ''
             },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
             agbConsent: true,
             privacyConsent: true,
             consentDate: new Date().toISOString()
@@ -173,6 +177,8 @@ export const useAuthStore = create<AuthState>()(
               snapchat: '',
               website: ''
             },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
             agbConsent: true,
             privacyConsent: true,
             consentDate: new Date().toISOString()
@@ -236,6 +242,8 @@ export const useAuthStore = create<AuthState>()(
               snapchat: '',
               website: ''
             },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
             agbConsent: true,
             privacyConsent: true,
             consentDate: new Date().toISOString()
@@ -278,6 +286,8 @@ export const useAuthStore = create<AuthState>()(
               snapchat: '',
               website: ''
             },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
             agbConsent: true,
             privacyConsent: true,
             consentDate: new Date().toISOString()
@@ -320,6 +330,8 @@ export const useAuthStore = create<AuthState>()(
               snapchat: '',
               website: ''
             },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
             agbConsent: true,
             privacyConsent: true,
             consentDate: new Date().toISOString()
