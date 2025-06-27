@@ -142,6 +142,55 @@ function RootLayoutNav() {
             headerShown: false 
           }} 
         />
+        <Stack.Screen 
+          name="profile-edit" 
+          options={{ 
+            title: "Edit Profile",
+          }} 
+        />
+        <Stack.Screen 
+          name="ai-recommendations" 
+          options={{ 
+            title: "AI Recommendations",
+          }} 
+        />
+        <Stack.Screen 
+          name="user-preferences" 
+          options={{ 
+            title: "User Preferences",
+          }} 
+        />
+        <Stack.Screen 
+          name="profile" 
+          options={{ 
+            title: "Profile",
+          }} 
+        />
+        <Stack.Screen 
+          name="live-events/[id]" 
+          options={{ 
+            title: "Live Event",
+          }} 
+        />
+        <Stack.Screen 
+          name="live-events/schedule" 
+          options={{ 
+            title: "Event Schedule",
+          }} 
+        />
+        <Stack.Screen 
+          name="create-challenge" 
+          options={{ 
+            title: "Create Challenge",
+            presentation: "modal",
+          }} 
+        />
+        <Stack.Screen 
+          name="challenge/[id]" 
+          options={{ 
+            title: "Challenge Details",
+          }} 
+        />
       </Stack>
     </>
   );
