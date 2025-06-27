@@ -69,10 +69,10 @@ export default function WelcomeScreen() {
       <View style={styles.content}>
         {/* Logo Container */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoSymbol}>Ƶ</Text>
+          <View style={[styles.logoCircle, Platform.OS === 'web' && styles.logoCircleWeb]}>
+            <Text style={[styles.logoSymbol, Platform.OS === 'web' && styles.logoSymbolWeb]}>Ƶ</Text>
           </View>
-          <Text style={styles.logoText}>Ƶest</Text>
+          <Text style={[styles.logoText, Platform.OS === 'web' && styles.logoTextWeb]}>Ƶest</Text>
         </View>
         
         <Text style={styles.title}>Welcome to ZestBet</Text>
@@ -197,16 +197,31 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  // Web-specific styles for the logo circle
+  logoCircleWeb: {
+    display: 'flex',
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
+  },
   logoSymbol: {
     fontSize: 52, // Increased by 30% from 40
     fontWeight: 'bold',
     color: '#000',
+  },
+  // Web-specific styles for the logo symbol
+  logoSymbolWeb: {
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    lineHeight: 91, // Match the height of the circle for vertical centering on web
+    textAlign: 'center',
   },
   logoText: {
     marginTop: 8,
     fontSize: 31, // Increased by 30% from 24
     fontWeight: 'bold',
     color: '#000',
+  },
+  // Web-specific styles for the logo text
+  logoTextWeb: {
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   title: {
     fontSize: 28,
