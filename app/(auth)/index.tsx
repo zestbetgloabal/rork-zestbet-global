@@ -13,6 +13,7 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/authStore';
+import AppleSignInButton from '@/components/AppleSignInButton';
 import colors from '@/constants/colors';
 
 interface ButtonProps {
@@ -96,17 +97,11 @@ export default function WelcomeScreen() {
           />
           
           {Platform.OS === 'ios' && (
-            <Pressable
-              style={styles.appleButton}
+            <AppleSignInButton
               onPress={handleAppleLogin}
-              disabled={isLoading}
-            >
-              <View style={styles.appleIconContainer}>
-                <Text style={styles.appleIcon}>
-                </Text>
-              </View>
-              <Text style={styles.appleButtonText}>Sign in with Apple</Text>
-            </Pressable>
+              loading={isLoading}
+              style={styles.appleButton}
+            />
           )}
         </View>
         
@@ -272,39 +267,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 12,
   },
-  // Apple button styles following Apple's design guidelines
   appleButton: {
-    height: 50,
     width: '100%',
-    borderRadius: 12,
-    backgroundColor: '#000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
-    marginTop: 12,
-  },
-  appleIconContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  appleIcon: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  appleButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   legalLinks: {
     flexDirection: 'row',

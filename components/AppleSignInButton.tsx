@@ -7,19 +7,22 @@ import {
   Platform,
   ActivityIndicator
 } from 'react-native';
+import { Apple } from 'lucide-react-native';
 
 interface AppleSignInButtonProps {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
   style?: any;
+  textStyle?: any;
 }
 
 export default function AppleSignInButton({ 
   onPress, 
   loading = false, 
   disabled = false,
-  style
+  style,
+  textStyle
 }: AppleSignInButtonProps) {
   // Only render on iOS
   if (Platform.OS !== 'ios') {
@@ -36,10 +39,8 @@ export default function AppleSignInButton({
         <ActivityIndicator color="#fff" size="small" />
       ) : (
         <>
-          <View style={styles.iconContainer}>
-            <Text style={styles.icon}></Text>
-          </View>
-          <Text style={styles.text}>Sign in with Apple</Text>
+          <Apple size={20} color="#fff" />
+          <Text style={[styles.text, textStyle]}>Sign in with Apple</Text>
         </>
       )}
     </Pressable>
@@ -61,21 +62,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 3,
+    gap: 8,
   },
   disabledButton: {
     opacity: 0.6,
-  },
-  iconContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  icon: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: 'bold',
   },
   text: {
     color: '#fff',

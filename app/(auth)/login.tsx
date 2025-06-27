@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import Button from '@/components/Button';
+import AppleSignInButton from '@/components/AppleSignInButton';
 import colors from '@/constants/colors';
 
 export default function LoginScreen() {
@@ -102,21 +103,15 @@ export default function LoginScreen() {
             <Text style={styles.googleIcon}>G</Text>
             <Text style={styles.socialButtonLabel}>Google</Text>
           </Pressable>
-          
-          {Platform.OS === 'ios' && (
-            <Pressable
-              style={styles.appleButton}
-              onPress={handleAppleLogin}
-              disabled={isLoading}
-            >
-              <View style={styles.appleIconContainer}>
-                <Text style={styles.appleIcon}>
-                </Text>
-              </View>
-              <Text style={styles.appleButtonText}>Sign in with Apple</Text>
-            </Pressable>
-          )}
         </View>
+        
+        {Platform.OS === 'ios' && (
+          <AppleSignInButton
+            onPress={handleAppleLogin}
+            loading={isLoading}
+            style={styles.appleButton}
+          />
+        )}
         
         <View style={styles.dividerContainer}>
           <View style={styles.divider} />
@@ -232,6 +227,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 16,
+    marginBottom: 16,
   },
   socialButton: {
     width: 120,
@@ -259,43 +255,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.primary,
   },
-  // Apple button styles following Apple's design guidelines
   appleButton: {
-    height: 48,
-    minWidth: 200,
-    borderRadius: 12,
-    backgroundColor: '#000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  appleIconContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  appleIcon: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  appleButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    width: '100%',
+    marginBottom: 16,
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
     marginBottom: 8,
   },
   divider: {
