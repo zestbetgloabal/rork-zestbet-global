@@ -31,6 +31,14 @@ export const formatTime = (date: Date | string): string => {
 };
 
 /**
+ * Formats a date and time to a readable string
+ */
+export const formatDateTime = (date: Date | string): string => {
+  const d = new Date(date);
+  return `${formatDate(d)} at ${formatTime(d)}`;
+};
+
+/**
  * Truncates a string to a specified length and adds ellipsis
  */
 export const truncateString = (str: string, length: number): string => {
@@ -136,6 +144,16 @@ export const formatCurrency = (amount: number, currency: string = 'USD'): string
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+};
+
+/**
+ * Formats a number in compact form (e.g., 1.2k, 5.3M)
+ */
+export const formatCompactNumber = (num: number): string => {
+  return Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1
+  }).format(num);
 };
 
 /**
