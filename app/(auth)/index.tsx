@@ -7,7 +7,8 @@ import {
   SafeAreaView,
   useWindowDimensions,
   ViewStyle,
-  TextStyle
+  TextStyle,
+  Platform
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,7 +26,7 @@ interface ButtonProps {
 export default function WelcomeScreen() {
   const router = useRouter();
   const { height } = useWindowDimensions();
-  const { isLoading } = useAuthStore();
+  const { isLoading, loginWithApple, loginWithGoogle } = useAuthStore();
   
   const handleEmailLogin = () => {
     router.push('/login');
@@ -33,6 +34,28 @@ export default function WelcomeScreen() {
   
   const handleCreateAccount = () => {
     router.push('/register');
+  };
+  
+  const handleAppleLogin = async () => {
+    try {
+      const success = await loginWithApple();
+      if (success) {
+        router.replace('/(tabs)');
+      }
+    } catch (error) {
+      console.error('Apple Login Error', error);
+    }
+  };
+  
+  const handleGoogleLogin = async () => {
+    try {
+      const success = await loginWithGoogle();
+      if (success) {
+        router.replace('/(tabs)');
+      }
+    } catch (error) {
+      console.error('Google Login Error', error);
+    }
   };
   
   return (
@@ -71,6 +94,20 @@ export default function WelcomeScreen() {
             disabled={isLoading}
             style={styles.loginButton}
           />
+          
+          {Platform.OS === 'ios' && (
+            <Pressable
+              style={styles.appleButton}
+              onPress={handleAppleLogin}
+              disabled={isLoading}
+            >
+              <View style={styles.appleIconContainer}>
+                <Text style={styles.appleIcon}>
+                </Text>
+              </View>
+              <Text style={styles.appleButtonText}>Sign in with Apple</Text>
+            </Pressable>
+          )}
         </View>
         
         <View style={styles.legalLinks}>
@@ -233,6 +270,41 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: 12,
+    marginBottom: 12,
+  },
+  // Apple button styles following Apple's design guidelines
+  appleButton: {
+    height: 50,
+    width: '100%',
+    borderRadius: 12,
+    backgroundColor: '#000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+    marginTop: 12,
+  },
+  appleIconContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  appleIcon: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  appleButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   legalLinks: {
     flexDirection: 'row',

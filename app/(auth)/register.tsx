@@ -160,12 +160,15 @@ export default function RegisterScreen() {
           
           {Platform.OS === 'ios' && (
             <Pressable
-              style={styles.socialButton}
+              style={styles.appleButton}
               onPress={handleAppleLogin}
               disabled={isLoading}
             >
-              <Text style={styles.appleIcon}>􀣺</Text>
-              <Text style={styles.socialButtonLabel}>Apple</Text>
+              <View style={styles.appleIconContainer}>
+                <Text style={styles.appleIcon}>
+                </Text>
+              </View>
+              <Text style={styles.appleButtonText}>Sign in with Apple</Text>
             </Pressable>
           )}
         </View>
@@ -405,10 +408,38 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.primary,
   },
+  // Apple button styles following Apple's design guidelines
+  appleButton: {
+    height: 48,
+    minWidth: 200,
+    borderRadius: 12,
+    backgroundColor: '#000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  appleIconContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
   appleIcon: {
-    fontSize: 24, // Increased size for better visibility
+    fontSize: 20,
+    color: '#fff',
     fontWeight: 'bold',
-    color: colors.text,
+  },
+  appleButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   dividerContainer: {
     flexDirection: 'row',
