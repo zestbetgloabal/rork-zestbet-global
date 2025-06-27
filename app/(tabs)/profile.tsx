@@ -8,7 +8,8 @@ import {
   Pressable,
   useWindowDimensions,
   Alert,
-  Linking
+  Linking,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Award, Share2, LogOut, MessageSquare, Edit, Instagram, Twitter, Facebook, Globe, Linkedin, FileText, Shield, Info, Youtube, Scissors, MessageCircle } from 'lucide-react-native';
@@ -30,12 +31,13 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { user } = useUserStore();
-  const { logout } = useAuthStore();
+  const { logout, isLoading } = useAuthStore();
   const { missions, fetchMissions } = useMissionStore();
   const { entries, fetchLeaderboard } = useLeaderboardStore();
   const { projects, fetchProjects, weeklyFeaturedProject } = useImpactStore();
   const { userRank, fetchUserRank } = useBadgeStore();
   const [activeTab, setActiveTab] = useState('missions');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   useEffect(() => {
     fetchMissions();
@@ -65,9 +67,20 @@ export default function ProfileScreen() {
         },
         {
           text: "Log Out",
-          onPress: () => {
-            logout();
-            router.replace('/(auth)');
+          onPress: async () => {
+            try {
+              setIsLoggingOut(true);
+              await logout();
+              // Small delay to ensure state updates are processed
+              setTimeout(() => {
+                router.replace('/(auth)');
+                setIsLoggingOut(false);
+              }, 300);
+            } catch (error) {
+              console.error('Logout error:', error);
+              setIsLoggingOut(false);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
           },
           style: "destructive"
         }
@@ -219,6 +232,15 @@ export default function ProfileScreen() {
   // Check if user has any social media profiles
   const hasSocialMedia = user?.socialMedia && 
     Object.values(user.socialMedia).some(value => value);
+  
+  if (isLoggingOut) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Logging out...</Text>
+      </View>
+    );
+  }
   
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -377,6 +399,7 @@ export default function ProfileScreen() {
             size="small"
             style={[styles.actionButton, styles.logoutButton]}
             textStyle={styles.logoutButtonText}
+            disabled={isLoading}
           />
         </View>
       </View>
@@ -451,6 +474,17 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.text,
   },
   header: {
     alignItems: 'center',

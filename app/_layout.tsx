@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
@@ -54,6 +54,7 @@ function RootLayoutNav() {
   const { isAuthenticated } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
   
   // Check if the current route is in the auth group
   const isInAuthGroup = segments[0] === '(auth)';
@@ -61,6 +62,16 @@ function RootLayoutNav() {
   const isInLegalGroup = segments[0] === 'legal';
   
   useEffect(() => {
+    // Set initial route only once
+    if (initialRoute === null) {
+      setInitialRoute(segments.join('/'));
+    }
+  }, [segments]);
+  
+  useEffect(() => {
+    // Skip initial navigation if we're still loading
+    if (initialRoute === null) return;
+    
     // If the user is not authenticated and not in the auth group or legal group, redirect to auth
     if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
       router.replace('/(auth)');
@@ -70,7 +81,7 @@ function RootLayoutNav() {
     if (isAuthenticated && isInAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isInAuthGroup, isInLegalGroup]);
+  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, initialRoute]);
   
   return (
     <>

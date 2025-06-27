@@ -80,7 +80,14 @@ export const useUserStore = create<UserState>()(
               }
             : null
         })),
-      logout: () => set({ user: null }),
+      logout: () => {
+        // Clear user state completely
+        set({ 
+          user: null,
+          isLoading: false,
+          error: null
+        });
+      },
       addTestZest: (amount = 100) => 
         set((state) => {
           if (!state.user) return state;

@@ -32,7 +32,7 @@ interface AuthState {
   register: (params: RegisterParams) => Promise<boolean>;
   phoneLogin: (phone: string, code: string) => Promise<boolean>;
   verifyPhone: (phone: string, code: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
@@ -332,10 +332,34 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      logout: () => {
-        set({ token: null, isAuthenticated: false });
-        const { logout } = useUserStore.getState();
-        logout();
+      logout: async () => {
+        try {
+          // First, get the userStore logout function
+          const userStoreLogout = useUserStore.getState().logout;
+          
+          // Clear auth state
+          set({ token: null, isAuthenticated: false, error: null });
+          
+          // Clear user state
+          userStoreLogout();
+          
+          // Clear persisted data
+          await AsyncStorage.multiRemove([
+            'auth-storage',
+            'user-storage',
+            'mission-storage',
+            'bet-storage',
+            'impact-storage',
+            'leaderboard-storage',
+            'badge-storage',
+            'challenge-storage',
+            'social-storage',
+            'live-event-storage',
+            'ai-storage'
+          ]);
+        } catch (error) {
+          console.error('Error during logout:', error);
+        }
       },
       
       clearError: () => set({ error: null }),
