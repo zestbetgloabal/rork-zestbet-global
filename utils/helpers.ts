@@ -94,6 +94,7 @@ export const generateId = (): string => {
 
 /**
  * Clears all AsyncStorage data
+ * Returns a promise that resolves when the operation is complete
  */
 export const clearAllStorage = async (): Promise<void> => {
   try {
@@ -107,6 +108,7 @@ export const clearAllStorage = async (): Promise<void> => {
 
 /**
  * Removes specific keys from AsyncStorage
+ * Returns a promise that resolves when the operation is complete
  */
 export const removeStorageItems = async (keys: string[]): Promise<void> => {
   try {
@@ -115,6 +117,40 @@ export const removeStorageItems = async (keys: string[]): Promise<void> => {
   } catch (error) {
     console.error('Error removing items from AsyncStorage:', error);
     throw error;
+  }
+};
+
+/**
+ * Safely removes specific keys from AsyncStorage
+ * Doesn't throw errors if keys don't exist or removal fails
+ */
+export const safeRemoveStorageItems = async (keys: string[]): Promise<void> => {
+  try {
+    // Filter out keys that don't exist
+    const existingKeys: string[] = [];
+    
+    for (const key of keys) {
+      try {
+        const value = await AsyncStorage.getItem(key);
+        if (value !== null) {
+          existingKeys.push(key);
+        }
+      } catch (e) {
+        // Skip keys that cause errors
+        console.log(`Key ${key} check failed, skipping`);
+      }
+    }
+    
+    // Only remove keys that exist
+    if (existingKeys.length > 0) {
+      await AsyncStorage.multiRemove(existingKeys);
+      console.log('Storage items successfully removed:', existingKeys);
+    } else {
+      console.log('No storage items to remove');
+    }
+  } catch (error) {
+    console.error('Error safely removing items from AsyncStorage:', error);
+    // Don't throw, just log the error
   }
 };
 

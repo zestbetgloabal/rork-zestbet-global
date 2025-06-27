@@ -334,31 +334,42 @@ export const useAuthStore = create<AuthState>()(
       
       logout: async () => {
         try {
-          // First, get the userStore logout function
-          const userStoreLogout = useUserStore.getState().logout;
+          // First, clear auth state
+          set({ isLoading: true });
           
           // Clear auth state
           set({ token: null, isAuthenticated: false, error: null });
           
-          // Clear user state
+          // Clear user state - get the latest reference to avoid stale closures
+          const userStoreLogout = useUserStore.getState().logout;
           userStoreLogout();
           
-          // Clear persisted data
-          await AsyncStorage.multiRemove([
-            'auth-storage',
-            'user-storage',
-            'mission-storage',
-            'bet-storage',
-            'impact-storage',
-            'leaderboard-storage',
-            'badge-storage',
-            'challenge-storage',
-            'social-storage',
-            'live-event-storage',
-            'ai-storage'
-          ]);
+          // Clear persisted data - do this in a try/catch to handle failures
+          try {
+            await AsyncStorage.multiRemove([
+              'auth-storage',
+              'user-storage',
+              'mission-storage',
+              'bet-storage',
+              'impact-storage',
+              'leaderboard-storage',
+              'badge-storage',
+              'challenge-storage',
+              'social-storage',
+              'live-event-storage',
+              'ai-storage'
+            ]);
+          } catch (storageError) {
+            console.error('Error clearing AsyncStorage:', storageError);
+            // Continue with logout even if storage clearing fails
+          }
+          
+          // Set loading to false at the end
+          set({ isLoading: false });
         } catch (error) {
           console.error('Error during logout:', error);
+          // Make sure we still set authenticated to false even if there's an error
+          set({ token: null, isAuthenticated: false, error: null, isLoading: false });
         }
       },
       

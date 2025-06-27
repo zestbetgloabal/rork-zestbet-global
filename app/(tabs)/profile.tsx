@@ -70,16 +70,18 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               setIsLoggingOut(true);
+              
+              // Call logout function
               await logout();
-              // Small delay to ensure state updates are processed
-              setTimeout(() => {
-                router.replace('/(auth)');
-                setIsLoggingOut(false);
-              }, 300);
+              
+              // Navigate to auth screen
+              router.replace('/(auth)');
             } catch (error) {
               console.error('Logout error:', error);
-              setIsLoggingOut(false);
               Alert.alert('Error', 'Failed to log out. Please try again.');
+            } finally {
+              // Always reset the loading state
+              setIsLoggingOut(false);
             }
           },
           style: "destructive"
@@ -399,7 +401,7 @@ export default function ProfileScreen() {
             size="small"
             style={[styles.actionButton, styles.logoutButton]}
             textStyle={styles.logoutButtonText}
-            disabled={isLoading}
+            disabled={isLoading || isLoggingOut}
           />
         </View>
       </View>

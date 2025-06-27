@@ -55,6 +55,7 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const [initialRoute, setInitialRoute] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Check if the current route is in the auth group
   const isInAuthGroup = segments[0] === '(auth)';
@@ -70,18 +71,24 @@ function RootLayoutNav() {
   
   useEffect(() => {
     // Skip initial navigation if we're still loading
-    if (initialRoute === null) return;
+    if (initialRoute === null || isNavigating) return;
     
     // If the user is not authenticated and not in the auth group or legal group, redirect to auth
     if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
-      router.replace('/(auth)');
+      setIsNavigating(true);
+      router.replace('/(auth)').finally(() => {
+        setIsNavigating(false);
+      });
     }
     
     // If the user is authenticated and in the auth group, redirect to tabs
     if (isAuthenticated && isInAuthGroup) {
-      router.replace('/(tabs)');
+      setIsNavigating(true);
+      router.replace('/(tabs)').finally(() => {
+        setIsNavigating(false);
+      });
     }
-  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, initialRoute]);
+  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, initialRoute, isNavigating]);
   
   return (
     <>
