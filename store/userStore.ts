@@ -151,10 +151,20 @@ export const useUserStore = create<UserState>()(
         const { user } = get();
         if (!user) return 0;
         
-        // Check if it's a new day
-        get().resetDailyBetAmountIfNewDay();
+        // Check if it's a new day - this can cause state updates during render
+        // We'll handle this check in a separate function call from useEffect
+        const today = new Date().toISOString().split('T')[0];
+        const lastBetDate = user.lastBetDate || today;
         
+        // Just calculate and return the value without updating state
         const currentAmount = user.dailyBetAmount || 0;
+        
+        // If it's a new day, we should return the full limit
+        // The actual state update will happen in resetDailyBetAmountIfNewDay
+        if (lastBetDate !== today) {
+          return DAILY_BET_LIMIT;
+        }
+        
         return Math.max(0, DAILY_BET_LIMIT - currentAmount);
       },
       resetDailyBetAmountIfNewDay: () => {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useBetStore } from '@/store/betStore';
@@ -62,8 +62,11 @@ export default function HomeScreen() {
   // Get time remaining for weekly charity project
   const timeRemaining = getTimeUntilNextProject();
   
-  // Get remaining daily limit
-  const remainingDailyLimit = getRemainingDailyLimit();
+  // Use useMemo to calculate remaining daily limit to avoid state updates during render
+  const remainingDailyLimit = useMemo(() => {
+    // Only call this once during initial render and when user changes
+    return getRemainingDailyLimit();
+  }, [user?.dailyBetAmount, user?.lastBetDate]);
   
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
