@@ -43,10 +43,10 @@ export default function SocialPostCard({ post, onLike }: SocialPostCardProps) {
   };
   
   // Get avatar from either post.user?.avatar or post.userAvatar with null checks
-  const avatarUrl = post.user?.avatar || post.userAvatar;
+  const avatarUrl = post.user?.avatar || post.userAvatar || null;
   
   // Get username with null checks
-  const username = post.user?.username || post.username;
+  const username = post.user?.username || post.username || 'Anonymous';
   
   return (
     <View style={styles.card}>
@@ -61,7 +61,7 @@ export default function SocialPostCard({ post, onLike }: SocialPostCardProps) {
         )}
         
         <View style={styles.userInfo}>
-          <Text style={styles.username}>{username || 'Anonymous'}</Text>
+          <Text style={styles.username}>{username}</Text>
           <Text style={styles.timestamp}>{formatDate(post.timestamp)}</Text>
         </View>
       </View>

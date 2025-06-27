@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Filter } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import { useBetStore } from '@/store/betStore';
 import BetCard from '@/components/BetCard';
 import Button from '@/components/Button';
@@ -22,6 +22,10 @@ export default function BetsScreen() {
     setRefreshing(true);
     await fetchBets();
     setRefreshing(false);
+  };
+  
+  const handleFilterChange = (index: number) => {
+    setVisibilityFilter(index === 0 ? 'all' : index === 1 ? 'public' : 'private');
   };
   
   const renderItem = ({ item }: { item: Bet }) => (
@@ -50,9 +54,7 @@ export default function BetsScreen() {
         <SegmentedControl
           values={['All Bets', 'Public', 'Private']}
           selectedIndex={visibilityFilter === 'all' ? 0 : visibilityFilter === 'public' ? 1 : 2}
-          onChange={(index) => {
-            setVisibilityFilter(index === 0 ? 'all' : index === 1 ? 'public' : 'private');
-          }}
+          onChange={handleFilterChange}
           style={styles.segmentedControl}
           tintColor={colors.primary}
         />

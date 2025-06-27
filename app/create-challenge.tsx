@@ -181,7 +181,7 @@ export default function CreateChallengeScreen() {
           challengeId: challengeId,
           minContribution: parseInt(minContribution),
           maxContribution: parseInt(maxContribution),
-          distributionStrategy: customDistribution ? 'custom' : 'standard',
+          distributionStrategy: customDistribution ? 'custom' as const : 'standard' as const,
           customDistribution: customDistribution ? {
             firstPlace: parseInt(firstPlacePercentage),
             secondPlace: parseInt(secondPlacePercentage),
