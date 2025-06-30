@@ -59,7 +59,11 @@ export default function ProfileScreen() {
             style={styles.avatar} 
           />
           <Text style={styles.username}>{user.username}</Text>
-          <Text style={styles.bio}>{user.biography}</Text>
+          
+          {/* Bio Section - Always show if exists, with better styling */}
+          {user.biography && user.biography.trim() !== '' && (
+            <Text style={styles.bio}>{user.biography}</Text>
+          )}
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
@@ -174,14 +178,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   bio: {
-    fontSize: 14,
-    color: colors.textLight,
+    fontSize: 16,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 16,
     paddingHorizontal: 20,
+    lineHeight: 22,
+    fontWeight: '400',
   },
   statsContainer: {
     flexDirection: 'row',

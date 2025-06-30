@@ -131,8 +131,11 @@ export default function ProfileScreen() {
           </View>
         </View>
         
-        {user?.biography && (
-          <Text style={styles.biography}>{user.biography}</Text>
+        {/* Bio Section - Improved display */}
+        {user?.biography && user.biography.trim() !== '' && (
+          <View style={styles.bioContainer}>
+            <Text style={styles.biography}>{user.biography}</Text>
+          </View>
         )}
         
         {/* Social Media Links */}
@@ -306,11 +309,16 @@ const styles = StyleSheet.create({
     height: 24,
     backgroundColor: colors.border,
   },
-  biography: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
+  bioContainer: {
+    width: '100%',
     marginBottom: 16,
+  },
+  biography: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 22,
+    textAlign: 'left',
+    fontWeight: '400',
   },
   socialLinks: {
     flexDirection: 'row',
