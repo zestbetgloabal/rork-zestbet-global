@@ -67,7 +67,7 @@ export default function ProfileScreen() {
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <ZestCurrency amount={user.zestBalance} size={24} />
+              <ZestCurrency amount={user.zestBalance} size="large" />
               <Text style={styles.statLabel}>Balance</Text>
             </View>
             <View style={styles.statDivider} />
@@ -92,7 +92,7 @@ export default function ProfileScreen() {
           >
             <Feather name="edit" size={20} color={colors.primary} />
             <Text style={styles.menuItemText}>Edit Profile</Text>
-            <Feather name="chevron-right" size={20} color={colors.textLight} />
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -101,7 +101,7 @@ export default function ProfileScreen() {
           >
             <Feather name="credit-card" size={20} color={colors.primary} />
             <Text style={styles.menuItemText}>Wallet</Text>
-            <Feather name="chevron-right" size={20} color={colors.textLight} />
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -110,7 +110,7 @@ export default function ProfileScreen() {
           >
             <Feather name="settings" size={20} color={colors.primary} />
             <Text style={styles.menuItemText}>Preferences</Text>
-            <Feather name="chevron-right" size={20} color={colors.textLight} />
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -123,7 +123,7 @@ export default function ProfileScreen() {
           >
             <MaterialCommunityIcons name="lightbulb-outline" size={20} color={colors.primary} />
             <Text style={styles.menuItemText}>Suggest Improvement</Text>
-            <Feather name="chevron-right" size={20} color={colors.textLight} />
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -132,7 +132,7 @@ export default function ProfileScreen() {
           >
             <FontAwesome5 name="file-contract" size={18} color={colors.primary} />
             <Text style={styles.menuItemText}>Legal Information</Text>
-            <Feather name="chevron-right" size={20} color={colors.textLight} />
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: colors.textLight,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   statDivider: {
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
