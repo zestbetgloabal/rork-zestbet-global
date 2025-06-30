@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Pressable, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useUserStore } from '@/store/userStore';
 import { useMissionStore } from '@/store/missionStore';
@@ -14,9 +14,10 @@ import { Award, Brain, Edit, Instagram, LogOut, Settings, Twitter } from 'lucide
 export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useUserStore();
-  const { logout, isLoading } = useAuthStore();
+  const { logout } = useAuthStore();
   const { missions, fetchMissions } = useMissionStore();
   const { recommendations, fetchRecommendations } = useAIStore();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   useEffect(() => {
     fetchMissions();
@@ -31,7 +32,20 @@ export default function ProfileScreen() {
     router.push('/profile-edit');
   };
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      // Navigation will be handled by the _layout.tsx effect
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+  
+  const confirmLogout = () => {
     Alert.alert(
       "Log Out",
       "Are you sure you want to log out?",
@@ -42,16 +56,7 @@ export default function ProfileScreen() {
         },
         {
           text: "Log Out",
-          onPress: () => {
-            logout()
-              .then(() => {
-                router.replace('/(auth)');
-              })
-              .catch((error) => {
-                console.error('Logout error:', error);
-                Alert.alert('Error', 'Failed to log out. Please try again.');
-              });
-          },
+          onPress: handleLogout,
           style: "destructive"
         }
       ]
@@ -61,6 +66,14 @@ export default function ProfileScreen() {
   const handleAIPreferences = () => {
     router.push('/user-preferences');
   };
+  
+  if (!user) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
   
   return (
     <ScrollView style={styles.container}>
@@ -199,10 +212,16 @@ export default function ProfileScreen() {
         
         <Pressable 
           style={[styles.actionButton, styles.logoutButton]}
-          onPress={handleLogout}
+          onPress={confirmLogout}
+          disabled={isLoggingOut}
         >
           <LogOut size={20} color={colors.error} />
-          <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
+          <Text style={[styles.actionText, styles.logoutText]}>
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
+          </Text>
+          {isLoggingOut && (
+            <ActivityIndicator size="small" color={colors.error} style={styles.logoutSpinner} />
+          )}
         </Pressable>
       </View>
     </ScrollView>
@@ -212,6 +231,12 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: colors.background,
   },
   header: {
@@ -380,6 +405,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     marginLeft: 12,
+    flex: 1,
   },
   logoutButton: {
     borderWidth: 1,
@@ -387,5 +413,8 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: colors.error,
+  },
+  logoutSpinner: {
+    marginLeft: 8,
   },
 });

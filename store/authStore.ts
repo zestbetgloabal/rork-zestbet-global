@@ -345,20 +345,22 @@ export const useAuthStore = create<AuthState>()(
       },
       
       logout: async () => {
-        return new Promise<void>((resolve, reject) => {
+        // First, set loading state
+        set({ isLoading: true });
+        
+        try {
+          // Clear user state - get the latest reference to avoid stale closures
+          const userStore = useUserStore.getState();
+          if (userStore && typeof userStore.logout === 'function') {
+            userStore.logout();
+          }
+          
+          // Clear auth state immediately to trigger navigation
+          set({ token: null, isAuthenticated: false, error: null });
+          
+          // Clear persisted data in the background
           try {
-            // First, clear auth state
-            set({ isLoading: true });
-            
-            // Clear auth state
-            set({ token: null, isAuthenticated: false, error: null });
-            
-            // Clear user state - get the latest reference to avoid stale closures
-            const userStoreLogout = useUserStore.getState().logout;
-            userStoreLogout();
-            
-            // Clear persisted data - do this in a try/catch to handle failures
-            AsyncStorage.multiRemove([
+            await AsyncStorage.multiRemove([
               'auth-storage',
               'user-storage',
               'mission-storage',
@@ -370,25 +372,20 @@ export const useAuthStore = create<AuthState>()(
               'social-storage',
               'live-event-storage',
               'ai-storage'
-            ])
-              .then(() => {
-                // Set loading to false at the end
-                set({ isLoading: false });
-                resolve();
-              })
-              .catch((storageError) => {
-                console.error('Error clearing AsyncStorage:', storageError);
-                // Continue with logout even if storage clearing fails
-                set({ isLoading: false });
-                resolve();
-              });
-          } catch (error) {
-            console.error('Error during logout:', error);
-            // Make sure we still set authenticated to false even if there's an error
-            set({ token: null, isAuthenticated: false, error: null, isLoading: false });
-            reject(error);
+            ]);
+          } catch (storageError) {
+            console.error('Error clearing AsyncStorage:', storageError);
+            // Continue with logout even if storage clearing fails
           }
-        });
+          
+          // Finally, set loading to false
+          set({ isLoading: false });
+        } catch (error) {
+          console.error('Error during logout:', error);
+          // Make sure we still set authenticated to false even if there's an error
+          set({ token: null, isAuthenticated: false, error: null, isLoading: false });
+          throw error;
+        }
       },
       
       clearError: () => set({ error: null }),

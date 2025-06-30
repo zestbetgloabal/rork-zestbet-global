@@ -13,7 +13,6 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/authStore';
-import AppleSignInButton from '@/components/AppleSignInButton';
 import colors from '@/constants/colors';
 
 interface ButtonProps {
@@ -27,7 +26,7 @@ interface ButtonProps {
 export default function WelcomeScreen() {
   const router = useRouter();
   const { height } = useWindowDimensions();
-  const { isLoading, loginWithApple, loginWithGoogle } = useAuthStore();
+  const { isLoading } = useAuthStore();
   
   const handleEmailLogin = () => {
     router.push('/login');
@@ -35,28 +34,6 @@ export default function WelcomeScreen() {
   
   const handleCreateAccount = () => {
     router.push('/register');
-  };
-  
-  const handleAppleLogin = async () => {
-    try {
-      const success = await loginWithApple();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      console.error('Apple Login Error', error);
-    }
-  };
-  
-  const handleGoogleLogin = async () => {
-    try {
-      const success = await loginWithGoogle();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      console.error('Google Login Error', error);
-    }
   };
   
   return (
@@ -95,14 +72,6 @@ export default function WelcomeScreen() {
             disabled={isLoading}
             style={styles.loginButton}
           />
-          
-          {Platform.OS === 'ios' && (
-            <AppleSignInButton
-              onPress={handleAppleLogin}
-              loading={isLoading}
-              style={styles.appleButton}
-            />
-          )}
         </View>
         
         <View style={styles.legalLinks}>
@@ -280,10 +249,6 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: 12,
-    marginBottom: 12,
-  },
-  appleButton: {
-    width: '100%',
   },
   legalLinks: {
     flexDirection: 'row',

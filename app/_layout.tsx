@@ -54,8 +54,6 @@ function RootLayoutNav() {
   const { isAuthenticated } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-  const [initialRoute, setInitialRoute] = useState<string | null>(null);
-  const [isNavigating, setIsNavigating] = useState(false);
   
   // Check if the current route is in the auth group
   const isInAuthGroup = segments[0] === '(auth)';
@@ -63,36 +61,22 @@ function RootLayoutNav() {
   const isInLegalGroup = segments[0] === 'legal';
   
   useEffect(() => {
-    // Set initial route only once
-    if (initialRoute === null) {
-      setInitialRoute(segments.join('/'));
-    }
-  }, [segments]);
-  
-  useEffect(() => {
-    // Skip initial navigation if we're still loading
-    if (initialRoute === null || isNavigating) return;
+    // Handle navigation based on authentication state
+    const handleNavigation = () => {
+      // If the user is not authenticated and not in the auth group or legal group, redirect to auth
+      if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
+        router.replace('/(auth)');
+      }
+      
+      // If the user is authenticated and in the auth group, redirect to tabs
+      if (isAuthenticated && isInAuthGroup) {
+        router.replace('/(tabs)');
+      }
+    };
     
-    // If the user is not authenticated and not in the auth group or legal group, redirect to auth
-    if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
-      setIsNavigating(true);
-      router.replace('/(auth)').then(() => {
-        setIsNavigating(false);
-      }).catch(() => {
-        setIsNavigating(false);
-      });
-    }
-    
-    // If the user is authenticated and in the auth group, redirect to tabs
-    if (isAuthenticated && isInAuthGroup) {
-      setIsNavigating(true);
-      router.replace('/(tabs)').then(() => {
-        setIsNavigating(false);
-      }).catch(() => {
-        setIsNavigating(false);
-      });
-    }
-  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, initialRoute, isNavigating]);
+    // Execute navigation logic
+    handleNavigation();
+  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, router]);
   
   return (
     <>

@@ -24,7 +24,7 @@ export default function LiveEventCard({ event, compact = false }: LiveEventCardP
   };
   
   // Format date and time manually instead of using formatDateTime
-  const formattedDateTime = (date: Date) => {
+  const formattedDateTime = (date: Date | string) => {
     return `${formatDate(date)} at ${formatTime(date)}`;
   };
   
