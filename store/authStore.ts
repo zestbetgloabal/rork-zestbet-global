@@ -31,7 +31,7 @@ interface AuthState {
   register: (params: RegisterParams) => Promise<boolean>;
   phoneLogin: (phone: string, code: string) => Promise<boolean>;
   verifyPhone: (phone: string, code: string) => Promise<boolean>;
-  logout: () => Promise<void>;
+  logout: () => void;
   clearError: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
@@ -349,49 +349,53 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      logout: async () => {
-        try {
-          // Clear auth state immediately
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
-            isLoading: false 
-          });
-          
-          // Clear user state
-          const { useUserStore } = await import('./userStore');
-          const userStore = useUserStore.getState();
-          if (userStore && typeof userStore.logout === 'function') {
-            userStore.logout();
+      logout: () => {
+        // Clear auth state immediately and synchronously
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false 
+        });
+        
+        // Clear all stores and storage asynchronously
+        setTimeout(async () => {
+          try {
+            // Clear all persisted data
+            await AsyncStorage.clear();
+            
+            // Force reload all stores to their initial state
+            const stores = await Promise.all([
+              import('./userStore'),
+              import('./betStore'),
+              import('./challengeStore'),
+              import('./impactStore'),
+              import('./missionStore'),
+              import('./leaderboardStore'),
+              import('./badgeStore'),
+              import('./liveEventStore'),
+              import('./aiStore'),
+              import('./chatStore')
+            ]);
+            
+            // Reset each store
+            stores.forEach((storeModule) => {
+              const storeKeys = Object.keys(storeModule);
+              storeKeys.forEach((key) => {
+                const store = storeModule[key];
+                if (store && typeof store.getState === 'function') {
+                  const state = store.getState();
+                  if (typeof state.logout === 'function') {
+                    state.logout();
+                  }
+                }
+              });
+            });
+            
+          } catch (error) {
+            console.error('Error during logout cleanup:', error);
           }
-          
-          // Clear all persisted data
-          await AsyncStorage.multiRemove([
-            'auth-storage',
-            'user-storage',
-            'mission-storage',
-            'bet-storage',
-            'impact-storage',
-            'leaderboard-storage',
-            'badge-storage',
-            'challenge-storage',
-            'social-storage',
-            'live-event-storage',
-            'ai-storage',
-            'chat-storage'
-          ]);
-          
-        } catch (error) {
-          console.error('Error during logout:', error);
-          // Even if there's an error, ensure auth state is cleared
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
-            isLoading: false 
-          });
-        }
+        }, 100);
       },
       
       clearError: () => set({ error: null }),

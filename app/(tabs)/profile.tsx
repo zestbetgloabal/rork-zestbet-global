@@ -17,13 +17,19 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      await logout();
-      // Navigation will be handled by the _layout.tsx effect
+      
+      // Call logout immediately
+      logout();
+      
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        setIsLoggingOut(false);
+      }, 500);
+      
     } catch (error) {
       console.error('Logout error:', error);
-      Alert.alert('Logout Failed', 'There was an error logging out. Please try again.');
-    } finally {
       setIsLoggingOut(false);
+      Alert.alert('Logout Failed', 'There was an error logging out. Please try again.');
     }
   };
 

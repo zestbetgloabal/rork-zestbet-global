@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
@@ -54,7 +54,6 @@ function RootLayoutNav() {
   const { isAuthenticated } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-  const [isNavigating, setIsNavigating] = useState(false);
   
   // Check if the current route is in the auth group
   const isInAuthGroup = segments[0] === '(auth)';
@@ -62,37 +61,30 @@ function RootLayoutNav() {
   const isInLegalGroup = segments[0] === 'legal';
   
   useEffect(() => {
-    // Prevent multiple navigation calls
-    if (isNavigating) return;
-    
     // Handle navigation based on authentication state
-    const handleNavigation = async () => {
-      try {
-        setIsNavigating(true);
-        
-        // Small delay to ensure state is properly updated
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // If the user is not authenticated and not in the auth group or legal group, redirect to auth
-        if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
-          router.replace('/(auth)');
-        }
-        
-        // If the user is authenticated and in the auth group, redirect to tabs
-        if (isAuthenticated && isInAuthGroup) {
-          router.replace('/(tabs)');
-        }
-      } catch (error) {
-        console.error('Navigation error:', error);
-      } finally {
-        // Reset navigation flag after a short delay
-        setTimeout(() => setIsNavigating(false), 200);
+    const handleNavigation = () => {
+      console.log('Navigation check:', { isAuthenticated, isInAuthGroup, isInLegalGroup, segments });
+      
+      // If the user is not authenticated and not in the auth group or legal group, redirect to auth
+      if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
+        console.log('Redirecting to auth');
+        router.replace('/(auth)');
+        return;
+      }
+      
+      // If the user is authenticated and in the auth group, redirect to tabs
+      if (isAuthenticated && isInAuthGroup) {
+        console.log('Redirecting to tabs');
+        router.replace('/(tabs)');
+        return;
       }
     };
     
-    // Execute navigation logic
-    handleNavigation();
-  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, router, isNavigating]);
+    // Small delay to ensure state is properly updated
+    const timeoutId = setTimeout(handleNavigation, 50);
+    
+    return () => clearTimeout(timeoutId);
+  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, router]);
   
   return (
     <>

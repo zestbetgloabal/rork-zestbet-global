@@ -57,7 +57,7 @@ export const useUserStore = create<UserState>()(
             : null
         })),
       logout: () => {
-        // Clear user state completely
+        // Clear user state completely and immediately
         set({ 
           user: null,
           isLoading: false,
