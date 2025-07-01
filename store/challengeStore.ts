@@ -22,6 +22,7 @@ interface ChallengeState {
   updateTeamScore: (challengeId: string, teamId: string, score: number) => Promise<boolean>;
   getChallenge: (challengeId: string) => Challenge | undefined;
   getUserParticipation: (challengeId: string, userId: string) => ChallengeParticipant | undefined;
+  reset: () => void;
 }
 
 export const useChallengeStore = create<ChallengeState>((set, get) => ({
@@ -1092,5 +1093,14 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
     }
     
     return challenge.participants.find(p => p.userId === userId);
+  },
+  
+  reset: () => {
+    set({
+      challenges: [],
+      userChallenges: [],
+      isLoading: false,
+      error: null
+    });
   }
 }));

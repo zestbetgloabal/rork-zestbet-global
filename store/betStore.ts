@@ -16,6 +16,7 @@ interface BetState {
   setVisibilityFilter: (filter: 'all' | 'public' | 'private') => void;
   setCurrentUser: (username: string | null) => void;
   getFilteredBets: () => Bet[];
+  reset: () => void;
 }
 
 export const useBetStore = create<BetState>((set, get) => ({
@@ -156,5 +157,16 @@ export const useBetStore = create<BetState>((set, get) => ({
          (bet.invitedFriends && currentUser && bet.invitedFriends.includes(currentUser)))
       );
     }
+  },
+  
+  reset: () => {
+    set({
+      bets: [],
+      userBets: [],
+      isLoading: false,
+      error: null,
+      visibilityFilter: 'all',
+      currentUser: null
+    });
   }
 }));

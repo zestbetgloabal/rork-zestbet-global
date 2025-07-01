@@ -18,6 +18,7 @@ interface AIState {
   getPersonalizedBets: (limit?: number) => Promise<Bet[]>;
   getPersonalizedMissions: (limit?: number) => Promise<Mission[]>;
   getSimilarUsers: (limit?: number) => Promise<User[]>;
+  reset: () => void;
 }
 
 export const useAIStore = create<AIState>((set, get) => ({
@@ -217,5 +218,13 @@ export const useAIStore = create<AIState>((set, get) => ({
       set({ error: 'Failed to fetch similar users', isLoading: false });
       return [];
     }
+  },
+  
+  reset: () => {
+    set({
+      recommendations: [],
+      isLoading: false,
+      error: null
+    });
   }
 }));

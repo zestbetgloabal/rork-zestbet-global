@@ -364,57 +364,76 @@ export const useAuthStore = create<AuthState>()(
             // Clear all persisted data
             await AsyncStorage.clear();
             
-            // Reset each store individually to avoid TypeScript errors
-            const [
-              { useUserStore },
-              { useBetStore },
-              { useChallengeStore },
-              { useImpactStore },
-              { useMissionStore },
-              { useLeaderboardStore },
-              { useBadgeStore },
-              { useLiveEventStore },
-              { useAIStore },
-              { useChatStore }
-            ] = await Promise.all([
-              import('./userStore'),
-              import('./betStore'),
-              import('./challengeStore'),
-              import('./impactStore'),
-              import('./missionStore'),
-              import('./leaderboardStore'),
-              import('./badgeStore'),
-              import('./liveEventStore'),
-              import('./aiStore'),
-              import('./chatStore')
-            ]);
+            // Reset each store individually with proper error handling
+            try {
+              const { useUserStore } = await import('./userStore');
+              useUserStore.getState().logout();
+            } catch (error) {
+              console.error('Error resetting userStore:', error);
+            }
             
-            // Reset each store by calling their reset/logout methods if they exist
-            const stores = [
-              useUserStore,
-              useBetStore,
-              useChallengeStore,
-              useImpactStore,
-              useMissionStore,
-              useLeaderboardStore,
-              useBadgeStore,
-              useLiveEventStore,
-              useAIStore,
-              useChatStore
-            ];
+            try {
+              const { useBetStore } = await import('./betStore');
+              useBetStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting betStore:', error);
+            }
             
-            stores.forEach((store) => {
-              try {
-                const state = store.getState();
-                if (typeof state.logout === 'function') {
-                  state.logout();
-                } else if (typeof state.reset === 'function') {
-                  state.reset();
-                }
-              } catch (error) {
-                console.error('Error resetting store:', error);
-              }
-            });
+            try {
+              const { useChallengeStore } = await import('./challengeStore');
+              useChallengeStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting challengeStore:', error);
+            }
+            
+            try {
+              const { useImpactStore } = await import('./impactStore');
+              useImpactStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting impactStore:', error);
+            }
+            
+            try {
+              const { useMissionStore } = await import('./missionStore');
+              useMissionStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting missionStore:', error);
+            }
+            
+            try {
+              const { useLeaderboardStore } = await import('./leaderboardStore');
+              useLeaderboardStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting leaderboardStore:', error);
+            }
+            
+            try {
+              const { useBadgeStore } = await import('./badgeStore');
+              useBadgeStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting badgeStore:', error);
+            }
+            
+            try {
+              const { useLiveEventStore } = await import('./liveEventStore');
+              useLiveEventStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting liveEventStore:', error);
+            }
+            
+            try {
+              const { useAIStore } = await import('./aiStore');
+              useAIStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting aiStore:', error);
+            }
+            
+            try {
+              const { useChatStore } = await import('./chatStore');
+              useChatStore.getState().reset();
+            } catch (error) {
+              console.error('Error resetting chatStore:', error);
+            }
             
           } catch (error) {
             console.error('Error during logout cleanup:', error);

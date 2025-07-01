@@ -7,6 +7,7 @@ interface LeaderboardState {
   isLoading: boolean;
   error: string | null;
   fetchLeaderboard: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
@@ -23,5 +24,12 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
     } catch (error) {
       set({ error: 'Failed to fetch leaderboard', isLoading: false });
     }
+  },
+  reset: () => {
+    set({
+      entries: [],
+      isLoading: false,
+      error: null
+    });
   }
 }));

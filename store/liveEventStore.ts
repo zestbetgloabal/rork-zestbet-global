@@ -21,6 +21,7 @@ interface LiveEventState {
     duration?: number,
     type?: 'solo' | 'team' | 'all'
   }) => Promise<LiveChallenge | null>;
+  reset: () => void;
 }
 
 // Mock data for development
@@ -363,5 +364,15 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
       set({ error: 'Failed to generate AI challenge', isLoading: false });
       return null;
     }
+  },
+  
+  reset: () => {
+    set({
+      events: [],
+      currentEvent: null,
+      isLoading: false,
+      error: null,
+      interactions: []
+    });
   }
 }));

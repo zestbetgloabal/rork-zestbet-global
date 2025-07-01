@@ -10,6 +10,7 @@ interface BadgeState {
   fetchBadges: () => Promise<void>;
   fetchUserRank: (userId: string) => Promise<void>;
   updateUserRank: (userId: string, tokensEarned: number) => Promise<void>;
+  reset: () => void;
 }
 
 export const useBadgeStore = create<BadgeState>((set, get) => ({
@@ -114,5 +115,14 @@ export const useBadgeStore = create<BadgeState>((set, get) => ({
     } catch (error) {
       set({ error: 'Failed to update user rank', isLoading: false });
     }
+  },
+  
+  reset: () => {
+    set({
+      badges: [],
+      userRank: null,
+      isLoading: false,
+      error: null
+    });
   }
 }));

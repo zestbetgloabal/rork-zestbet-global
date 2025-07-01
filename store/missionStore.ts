@@ -8,6 +8,7 @@ interface MissionState {
   error: string | null;
   fetchMissions: () => Promise<void>;
   completeMission: (missionId: string) => Promise<boolean>;
+  reset: () => void;
 }
 
 export const useMissionStore = create<MissionState>((set, get) => ({
@@ -52,5 +53,12 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       set({ error: 'Failed to complete mission', isLoading: false });
       return false;
     }
+  },
+  reset: () => {
+    set({
+      missions: [],
+      isLoading: false,
+      error: null
+    });
   }
 }));

@@ -12,6 +12,7 @@ interface ImpactState {
   error: string | null;
   fetchProjects: () => Promise<void>;
   getTimeUntilNextProject: () => { days: number; hours: number; minutes: number } | null;
+  reset: () => void;
 }
 
 export const useImpactStore = create<ImpactState>()(
@@ -67,6 +68,16 @@ export const useImpactStore = create<ImpactState>()(
         const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
         
         return { days, hours, minutes };
+      },
+      
+      reset: () => {
+        set({
+          projects: [],
+          totalDonated: 0,
+          weeklyFeaturedProject: null,
+          isLoading: false,
+          error: null
+        });
       }
     }),
     {
