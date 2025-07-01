@@ -14,10 +14,10 @@ export default function ProfileScreen() {
   const { user } = useUserStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     try {
       setIsLoggingOut(true);
-      await logout();
+      logout();
       // Navigation will be handled by the _layout.tsx effect
     } catch (error) {
       console.error('Logout error:', error);

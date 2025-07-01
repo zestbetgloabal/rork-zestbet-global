@@ -54,6 +54,7 @@ function RootLayoutNav() {
   const { isAuthenticated } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Check if the current route is in the auth group
   const isInAuthGroup = segments[0] === '(auth)';
@@ -61,22 +62,34 @@ function RootLayoutNav() {
   const isInLegalGroup = segments[0] === 'legal';
   
   useEffect(() => {
+    // Prevent multiple navigation calls
+    if (isNavigating) return;
+    
     // Handle navigation based on authentication state
     const handleNavigation = () => {
-      // If the user is not authenticated and not in the auth group or legal group, redirect to auth
-      if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
-        router.replace('/(auth)');
-      }
-      
-      // If the user is authenticated and in the auth group, redirect to tabs
-      if (isAuthenticated && isInAuthGroup) {
-        router.replace('/(tabs)');
+      try {
+        setIsNavigating(true);
+        
+        // If the user is not authenticated and not in the auth group or legal group, redirect to auth
+        if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
+          router.replace('/(auth)');
+        }
+        
+        // If the user is authenticated and in the auth group, redirect to tabs
+        if (isAuthenticated && isInAuthGroup) {
+          router.replace('/(tabs)');
+        }
+      } catch (error) {
+        console.error('Navigation error:', error);
+      } finally {
+        // Reset navigation flag after a short delay
+        setTimeout(() => setIsNavigating(false), 100);
       }
     };
     
     // Execute navigation logic
     handleNavigation();
-  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, router]);
+  }, [isAuthenticated, isInAuthGroup, isInLegalGroup, router, isNavigating]);
   
   return (
     <>

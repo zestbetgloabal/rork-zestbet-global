@@ -32,7 +32,7 @@ interface AuthState {
   register: (params: RegisterParams) => Promise<boolean>;
   phoneLogin: (phone: string, code: string) => Promise<boolean>;
   verifyPhone: (phone: string, code: string) => Promise<boolean>;
-  logout: () => Promise<void>;
+  logout: () => void;
   clearError: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
@@ -344,48 +344,40 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      logout: async () => {
-        // First, set loading state
-        set({ isLoading: true });
-        
-        try {
-          // Clear user state - get the latest reference to avoid stale closures
-          const userStore = useUserStore.getState();
-          if (userStore && typeof userStore.logout === 'function') {
-            userStore.logout();
-          }
-          
-          // Clear auth state immediately to trigger navigation
-          set({ token: null, isAuthenticated: false, error: null });
-          
-          // Clear persisted data in the background
-          try {
-            await AsyncStorage.multiRemove([
-              'auth-storage',
-              'user-storage',
-              'mission-storage',
-              'bet-storage',
-              'impact-storage',
-              'leaderboard-storage',
-              'badge-storage',
-              'challenge-storage',
-              'social-storage',
-              'live-event-storage',
-              'ai-storage'
-            ]);
-          } catch (storageError) {
-            console.error('Error clearing AsyncStorage:', storageError);
-            // Continue with logout even if storage clearing fails
-          }
-          
-          // Finally, set loading to false
-          set({ isLoading: false });
-        } catch (error) {
-          console.error('Error during logout:', error);
-          // Make sure we still set authenticated to false even if there's an error
-          set({ token: null, isAuthenticated: false, error: null, isLoading: false });
-          throw error;
+      logout: () => {
+        // Clear user state first
+        const userStore = useUserStore.getState();
+        if (userStore && typeof userStore.logout === 'function') {
+          userStore.logout();
         }
+        
+        // Clear auth state immediately
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false 
+        });
+        
+        // Clear persisted data in background (don't await)
+        setTimeout(() => {
+          AsyncStorage.multiRemove([
+            'auth-storage',
+            'user-storage',
+            'mission-storage',
+            'bet-storage',
+            'impact-storage',
+            'leaderboard-storage',
+            'badge-storage',
+            'challenge-storage',
+            'social-storage',
+            'live-event-storage',
+            'ai-storage',
+            'chat-storage'
+          ]).catch(error => {
+            console.error('Error clearing AsyncStorage:', error);
+          });
+        }, 100);
       },
       
       clearError: () => set({ error: null }),
