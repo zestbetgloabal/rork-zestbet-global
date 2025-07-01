@@ -364,8 +364,19 @@ export const useAuthStore = create<AuthState>()(
             // Clear all persisted data
             await AsyncStorage.clear();
             
-            // Force reload all stores to their initial state
-            const stores = await Promise.all([
+            // Reset each store individually to avoid TypeScript errors
+            const [
+              { useUserStore },
+              { useBetStore },
+              { useChallengeStore },
+              { useImpactStore },
+              { useMissionStore },
+              { useLeaderboardStore },
+              { useBadgeStore },
+              { useLiveEventStore },
+              { useAIStore },
+              { useChatStore }
+            ] = await Promise.all([
               import('./userStore'),
               import('./betStore'),
               import('./challengeStore'),
@@ -378,18 +389,31 @@ export const useAuthStore = create<AuthState>()(
               import('./chatStore')
             ]);
             
-            // Reset each store
-            stores.forEach((storeModule) => {
-              const storeKeys = Object.keys(storeModule);
-              storeKeys.forEach((key) => {
-                const store = storeModule[key];
-                if (store && typeof store.getState === 'function') {
-                  const state = store.getState();
-                  if (typeof state.logout === 'function') {
-                    state.logout();
-                  }
+            // Reset each store by calling their reset/logout methods if they exist
+            const stores = [
+              useUserStore,
+              useBetStore,
+              useChallengeStore,
+              useImpactStore,
+              useMissionStore,
+              useLeaderboardStore,
+              useBadgeStore,
+              useLiveEventStore,
+              useAIStore,
+              useChatStore
+            ];
+            
+            stores.forEach((store) => {
+              try {
+                const state = store.getState();
+                if (typeof state.logout === 'function') {
+                  state.logout();
+                } else if (typeof state.reset === 'function') {
+                  state.reset();
                 }
-              });
+              } catch (error) {
+                console.error('Error resetting store:', error);
+              }
             });
             
           } catch (error) {
