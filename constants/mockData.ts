@@ -1,6 +1,6 @@
 // Add this to your existing mockData.ts file if it doesn't already exist
 
-import { Bet, SocialPost, Badge, Challenge, ChallengePool, ChallengeTeam, UserRank } from '@/types';
+import { Bet, SocialPost, Badge, Challenge, ChallengePool, ChallengeTeam, UserRank, Mission, ImpactProject, LeaderboardEntry } from '@/types';
 
 // Mock bets for development
 export const mockBets: Bet[] = [
@@ -424,6 +424,176 @@ export const mockChallenges: Challenge[] = [
         rank: 2
       }
     ]
+  }
+];
+
+// Mock missions for development
+export const mockMissions: Mission[] = [
+  {
+    id: '1',
+    title: 'First Bet',
+    description: 'Place your first bet to get started',
+    reward: 50,
+    category: 'onboarding',
+    difficulty: 'easy',
+    status: 'open',
+    progress: 0,
+    maxProgress: 1
+  },
+  {
+    id: '2',
+    title: 'Social Butterfly',
+    description: 'Share 3 bets on social media',
+    reward: 100,
+    category: 'social',
+    difficulty: 'medium',
+    status: 'open',
+    progress: 1,
+    maxProgress: 3
+  },
+  {
+    id: '3',
+    title: 'High Roller',
+    description: 'Place a bet with at least 500 Zest',
+    reward: 200,
+    category: 'betting',
+    difficulty: 'hard',
+    status: 'open',
+    progress: 0,
+    maxProgress: 1
+  },
+  {
+    id: '4',
+    title: 'Community Builder',
+    description: 'Invite 5 friends to join ZestBet',
+    reward: 300,
+    category: 'referral',
+    difficulty: 'medium',
+    status: 'open',
+    progress: 2,
+    maxProgress: 5
+  },
+  {
+    id: '5',
+    title: 'Prediction Master',
+    description: 'Win 10 bets in a row',
+    reward: 500,
+    category: 'achievement',
+    difficulty: 'hard',
+    status: 'completed',
+    progress: 10,
+    maxProgress: 10
+  }
+];
+
+// Mock impact projects for development
+export const mockImpactProjects: ImpactProject[] = [
+  {
+    id: '1',
+    title: 'Clean Water for Rural Communities',
+    description: 'Providing clean drinking water access to remote villages in developing countries.',
+    organization: 'Water for All Foundation',
+    amount: 2500,
+    goal: 10000,
+    category: 'water',
+    image: 'https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?q=80&w=1000',
+    featured: true,
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    location: 'Kenya, Africa',
+    website: 'https://waterforall.org'
+  },
+  {
+    id: '2',
+    title: 'Education for Underprivileged Children',
+    description: 'Supporting education programs for children in low-income communities.',
+    organization: 'Education First Initiative',
+    amount: 1800,
+    goal: 5000,
+    category: 'education',
+    image: 'https://images.unsplash.com/photo-1497486751825-1233686d5d80?q=80&w=1000',
+    featured: false,
+    location: 'India',
+    website: 'https://educationfirst.org'
+  },
+  {
+    id: '3',
+    title: 'Reforestation Project',
+    description: 'Planting trees to combat climate change and restore natural habitats.',
+    organization: 'Green Earth Alliance',
+    amount: 3200,
+    goal: 8000,
+    category: 'environment',
+    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1000',
+    featured: false,
+    location: 'Brazil',
+    website: 'https://greenearth.org'
+  },
+  {
+    id: '4',
+    title: 'Medical Supplies for Disaster Relief',
+    description: 'Emergency medical aid for communities affected by natural disasters.',
+    organization: 'Global Relief Network',
+    amount: 4100,
+    goal: 15000,
+    category: 'healthcare',
+    image: 'https://images.unsplash.com/photo-1584515933487-779824d29309?q=80&w=1000',
+    featured: false,
+    location: 'Philippines',
+    website: 'https://globalrelief.org'
+  }
+];
+
+// Mock leaderboard for development
+export const mockLeaderboard: LeaderboardEntry[] = [
+  {
+    id: '1',
+    userId: 'user1',
+    username: 'BetMaster',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=1000',
+    score: 15420,
+    rank: 1,
+    change: 2,
+    badge: mockBadges[4] // General
+  },
+  {
+    id: '2',
+    userId: 'user2',
+    username: 'LuckyStreak',
+    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?q=80&w=1000',
+    score: 12850,
+    rank: 2,
+    change: -1,
+    badge: mockBadges[3] // Captain
+  },
+  {
+    id: '3',
+    userId: 'user3',
+    username: 'SportsFanatic',
+    avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1000',
+    score: 11200,
+    rank: 3,
+    change: 1,
+    badge: mockBadges[3] // Captain
+  },
+  {
+    id: '4',
+    userId: 'user4',
+    username: 'PredictionPro',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000',
+    score: 9800,
+    rank: 4,
+    change: 0,
+    badge: mockBadges[2] // Sergeant
+  },
+  {
+    id: '5',
+    userId: 'user5',
+    username: 'GameChanger',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000',
+    score: 8500,
+    rank: 5,
+    change: 3,
+    badge: mockBadges[2] // Sergeant
   }
 ];
 

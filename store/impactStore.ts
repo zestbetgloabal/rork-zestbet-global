@@ -32,10 +32,10 @@ export const useImpactStore = create<ImpactState>()(
           await new Promise(resolve => setTimeout(resolve, 500));
           
           const projects = mockImpactProjects;
-          const totalDonated = projects.reduce((sum, project) => sum + project.amount, 0);
+          const totalDonated = projects.reduce((sum: number, project: ImpactProject) => sum + project.amount, 0);
           
           // Find the featured project
-          const featuredProject = projects.find(project => project.featured) || null;
+          const featuredProject = projects.find((project: ImpactProject) => project.featured) || null;
           
           set({ 
             projects, 

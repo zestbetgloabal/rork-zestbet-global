@@ -93,6 +93,13 @@ export const generateId = (): string => {
 };
 
 /**
+ * Generates a random ID (alias for generateId)
+ */
+export const generateRandomId = (): string => {
+  return generateId();
+};
+
+/**
  * Clears all AsyncStorage data
  * Returns a promise that resolves when the operation is complete
  */

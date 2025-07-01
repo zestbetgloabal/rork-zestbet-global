@@ -51,8 +51,8 @@ export const useAIStore = create<AIState>((set, get) => ({
           isShown: false,
           isClicked: false,
           relatedBet: bet,
-          relatedMission: null,
-          relatedUser: null
+          relatedMission: undefined,
+          relatedUser: undefined
         }));
       } else if (type === 'mission') {
         // Get random missions as recommendations
@@ -69,9 +69,9 @@ export const useAIStore = create<AIState>((set, get) => ({
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
           isShown: false,
           isClicked: false,
-          relatedBet: null,
+          relatedBet: undefined,
           relatedMission: mission,
-          relatedUser: null
+          relatedUser: undefined
         }));
       } else if (type === 'friend') {
         // Mock friend recommendations
@@ -83,15 +83,32 @@ export const useAIStore = create<AIState>((set, get) => ({
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
           isShown: false,
           isClicked: false,
-          relatedBet: null,
-          relatedMission: null,
+          relatedBet: undefined,
+          relatedMission: undefined,
           relatedUser: {
             id: `user_${i}`,
             username: `user_${i}`,
             avatar: `https://i.pravatar.cc/150?img=${i + 10}`,
             zestBalance: Math.floor(Math.random() * 1000),
             points: Math.floor(Math.random() * 500),
-            inviteCode: `ZEST${Math.floor(Math.random() * 10000)}`
+            inviteCode: `ZEST${Math.floor(Math.random() * 10000)}`,
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
+            biography: 'New user on ZestBet. Ready to make predictions!',
+            socialMedia: {
+              instagram: '',
+              twitter: '',
+              facebook: '',
+              linkedin: '',
+              tiktok: '',
+              youtube: '',
+              pinterest: '',
+              snapchat: '',
+              website: ''
+            },
+            agbConsent: true,
+            privacyConsent: true,
+            consentDate: new Date().toISOString()
           }
         }));
       }
@@ -209,7 +226,24 @@ export const useAIStore = create<AIState>((set, get) => ({
         avatar: `https://i.pravatar.cc/150?img=${i + 20}`,
         zestBalance: Math.floor(Math.random() * 1000),
         points: Math.floor(Math.random() * 500),
-        inviteCode: `ZEST${Math.floor(Math.random() * 10000)}`
+        inviteCode: `ZEST${Math.floor(Math.random() * 10000)}`,
+        dailyBetAmount: 0,
+        lastBetDate: new Date().toISOString(),
+        biography: 'New user on ZestBet. Ready to make predictions!',
+        socialMedia: {
+          instagram: '',
+          twitter: '',
+          facebook: '',
+          linkedin: '',
+          tiktok: '',
+          youtube: '',
+          pinterest: '',
+          snapchat: '',
+          website: ''
+        },
+        agbConsent: true,
+        privacyConsent: true,
+        consentDate: new Date().toISOString()
       }));
       
       set({ isLoading: false });

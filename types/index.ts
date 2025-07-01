@@ -247,6 +247,86 @@ export interface UserRank {
   }[];
 }
 
+// AI Recommendation types
+export interface AIRecommendation {
+  id: string;
+  type: 'bet' | 'mission' | 'friend';
+  score: number; // 0-1, higher is better
+  createdAt: Date;
+  expiresAt: Date;
+  isShown: boolean;
+  isClicked: boolean;
+  relatedBet?: Bet;
+  relatedMission?: Mission;
+  relatedUser?: User;
+}
+
+// Mission types
+export interface Mission {
+  id: string;
+  title: string;
+  description: string;
+  reward: number;
+  category: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  status: 'open' | 'completed';
+  progress?: number; // 0-100
+  maxProgress?: number;
+  deadline?: Date;
+  requirements?: string[];
+}
+
+// Impact Project types
+export interface ImpactProject {
+  id: string;
+  title: string;
+  description: string;
+  organization: string;
+  amount: number;
+  goal?: number;
+  category: string;
+  image?: string;
+  featured?: boolean;
+  endDate?: Date;
+  location?: string;
+  website?: string;
+}
+
+// Leaderboard types
+export interface LeaderboardEntry {
+  id: string;
+  userId: string;
+  username: string;
+  avatar?: string;
+  score: number;
+  rank: number;
+  change?: number; // Position change from last period
+  badge?: Badge;
+}
+
+// Social Post types
+export interface SocialPost {
+  id: string;
+  userId: string;
+  username: string;
+  userAvatar?: string;
+  content: string;
+  timestamp: Date;
+  likes: number;
+  comments: number;
+  shares: number;
+  tags?: string[];
+  attachments?: SocialPostAttachment[];
+}
+
+export interface SocialPostAttachment {
+  type: 'image' | 'video' | 'link';
+  url: string;
+  thumbnail?: string;
+  title?: string;
+  description?: string;
+}
+
 // Add this helper function to utils/helpers.ts if it doesn't exist
 export function getTimeRemaining(date: Date) {
   const total = new Date(date).getTime() - new Date().getTime();

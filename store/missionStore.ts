@@ -23,7 +23,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Ensure the status is properly typed as "completed" | "open"
-      const typedMissions = mockMissions.map(mission => ({
+      const typedMissions = mockMissions.map((mission: Mission) => ({
         ...mission,
         status: mission.status as "completed" | "open"
       }));
@@ -41,7 +41,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       await new Promise(resolve => setTimeout(resolve, 500));
       
       set((state) => ({
-        missions: state.missions.map(mission => 
+        missions: state.missions.map((mission: Mission) => 
           mission.id === missionId 
             ? { ...mission, status: 'completed' as const } 
             : mission

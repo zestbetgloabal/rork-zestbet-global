@@ -9,6 +9,7 @@ interface ChatState {
   fetchMessages: () => Promise<void>;
   sendMessage: (content: string) => Promise<boolean>;
   joinRoom: (roomId: string) => Promise<void>;
+  reset: () => void;
 }
 
 // Mock data for the general chat room
@@ -145,5 +146,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (error) {
       set({ error: 'Failed to join room', isLoading: false });
     }
+  },
+
+  reset: () => {
+    set({
+      messages: [],
+      currentRoom: null,
+      isLoading: false,
+      error: null
+    });
   }
 }));
