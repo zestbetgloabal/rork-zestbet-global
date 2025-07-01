@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useUserStore } from './userStore';
 
 interface RegisterParams {
   email: string;
@@ -32,7 +31,7 @@ interface AuthState {
   register: (params: RegisterParams) => Promise<boolean>;
   phoneLogin: (phone: string, code: string) => Promise<boolean>;
   verifyPhone: (phone: string, code: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
@@ -64,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
           set({ token: 'mock-jwt-token', isLoading: false, isAuthenticated: true });
           
           // Set user data
+          const { useUserStore } = await import('./userStore');
           const { setUser } = useUserStore.getState();
           setUser({
             id: '1',
@@ -108,6 +108,7 @@ export const useAuthStore = create<AuthState>()(
           set({ token: 'mock-jwt-token', isLoading: false, isAuthenticated: true });
           
           // Set user data
+          const { useUserStore } = await import('./userStore');
           const { setUser } = useUserStore.getState();
           setUser({
             id: '1',
@@ -158,6 +159,7 @@ export const useAuthStore = create<AuthState>()(
           set({ token: 'mock-jwt-token', isLoading: false, isAuthenticated: true });
           
           // Set user data
+          const { useUserStore } = await import('./userStore');
           const { setUser } = useUserStore.getState();
           setUser({
             id: '1',
@@ -223,6 +225,7 @@ export const useAuthStore = create<AuthState>()(
           set({ token: 'mock-google-jwt-token', isLoading: false, isAuthenticated: true });
           
           // Set user data
+          const { useUserStore } = await import('./userStore');
           const { setUser } = useUserStore.getState();
           setUser({
             id: '1',
@@ -267,6 +270,7 @@ export const useAuthStore = create<AuthState>()(
           set({ token: 'mock-apple-jwt-token', isLoading: false, isAuthenticated: true });
           
           // Set user data
+          const { useUserStore } = await import('./userStore');
           const { setUser } = useUserStore.getState();
           setUser({
             id: '1',
@@ -311,6 +315,7 @@ export const useAuthStore = create<AuthState>()(
           set({ token: 'mock-biometric-jwt-token', isLoading: false, isAuthenticated: true });
           
           // Set user data
+          const { useUserStore } = await import('./userStore');
           const { setUser } = useUserStore.getState();
           setUser({
             id: '1',
@@ -344,24 +349,25 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      logout: () => {
-        // Clear user state first
-        const userStore = useUserStore.getState();
-        if (userStore && typeof userStore.logout === 'function') {
-          userStore.logout();
-        }
-        
-        // Clear auth state immediately
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false 
-        });
-        
-        // Clear persisted data in background (don't await)
-        setTimeout(() => {
-          AsyncStorage.multiRemove([
+      logout: async () => {
+        try {
+          // Clear auth state immediately
+          set({ 
+            token: null, 
+            isAuthenticated: false, 
+            error: null, 
+            isLoading: false 
+          });
+          
+          // Clear user state
+          const { useUserStore } = await import('./userStore');
+          const userStore = useUserStore.getState();
+          if (userStore && typeof userStore.logout === 'function') {
+            userStore.logout();
+          }
+          
+          // Clear all persisted data
+          await AsyncStorage.multiRemove([
             'auth-storage',
             'user-storage',
             'mission-storage',
@@ -374,10 +380,18 @@ export const useAuthStore = create<AuthState>()(
             'live-event-storage',
             'ai-storage',
             'chat-storage'
-          ]).catch(error => {
-            console.error('Error clearing AsyncStorage:', error);
+          ]);
+          
+        } catch (error) {
+          console.error('Error during logout:', error);
+          // Even if there's an error, ensure auth state is cleared
+          set({ 
+            token: null, 
+            isAuthenticated: false, 
+            error: null, 
+            isLoading: false 
           });
-        }, 100);
+        }
       },
       
       clearError: () => set({ error: null }),

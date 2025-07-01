@@ -23,31 +23,7 @@ interface UserState {
 export const useUserStore = create<UserState>()(
   persist(
     (set, get) => ({
-      user: {
-        id: '1',
-        username: 'zest_user',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-        zestBalance: 100,
-        points: 250,
-        inviteCode: 'ZEST123',
-        dailyBetAmount: 0,
-        lastBetDate: new Date().toISOString().split('T')[0],
-        biography: 'Passionate about betting on future trends and supporting social causes. I love predicting tech and sports outcomes!',
-        socialMedia: {
-          instagram: 'zest_user',
-          twitter: 'zest_user',
-          facebook: '',
-          linkedin: '',
-          tiktok: 'zest_user',
-          youtube: '',
-          pinterest: '',
-          snapchat: '',
-          website: ''
-        },
-        agbConsent: true,
-        privacyConsent: true,
-        consentDate: new Date().toISOString()
-      },
+      user: null,
       isLoading: false,
       error: null,
       setUser: (user) => set({ user }),

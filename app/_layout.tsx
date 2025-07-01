@@ -66,9 +66,12 @@ function RootLayoutNav() {
     if (isNavigating) return;
     
     // Handle navigation based on authentication state
-    const handleNavigation = () => {
+    const handleNavigation = async () => {
       try {
         setIsNavigating(true);
+        
+        // Small delay to ensure state is properly updated
+        await new Promise(resolve => setTimeout(resolve, 50));
         
         // If the user is not authenticated and not in the auth group or legal group, redirect to auth
         if (!isAuthenticated && !isInAuthGroup && !isInLegalGroup) {
@@ -83,7 +86,7 @@ function RootLayoutNav() {
         console.error('Navigation error:', error);
       } finally {
         // Reset navigation flag after a short delay
-        setTimeout(() => setIsNavigating(false), 100);
+        setTimeout(() => setIsNavigating(false), 200);
       }
     };
     
