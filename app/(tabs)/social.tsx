@@ -9,172 +9,119 @@ import {
   ActivityIndicator,
   Keyboard,
   Platform,
-  Switch,
-  Alert
+  KeyboardAvoidingView
 } from 'react-native';
-import { Send, Facebook, Instagram, Video } from 'lucide-react-native';
-import { useSocialStore } from '@/store/socialStore';
-import SocialPostCard from '@/components/SocialPostCard';
+import { Send, Users } from 'lucide-react-native';
+import { useChatStore } from '@/store/chatStore';
+import ChatMessage from '@/components/ChatMessage';
 import colors from '@/constants/colors';
-import { SocialPost } from '@/types';
+import { ChatMessage as ChatMessageType } from '@/types';
 
-export default function SocialScreen() {
-  const { posts, isLoading, fetchPosts, createPost, likePost, crossPostToSocialMedia } = useSocialStore();
-  const [content, setContent] = useState('');
-  const [isPosting, setIsPosting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const inputRef = useRef<TextInput>(null);
-  
-  // Social media cross-posting states
-  const [postToFacebook, setPostToFacebook] = useState(false);
-  const [postToInstagram, setPostToInstagram] = useState(false);
-  const [postToTikTok, setPostToTikTok] = useState(false);
-  const [showCrossPostOptions, setShowCrossPostOptions] = useState(false);
+export default function ChatScreen() {
+  const { messages, currentRoom, isLoading, fetchMessages, sendMessage } = useChatStore();
+  const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
   
   useEffect(() => {
-    fetchPosts();
+    fetchMessages();
   }, []);
   
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchPosts();
-    setRefreshing(false);
-  };
-  
-  const handlePost = async () => {
-    if (!content.trim()) return;
-    
-    setIsPosting(true);
-    
-    try {
-      // Create post in the app
-      const success = await createPost(content);
-      
-      if (success) {
-        // Cross-post to selected social media platforms
-        if (postToFacebook || postToInstagram || postToTikTok) {
-          const platforms = [];
-          if (postToFacebook) platforms.push('facebook');
-          if (postToInstagram) platforms.push('instagram');
-          if (postToTikTok) platforms.push('tiktok');
-          
-          await crossPostToSocialMedia(content, platforms);
-        }
-        
-        setContent('');
-        setShowCrossPostOptions(false);
-        setPostToFacebook(false);
-        setPostToInstagram(false);
-        setPostToTikTok(false);
-        Keyboard.dismiss();
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to post. Please try again.');
-    } finally {
-      setIsPosting(false);
+  useEffect(() => {
+    // Auto-scroll to bottom when new messages arrive
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
+  }, [messages]);
+  
+  const handleSend = async () => {
+    if (!inputText.trim() || isSending) return;
+    
+    setIsSending(true);
+    const success = await sendMessage(inputText);
+    
+    if (success) {
+      setInputText('');
+      Keyboard.dismiss();
+    }
+    
+    setIsSending(false);
   };
   
-  const toggleCrossPostOptions = () => {
-    setShowCrossPostOptions(!showCrossPostOptions);
+  const renderMessage = ({ item, index }: { item: ChatMessageType; index: number }) => {
+    const isCurrentUser = item.senderId === 'current_user';
+    return (
+      <ChatMessage 
+        message={item} 
+        isCurrentUser={isCurrentUser}
+      />
+    );
   };
   
-  const renderItem = ({ item }: { item: SocialPost }) => (
-    <SocialPostCard 
-      post={item} 
-      onLike={() => likePost(item.id)}
-    />
-  );
+  if (isLoading && messages.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading chat...</Text>
+      </View>
+    );
+  }
   
   return (
-    <View style={styles.container}>
-      {isLoading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-        />
-      )}
-      
-      <View style={styles.inputContainer}>
-        {showCrossPostOptions && (
-          <View style={styles.crossPostContainer}>
-            <Text style={styles.crossPostTitle}>Cross-post to:</Text>
-            
-            <View style={styles.socialOption}>
-              <Facebook size={20} color={postToFacebook ? colors.primary : colors.textSecondary} />
-              <Text style={styles.socialOptionText}>Facebook</Text>
-              <Switch
-                value={postToFacebook}
-                onValueChange={setPostToFacebook}
-                trackColor={{ false: colors.border, true: `${colors.primary}80` }}
-                thumbColor={postToFacebook ? colors.primary : colors.card}
-              />
-            </View>
-            
-            <View style={styles.socialOption}>
-              <Instagram size={20} color={postToInstagram ? colors.primary : colors.textSecondary} />
-              <Text style={styles.socialOptionText}>Instagram</Text>
-              <Switch
-                value={postToInstagram}
-                onValueChange={setPostToInstagram}
-                trackColor={{ false: colors.border, true: `${colors.primary}80` }}
-                thumbColor={postToInstagram ? colors.primary : colors.card}
-              />
-            </View>
-            
-            <View style={styles.socialOption}>
-              <Video size={20} color={postToTikTok ? colors.primary : colors.textSecondary} />
-              <Text style={styles.socialOptionText}>TikTok</Text>
-              <Switch
-                value={postToTikTok}
-                onValueChange={setPostToTikTok}
-                trackColor={{ false: colors.border, true: `${colors.primary}80` }}
-                thumbColor={postToTikTok ? colors.primary : colors.card}
-              />
-            </View>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {/* Chat Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Users size={20} color={colors.primary} />
+          <View style={styles.headerText}>
+            <Text style={styles.roomName}>{currentRoom?.name || 'Chat'}</Text>
+            <Text style={styles.participantCount}>
+              {currentRoom?.participants.length || 0} members
+            </Text>
           </View>
-        )}
-        
+        </View>
+      </View>
+      
+      {/* Messages List */}
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        renderItem={renderMessage}
+        keyExtractor={item => item.id}
+        style={styles.messagesList}
+        contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
+      />
+      
+      {/* Input Area */}
+      <View style={styles.inputContainer}>
         <View style={styles.inputRow}>
           <TextInput
-            ref={inputRef}
             style={styles.input}
-            placeholder="Share your betting story..."
-            value={content}
-            onChangeText={setContent}
+            placeholder="Type a message..."
+            placeholderTextColor={colors.textSecondary}
+            value={inputText}
+            onChangeText={setInputText}
             multiline
-            maxLength={280}
+            maxLength={500}
+            onSubmitEditing={handleSend}
+            blurOnSubmit={false}
           />
-          
-          <Pressable 
-            style={styles.shareButton}
-            onPress={toggleCrossPostOptions}
-          >
-            <Text style={[
-              styles.shareButtonText, 
-              { color: showCrossPostOptions ? colors.primary : colors.textSecondary }
-            ]}>
-              {showCrossPostOptions ? 'Hide' : 'Share'}
-            </Text>
-          </Pressable>
           
           <Pressable 
             style={[
               styles.sendButton,
-              (!content.trim() || isPosting) && styles.disabledSendButton
+              (!inputText.trim() || isSending) && styles.disabledSendButton
             ]}
-            onPress={handlePost}
-            disabled={!content.trim() || isPosting}
+            onPress={handleSend}
+            disabled={!inputText.trim() || isSending}
           >
-            {isPosting ? (
+            {isSending ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
               <Send size={20} color="white" />
@@ -182,7 +129,7 @@ export default function SocialScreen() {
           </Pressable>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -191,46 +138,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  listContent: {
-    padding: 16,
-    paddingBottom: 80, // Extra padding for input
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  inputContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 12, // Extra padding for iOS
   },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  header: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  roomName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  participantCount: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  messagesList: {
+    flex: 1,
+  },
+  messagesContent: {
+    paddingVertical: 8,
+  },
+  inputContainer: {
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
   input: {
     flex: 1,
-    backgroundColor: colors.card,
+    backgroundColor: colors.background,
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     maxHeight: 100,
-  },
-  shareButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  shareButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   sendButton: {
     width: 40,
@@ -239,33 +211,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 12,
+    marginBottom: 2,
   },
   disabledSendButton: {
     backgroundColor: colors.border,
-  },
-  crossPostContainer: {
-    padding: 16,
-    backgroundColor: colors.card,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  crossPostTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  socialOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  socialOptionText: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.text,
-    marginLeft: 12,
   },
 });

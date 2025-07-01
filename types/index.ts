@@ -119,29 +119,38 @@ export interface BetPlacement {
   status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
 }
 
-// Add SocialPost interface
-export interface SocialPost {
+// Chat-related types
+export interface ChatMessage {
   id: string;
-  userId: string;
-  username: string;
-  userAvatar?: string;
+  senderId: string;
+  senderUsername: string;
+  senderAvatar?: string;
   content: string;
   timestamp: Date;
-  likes: number;
-  comments: number;
-  shares: number;
-  liked?: boolean;
-  attachments?: Array<{
-    type: 'image' | 'video' | 'link';
-    url: string;
-    thumbnail?: string;
-  }>;
-  tags?: string[];
-  user?: {
-    id: string;
-    username: string;
-    avatar?: string;
-  };
+  type: 'text' | 'image' | 'system';
+  edited?: boolean;
+  editedAt?: Date;
+}
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'public' | 'private' | 'group';
+  participants: ChatParticipant[];
+  lastMessage?: ChatMessage;
+  unreadCount: number;
+  createdAt: Date;
+}
+
+export interface ChatParticipant {
+  id: string;
+  username: string;
+  avatar?: string;
+  role: 'admin' | 'moderator' | 'member';
+  joinedAt: Date;
+  lastSeen?: Date;
+  isOnline: boolean;
 }
 
 // Add Challenge and ChallengePool interfaces for the betting pool system
