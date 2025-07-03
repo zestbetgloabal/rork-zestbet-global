@@ -14,13 +14,13 @@ export default function ProfileScreen() {
   const { user } = useUserStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     try {
       setIsLoggingOut(true);
       console.log('Starting logout process...');
       
-      // Call logout function
-      await logout();
+      // Call logout function (now synchronous)
+      logout();
       
       console.log('Logout completed, forcing navigation to auth...');
       
@@ -30,7 +30,7 @@ export default function ProfileScreen() {
       // Reset loading state after a short delay
       setTimeout(() => {
         setIsLoggingOut(false);
-      }, 500);
+      }, 300);
       
     } catch (error) {
       console.error('Logout error:', error);
@@ -44,12 +44,12 @@ export default function ProfileScreen() {
           { text: 'Cancel', style: 'cancel' },
           { 
             text: 'Force Logout', 
-            onPress: async () => {
+            onPress: () => {
               try {
                 setIsLoggingOut(true);
-                await forceLogout();
+                forceLogout();
                 router.replace('/(auth)');
-                setTimeout(() => setIsLoggingOut(false), 500);
+                setTimeout(() => setIsLoggingOut(false), 300);
               } catch (forceError) {
                 console.error('Force logout error:', forceError);
                 setIsLoggingOut(false);
@@ -198,11 +198,11 @@ export default function ProfileScreen() {
                   { text: 'Cancel', style: 'cancel' },
                   { 
                     text: 'Force Logout', 
-                    onPress: async () => {
+                    onPress: () => {
                       setIsLoggingOut(true);
-                      await forceLogout();
+                      forceLogout();
                       router.replace('/(auth)');
-                      setTimeout(() => setIsLoggingOut(false), 500);
+                      setTimeout(() => setIsLoggingOut(false), 300);
                     }, 
                     style: 'destructive' 
                   }

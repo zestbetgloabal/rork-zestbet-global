@@ -97,10 +97,26 @@ function RootLayoutNav() {
         router.replace('/(auth)');
         return;
       }
+      
+      // Additional check: if user is in any protected route without auth, redirect
+      const protectedRoutes = ['bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'live-events', 'create-challenge', 'challenge'];
+      const currentRoute = segments[0];
+      if (!isAuthenticated && !token && protectedRoutes.includes(currentRoute)) {
+        console.log('Redirecting from protected route to auth');
+        router.replace('/(auth)');
+        return;
+      }
     };
     
-    // Small delay to ensure state is properly updated
-    const timeoutId = setTimeout(handleNavigation, 100);
+    // Immediate check for logout scenarios
+    if (!isAuthenticated && !token && segments[0] === '(tabs)') {
+      console.log('Immediate logout redirect');
+      router.replace('/(auth)');
+      return;
+    }
+    
+    // Small delay for other navigation scenarios
+    const timeoutId = setTimeout(handleNavigation, 50);
     
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);
