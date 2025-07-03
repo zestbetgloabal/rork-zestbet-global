@@ -31,7 +31,7 @@ interface AuthState {
   register: (params: RegisterParams) => Promise<boolean>;
   phoneLogin: (phone: string, code: string) => Promise<boolean>;
   verifyPhone: (phone: string, code: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
@@ -349,7 +349,9 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      logout: () => {
+      logout: async () => {
+        console.log('=== LOGOUT STARTED ===');
+        
         // Clear auth state immediately
         set({ 
           token: null, 
@@ -358,34 +360,69 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false 
         });
         
-        // Clear all stores and storage asynchronously
-        (async () => {
+        console.log('Auth state cleared');
+        
+        // Clear all stores and storage
+        try {
+          // Clear user store
           try {
-            // Clear user store
+            const { useUserStore } = await import('./userStore');
+            useUserStore.getState().logout();
+            console.log('User store cleared');
+          } catch (e) {
+            console.log('Failed to clear user store:', e);
+          }
+          
+          // Clear other stores that might have reset methods
+          const storeModules = [
+            './betStore',
+            './challengeStore', 
+            './impactStore',
+            './missionStore',
+            './leaderboardStore',
+            './badgeStore',
+            './liveEventStore',
+            './aiStore'
+          ];
+          
+          for (const storeModule of storeModules) {
             try {
-              const { useUserStore } = await import('./userStore');
-              useUserStore.getState().logout();
-            } catch (e) {
-              console.log('Failed to clear user store:', e);
-            }
-            
-            // Clear chat store
-            try {
-              const { useChatStore } = await import('./chatStore');
-              const chatState = useChatStore.getState();
-              if (chatState && typeof chatState.reset === 'function') {
-                chatState.reset();
+              const module = await import(storeModule);
+              const storeKey = Object.keys(module).find(key => key.startsWith('use') && key.endsWith('Store'));
+              if (storeKey) {
+                const store = module[storeKey];
+                const state = store.getState();
+                if (state && typeof state.reset === 'function') {
+                  state.reset();
+                  console.log(`${storeModule} cleared`);
+                }
               }
             } catch (e) {
-              console.log('Failed to clear chat store:', e);
+              console.log(`Failed to clear ${storeModule}:`, e);
             }
-            
-            // Clear AsyncStorage
-            await AsyncStorage.clear();
-          } catch (error) {
-            console.error('Error clearing storage during logout:', error);
           }
-        })();
+          
+          // Clear chat store separately as it might not have reset
+          try {
+            const { useChatStore } = await import('./chatStore');
+            const chatState = useChatStore.getState();
+            if (chatState && typeof chatState.reset === 'function') {
+              chatState.reset();
+              console.log('Chat store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear chat store:', e);
+          }
+          
+          // Clear AsyncStorage completely
+          await AsyncStorage.clear();
+          console.log('AsyncStorage cleared');
+          
+          console.log('=== LOGOUT COMPLETED ===');
+          
+        } catch (error) {
+          console.error('Error clearing storage during logout:', error);
+        }
       },
       
       clearError: () => set({ error: null }),
