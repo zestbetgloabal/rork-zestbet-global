@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
@@ -60,6 +60,11 @@ function RootLayoutNav() {
   // Check if the current route is in the legal group
   const isInLegalGroup = segments[0] === 'legal';
   
+  // Debug: Log auth state changes
+  React.useEffect(() => {
+    console.log('Auth state changed:', { isAuthenticated, hasToken: !!token });
+  }, [isAuthenticated, token]);
+  
   useEffect(() => {
     // Handle navigation based on authentication state
     const handleNavigation = () => {
@@ -85,10 +90,17 @@ function RootLayoutNav() {
         router.replace('/(tabs)');
         return;
       }
+      
+      // Special case: if user was logged out (no token, no auth) and is in tabs, redirect to auth
+      if (!isAuthenticated && !token && segments[0] === '(tabs)') {
+        console.log('User logged out, redirecting from tabs to auth');
+        router.replace('/(auth)');
+        return;
+      }
     };
     
     // Small delay to ensure state is properly updated
-    const timeoutId = setTimeout(handleNavigation, 150);
+    const timeoutId = setTimeout(handleNavigation, 100);
     
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);

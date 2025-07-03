@@ -350,7 +350,9 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      logout: () => {
+      logout: async () => {
+        console.log('Logout initiated');
+        
         // Clear auth state immediately and synchronously
         set({ 
           token: null, 
@@ -359,63 +361,54 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false 
         });
         
-        // Clear all stores and storage asynchronously
-        setTimeout(async () => {
+        try {
+          // Clear specific storage keys first
+          const keysToRemove = [
+            'auth-storage',
+            'user-storage',
+            'chat-storage',
+            'bet-storage',
+            'challenge-storage',
+            'impact-storage',
+            'mission-storage',
+            'leaderboard-storage',
+            'badge-storage',
+            'live-event-storage',
+            'ai-storage'
+          ];
+          
+          await AsyncStorage.multiRemove(keysToRemove);
+          
+          // Clear user store immediately
+          const { useUserStore } = await import('./userStore');
+          useUserStore.getState().logout();
+          
+          // Clear chat store if it exists
           try {
-            // Clear all persisted data from AsyncStorage
-            await AsyncStorage.clear();
-            
-            // Reset user store
-            try {
-              const { useUserStore } = await import('./userStore');
-              useUserStore.getState().logout();
-            } catch (error) {
-              console.error('Error resetting userStore:', error);
-            }
-            
-            // Reset chat store
-            try {
-              const { useChatStore } = await import('./chatStore');
+            const { useChatStore } = await import('./chatStore');
+            if (useChatStore.getState().reset) {
               useChatStore.getState().reset();
-            } catch (error) {
-              console.error('Error resetting chatStore:', error);
             }
-            
-            // Reset other stores that have reset methods
-            const storeResetters = [
-              { name: 'betStore', import: () => import('./betStore') },
-              { name: 'challengeStore', import: () => import('./challengeStore') },
-              { name: 'impactStore', import: () => import('./impactStore') },
-              { name: 'missionStore', import: () => import('./missionStore') },
-              { name: 'leaderboardStore', import: () => import('./leaderboardStore') },
-              { name: 'badgeStore', import: () => import('./badgeStore') },
-              { name: 'liveEventStore', import: () => import('./liveEventStore') },
-              { name: 'aiStore', import: () => import('./aiStore') }
-            ];
-            
-            for (const store of storeResetters) {
-              try {
-                const storeModule = await store.import();
-                const storeInstance = Object.values(storeModule)[0] as any;
-                if (storeInstance && typeof storeInstance.getState === 'function') {
-                  const state = storeInstance.getState();
-                  if (typeof state.reset === 'function') {
-                    state.reset();
-                  }
-                }
-              } catch (error) {
-                console.error(`Error resetting ${store.name}:`, error);
-              }
-            }
-            
           } catch (error) {
-            console.error('Error during logout cleanup:', error);
+            console.log('Chat store not available or no reset method');
           }
-        }, 100);
+          
+          // Clear all AsyncStorage as final step
+          await AsyncStorage.clear();
+          
+          console.log('Logout completed successfully');
+        } catch (error) {
+          console.error('Error during logout:', error);
+          // Even if there's an error, try to clear everything
+          try {
+            await AsyncStorage.clear();
+          } catch (clearError) {
+            console.error('Error clearing AsyncStorage:', clearError);
+          }
+        }
       },
       
-      forceLogout: () => {
-        // Emergency logout that clears everything immediately
+      forceLogout: async () => {
         console.log('Force logout initiated');
         
         // Clear auth state immediately
@@ -426,33 +419,28 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false 
         });
         
-        // Clear AsyncStorage completely
-        AsyncStorage.clear().catch(error => {
-          console.error('Error clearing AsyncStorage:', error);
-        });
-        
-        // Force reload the app state by clearing all stores
-        setTimeout(() => {
+        try {
+          // Clear AsyncStorage completely
+          await AsyncStorage.clear();
+          
+          // Clear user store directly
+          const { useUserStore } = await import('./userStore');
+          useUserStore.getState().logout();
+          
+          // Clear chat store if available
           try {
-            // Clear user store directly
-            const userStore = require('./userStore').useUserStore;
-            if (userStore && userStore.getState && userStore.getState().logout) {
-              userStore.getState().logout();
+            const { useChatStore } = await import('./chatStore');
+            if (useChatStore.getState().reset) {
+              useChatStore.getState().reset();
             }
           } catch (error) {
-            console.error('Error force clearing user store:', error);
+            console.log('Chat store not available for force logout');
           }
           
-          try {
-            // Clear chat store directly
-            const chatStore = require('./chatStore').useChatStore;
-            if (chatStore && chatStore.getState && chatStore.getState().reset) {
-              chatStore.getState().reset();
-            }
-          } catch (error) {
-            console.error('Error force clearing chat store:', error);
-          }
-        }, 50);
+          console.log('Force logout completed');
+        } catch (error) {
+          console.error('Error during force logout:', error);
+        }
       },
       
       clearError: () => set({ error: null }),

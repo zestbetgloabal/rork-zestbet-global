@@ -17,30 +17,49 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
+      console.log('Starting logout process...');
       
-      // Try normal logout first
-      logout();
+      // Call logout function
+      await logout();
       
-      // Give time for cleanup and navigation
+      console.log('Logout completed, forcing navigation to auth...');
+      
+      // Force navigation to auth screen immediately
+      router.replace('/(auth)');
+      
+      // Reset loading state after a short delay
       setTimeout(() => {
         setIsLoggingOut(false);
-        // The navigation will be handled by the root layout
-      }, 1000);
+      }, 500);
       
     } catch (error) {
-      console.error('Normal logout error, trying force logout:', error);
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
       
-      try {
-        // Try force logout as fallback
-        forceLogout();
-        setTimeout(() => {
-          setIsLoggingOut(false);
-        }, 500);
-      } catch (forceError) {
-        console.error('Force logout error:', forceError);
-        setIsLoggingOut(false);
-        Alert.alert('Logout Failed', 'There was an error logging out. Please restart the app.');
-      }
+      // Try force logout as fallback
+      Alert.alert(
+        'Logout Error',
+        'Normal logout failed. Try force logout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Force Logout', 
+            onPress: async () => {
+              try {
+                setIsLoggingOut(true);
+                await forceLogout();
+                router.replace('/(auth)');
+                setTimeout(() => setIsLoggingOut(false), 500);
+              } catch (forceError) {
+                console.error('Force logout error:', forceError);
+                setIsLoggingOut(false);
+                Alert.alert('Error', 'Please restart the app to logout.');
+              }
+            },
+            style: 'destructive'
+          }
+        ]
+      );
     }
   };
 
@@ -165,31 +184,51 @@ export default function ProfileScreen() {
           )}
         </TouchableOpacity>
         
-        {/* Debug button for testing force logout */}
-        <TouchableOpacity 
-          style={[styles.logoutButton, { backgroundColor: colors.warning, marginTop: 8 }]} 
-          onPress={() => {
-            Alert.alert(
-              'Force Logout',
-              'This will force logout immediately. Use only if normal logout fails.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Force Logout', 
-                  onPress: () => {
-                    setIsLoggingOut(true);
-                    forceLogout();
-                    setTimeout(() => setIsLoggingOut(false), 500);
-                  }, 
-                  style: 'destructive' 
-                }
-              ]
-            );
-          }}
-          disabled={isLoggingOut}
-        >
-          <Text style={styles.logoutText}>Force Logout (Debug)</Text>
-        </TouchableOpacity>
+        {/* Debug section */}
+        <View style={styles.debugSection}>
+          <Text style={styles.debugTitle}>Debug Options</Text>
+          
+          <TouchableOpacity 
+            style={[styles.debugButton, { backgroundColor: colors.warning }]} 
+            onPress={() => {
+              Alert.alert(
+                'Force Logout',
+                'This will force logout immediately. Use only if normal logout fails.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Force Logout', 
+                    onPress: async () => {
+                      setIsLoggingOut(true);
+                      await forceLogout();
+                      router.replace('/(auth)');
+                      setTimeout(() => setIsLoggingOut(false), 500);
+                    }, 
+                    style: 'destructive' 
+                  }
+                ]
+              );
+            }}
+            disabled={isLoggingOut}
+          >
+            <Text style={styles.debugButtonText}>Force Logout</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.debugButton, { backgroundColor: colors.info }]} 
+            onPress={() => {
+              const { isAuthenticated, token } = useAuthStore.getState();
+              const { user } = useUserStore.getState();
+              Alert.alert(
+                'Auth State Debug',
+                `Authenticated: ${isAuthenticated}\nHas Token: ${!!token}\nUser: ${user?.username || 'None'}`,
+                [{ text: 'OK' }]
+              );
+            }}
+          >
+            <Text style={styles.debugButtonText}>Check Auth State</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -297,5 +336,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  debugSection: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  debugTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.textSecondary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  debugButton: {
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  debugButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
