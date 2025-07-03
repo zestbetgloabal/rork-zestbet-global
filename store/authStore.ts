@@ -373,36 +373,103 @@ export const useAuthStore = create<AuthState>()(
             console.log('Failed to clear user store:', e);
           }
           
-          // Clear other stores that might have reset methods
-          const storeModules = [
-            './betStore',
-            './challengeStore', 
-            './impactStore',
-            './missionStore',
-            './leaderboardStore',
-            './badgeStore',
-            './liveEventStore',
-            './aiStore'
-          ];
-          
-          for (const storeModule of storeModules) {
-            try {
-              const module = await import(storeModule);
-              const storeKey = Object.keys(module).find(key => key.startsWith('use') && key.endsWith('Store'));
-              if (storeKey) {
-                const store = module[storeKey];
-                const state = store.getState();
-                if (state && typeof state.reset === 'function') {
-                  state.reset();
-                  console.log(`${storeModule} cleared`);
-                }
-              }
-            } catch (e) {
-              console.log(`Failed to clear ${storeModule}:`, e);
+          // Clear bet store
+          try {
+            const { useBetStore } = await import('./betStore');
+            const betState = useBetStore.getState();
+            if (betState && typeof betState.reset === 'function') {
+              betState.reset();
+              console.log('Bet store cleared');
             }
+          } catch (e) {
+            console.log('Failed to clear bet store:', e);
           }
           
-          // Clear chat store separately as it might not have reset
+          // Clear challenge store
+          try {
+            const { useChallengeStore } = await import('./challengeStore');
+            const challengeState = useChallengeStore.getState();
+            if (challengeState && typeof challengeState.reset === 'function') {
+              challengeState.reset();
+              console.log('Challenge store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear challenge store:', e);
+          }
+          
+          // Clear impact store
+          try {
+            const { useImpactStore } = await import('./impactStore');
+            const impactState = useImpactStore.getState();
+            if (impactState && typeof impactState.reset === 'function') {
+              impactState.reset();
+              console.log('Impact store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear impact store:', e);
+          }
+          
+          // Clear mission store
+          try {
+            const { useMissionStore } = await import('./missionStore');
+            const missionState = useMissionStore.getState();
+            if (missionState && typeof missionState.reset === 'function') {
+              missionState.reset();
+              console.log('Mission store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear mission store:', e);
+          }
+          
+          // Clear leaderboard store
+          try {
+            const { useLeaderboardStore } = await import('./leaderboardStore');
+            const leaderboardState = useLeaderboardStore.getState();
+            if (leaderboardState && typeof leaderboardState.reset === 'function') {
+              leaderboardState.reset();
+              console.log('Leaderboard store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear leaderboard store:', e);
+          }
+          
+          // Clear badge store
+          try {
+            const { useBadgeStore } = await import('./badgeStore');
+            const badgeState = useBadgeStore.getState();
+            if (badgeState && typeof badgeState.reset === 'function') {
+              badgeState.reset();
+              console.log('Badge store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear badge store:', e);
+          }
+          
+          // Clear live event store
+          try {
+            const { useLiveEventStore } = await import('./liveEventStore');
+            const liveEventState = useLiveEventStore.getState();
+            if (liveEventState && typeof liveEventState.reset === 'function') {
+              liveEventState.reset();
+              console.log('Live event store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear live event store:', e);
+          }
+          
+          // Clear AI store
+          try {
+            const { useAIStore } = await import('./aiStore');
+            const aiState = useAIStore.getState();
+            if (aiState && typeof aiState.reset === 'function') {
+              aiState.reset();
+              console.log('AI store cleared');
+            }
+          } catch (e) {
+            console.log('Failed to clear AI store:', e);
+          }
+          
+          // Clear chat store
           try {
             const { useChatStore } = await import('./chatStore');
             const chatState = useChatStore.getState();
