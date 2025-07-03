@@ -10,60 +10,29 @@ import ZestCurrency from '@/components/ZestCurrency';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { logout, forceLogout } = useAuthStore();
+  const { logout } = useAuthStore();
   const { user } = useUserStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      console.log('Starting logout process...');
       
       // Call logout function
       logout();
       
-      console.log('Logout called, waiting briefly then navigating...');
-      
       // Wait a moment for state to update, then navigate
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Force navigation to auth screen
+      // Navigate to auth screen
       router.replace('/(auth)');
       
-      console.log('Navigation to auth completed');
-      
-      // Reset loading state
       setIsLoggingOut(false);
       
     } catch (error) {
       console.error('Logout error:', error);
       setIsLoggingOut(false);
-      
-      // Try force logout as fallback
-      Alert.alert(
-        'Logout Error',
-        'Normal logout failed. Try force logout?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Force Logout', 
-            onPress: async () => {
-              try {
-                setIsLoggingOut(true);
-                forceLogout();
-                await new Promise(resolve => setTimeout(resolve, 200));
-                router.replace('/(auth)');
-                setIsLoggingOut(false);
-              } catch (forceError) {
-                console.error('Force logout error:', forceError);
-                setIsLoggingOut(false);
-                Alert.alert('Error', 'Please restart the app to logout.');
-              }
-            },
-            style: 'destructive'
-          }
-        ]
-      );
+      Alert.alert('Error', 'Logout failed. Please try again.');
     }
   };
 
@@ -187,83 +156,6 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Logout</Text>
           )}
         </TouchableOpacity>
-        
-        {/* Debug section */}
-        <View style={styles.debugSection}>
-          <Text style={styles.debugTitle}>Debug Options</Text>
-          
-          <TouchableOpacity 
-            style={[styles.debugButton, { backgroundColor: colors.warning }]} 
-            onPress={() => {
-              Alert.alert(
-                'Force Logout',
-                'This will force logout immediately. Use only if normal logout fails.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Force Logout', 
-                    onPress: async () => {
-                      setIsLoggingOut(true);
-                      forceLogout();
-                      await new Promise(resolve => setTimeout(resolve, 200));
-                      router.replace('/(auth)');
-                      setIsLoggingOut(false);
-                    }, 
-                    style: 'destructive' 
-                  }
-                ]
-              );
-            }}
-            disabled={isLoggingOut}
-          >
-            <Text style={styles.debugButtonText}>Force Logout</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.debugButton, { backgroundColor: colors.info }]} 
-            onPress={() => {
-              const { isAuthenticated, token } = useAuthStore.getState();
-              const { user } = useUserStore.getState();
-              Alert.alert(
-                'Auth State Debug',
-                `Authenticated: ${isAuthenticated}\nHas Token: ${!!token}\nToken: ${token ? 'exists' : 'null'}\nUser: ${user?.username || 'None'}`,
-                [{ text: 'OK' }]
-              );
-            }}
-          >
-            <Text style={styles.debugButtonText}>Check Auth State</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.debugButton, { backgroundColor: colors.secondary }]} 
-            onPress={() => {
-              console.log('=== MANUAL LOGOUT TEST ===');
-              logout();
-              console.log('Logout called, checking state...');
-              setTimeout(() => {
-                const { isAuthenticated, token } = useAuthStore.getState();
-                console.log('State after logout:', { isAuthenticated, hasToken: !!token });
-                Alert.alert(
-                  'Logout Test',
-                  `Auth after logout: ${isAuthenticated}\nToken after logout: ${!!token}`,
-                  [{ text: 'OK' }]
-                );
-              }, 100);
-            }}
-          >
-            <Text style={styles.debugButtonText}>Test Logout Only</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.debugButton, { backgroundColor: '#9333ea' }]} 
-            onPress={() => {
-              console.log('=== MANUAL NAVIGATION TEST ===');
-              router.replace('/(auth)');
-            }}
-          >
-            <Text style={styles.debugButtonText}>Test Navigation to Auth</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -371,28 +263,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  debugSection: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  debugTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.textSecondary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  debugButton: {
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  debugButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

@@ -32,7 +32,6 @@ interface AuthState {
   phoneLogin: (phone: string, code: string) => Promise<boolean>;
   verifyPhone: (phone: string, code: string) => Promise<boolean>;
   logout: () => void;
-  forceLogout: () => void;
   clearError: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
@@ -351,68 +350,6 @@ export const useAuthStore = create<AuthState>()(
       },
       
       logout: () => {
-        console.log('=== LOGOUT INITIATED ===');
-        
-        // Clear auth state immediately and synchronously
-        const newState = { 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false 
-        };
-        
-        console.log('Setting auth state to:', newState);
-        set(newState);
-        
-        // Verify state was set
-        const currentState = get();
-        console.log('Auth state after logout:', {
-          token: currentState.token,
-          isAuthenticated: currentState.isAuthenticated
-        });
-        
-        // Clear all stores and storage asynchronously but don't wait for it
-        (async () => {
-          try {
-            console.log('Starting async cleanup...');
-            
-            // Clear user store
-            try {
-              const { useUserStore } = await import('./userStore');
-              useUserStore.getState().logout();
-              console.log('User store cleared');
-            } catch (e) {
-              console.log('Failed to clear user store:', e);
-            }
-            
-            // Clear chat store
-            try {
-              const { useChatStore } = await import('./chatStore');
-              const chatState = useChatStore.getState();
-              if (chatState && typeof chatState.reset === 'function') {
-                chatState.reset();
-                console.log('Chat store cleared');
-              }
-            } catch (e) {
-              console.log('Failed to clear chat store:', e);
-            }
-            
-            // Clear all AsyncStorage
-            await AsyncStorage.clear();
-            console.log('AsyncStorage cleared');
-            
-            console.log('=== LOGOUT CLEANUP COMPLETED ===');
-          } catch (error) {
-            console.error('Error clearing storage during logout:', error);
-          }
-        })();
-        
-        console.log('=== LOGOUT FUNCTION COMPLETED ===');
-      },
-      
-      forceLogout: () => {
-        console.log('Force logout initiated');
-        
         // Clear auth state immediately
         set({ 
           token: null, 
@@ -421,7 +358,7 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false 
         });
         
-        // Clear everything asynchronously
+        // Clear all stores and storage asynchronously
         (async () => {
           try {
             // Clear user store
@@ -443,12 +380,10 @@ export const useAuthStore = create<AuthState>()(
               console.log('Failed to clear chat store:', e);
             }
             
-            // Clear AsyncStorage completely
+            // Clear AsyncStorage
             await AsyncStorage.clear();
-            
-            console.log('Force logout completed');
           } catch (error) {
-            console.error('Error during force logout:', error);
+            console.error('Error clearing storage during logout:', error);
           }
         })();
       },
