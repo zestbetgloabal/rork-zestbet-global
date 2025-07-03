@@ -351,44 +351,63 @@ export const useAuthStore = create<AuthState>()(
       },
       
       logout: () => {
-        console.log('Logout initiated');
+        console.log('=== LOGOUT INITIATED ===');
         
         // Clear auth state immediately and synchronously
-        set({ 
+        const newState = { 
           token: null, 
           isAuthenticated: false, 
           error: null, 
           isLoading: false 
+        };
+        
+        console.log('Setting auth state to:', newState);
+        set(newState);
+        
+        // Verify state was set
+        const currentState = get();
+        console.log('Auth state after logout:', {
+          token: currentState.token,
+          isAuthenticated: currentState.isAuthenticated
         });
         
         // Clear all stores and storage asynchronously but don't wait for it
         (async () => {
           try {
-            // Clear all stores immediately
-            const stores = [
-              () => import('./userStore').then(m => m.useUserStore.getState().logout()),
-              () => import('./chatStore').then(m => m.useChatStore.getState().reset()),
-              () => import('./betStore').then(m => m.useBetStore.getState().reset()),
-              () => import('./challengeStore').then(m => m.useChallengeStore.getState().reset()),
-              () => import('./impactStore').then(m => m.useImpactStore.getState().reset()),
-              () => import('./missionStore').then(m => m.useMissionStore.getState().reset()),
-              () => import('./leaderboardStore').then(m => m.useLeaderboardStore.getState().reset()),
-              () => import('./badgeStore').then(m => m.useBadgeStore.getState().reset()),
-              () => import('./liveEventStore').then(m => m.useLiveEventStore.getState().reset()),
-              () => import('./aiStore').then(m => m.useAIStore.getState().reset())
-            ];
+            console.log('Starting async cleanup...');
             
-            // Clear all stores
-            await Promise.allSettled(stores.map(store => store().catch(e => console.log('Store clear failed:', e))));
+            // Clear user store
+            try {
+              const { useUserStore } = await import('./userStore');
+              useUserStore.getState().logout();
+              console.log('User store cleared');
+            } catch (e) {
+              console.log('Failed to clear user store:', e);
+            }
+            
+            // Clear chat store
+            try {
+              const { useChatStore } = await import('./chatStore');
+              const chatState = useChatStore.getState();
+              if (chatState && typeof chatState.reset === 'function') {
+                chatState.reset();
+                console.log('Chat store cleared');
+              }
+            } catch (e) {
+              console.log('Failed to clear chat store:', e);
+            }
             
             // Clear all AsyncStorage
             await AsyncStorage.clear();
+            console.log('AsyncStorage cleared');
             
-            console.log('Logout storage cleared successfully');
+            console.log('=== LOGOUT CLEANUP COMPLETED ===');
           } catch (error) {
             console.error('Error clearing storage during logout:', error);
           }
         })();
+        
+        console.log('=== LOGOUT FUNCTION COMPLETED ===');
       },
       
       forceLogout: () => {
@@ -405,22 +424,24 @@ export const useAuthStore = create<AuthState>()(
         // Clear everything asynchronously
         (async () => {
           try {
-            // Clear all stores immediately
-            const stores = [
-              () => import('./userStore').then(m => m.useUserStore.getState().logout()),
-              () => import('./chatStore').then(m => m.useChatStore.getState().reset()),
-              () => import('./betStore').then(m => m.useBetStore.getState().reset()),
-              () => import('./challengeStore').then(m => m.useChallengeStore.getState().reset()),
-              () => import('./impactStore').then(m => m.useImpactStore.getState().reset()),
-              () => import('./missionStore').then(m => m.useMissionStore.getState().reset()),
-              () => import('./leaderboardStore').then(m => m.useLeaderboardStore.getState().reset()),
-              () => import('./badgeStore').then(m => m.useBadgeStore.getState().reset()),
-              () => import('./liveEventStore').then(m => m.useLiveEventStore.getState().reset()),
-              () => import('./aiStore').then(m => m.useAIStore.getState().reset())
-            ];
+            // Clear user store
+            try {
+              const { useUserStore } = await import('./userStore');
+              useUserStore.getState().logout();
+            } catch (e) {
+              console.log('Failed to clear user store:', e);
+            }
             
-            // Clear all stores
-            await Promise.allSettled(stores.map(store => store().catch(e => console.log('Store clear failed:', e))));
+            // Clear chat store
+            try {
+              const { useChatStore } = await import('./chatStore');
+              const chatState = useChatStore.getState();
+              if (chatState && typeof chatState.reset === 'function') {
+                chatState.reset();
+              }
+            } catch (e) {
+              console.log('Failed to clear chat store:', e);
+            }
             
             // Clear AsyncStorage completely
             await AsyncStorage.clear();

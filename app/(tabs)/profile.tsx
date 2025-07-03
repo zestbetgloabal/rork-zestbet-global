@@ -14,23 +14,26 @@ export default function ProfileScreen() {
   const { user } = useUserStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
       console.log('Starting logout process...');
       
-      // Call logout function (now synchronous)
+      // Call logout function
       logout();
       
-      console.log('Logout completed, forcing navigation to auth...');
+      console.log('Logout called, waiting briefly then navigating...');
       
-      // Force navigation to auth screen immediately
+      // Wait a moment for state to update, then navigate
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Force navigation to auth screen
       router.replace('/(auth)');
       
-      // Reset loading state after a short delay
-      setTimeout(() => {
-        setIsLoggingOut(false);
-      }, 300);
+      console.log('Navigation to auth completed');
+      
+      // Reset loading state
+      setIsLoggingOut(false);
       
     } catch (error) {
       console.error('Logout error:', error);
@@ -44,12 +47,13 @@ export default function ProfileScreen() {
           { text: 'Cancel', style: 'cancel' },
           { 
             text: 'Force Logout', 
-            onPress: () => {
+            onPress: async () => {
               try {
                 setIsLoggingOut(true);
                 forceLogout();
+                await new Promise(resolve => setTimeout(resolve, 200));
                 router.replace('/(auth)');
-                setTimeout(() => setIsLoggingOut(false), 300);
+                setIsLoggingOut(false);
               } catch (forceError) {
                 console.error('Force logout error:', forceError);
                 setIsLoggingOut(false);
@@ -198,11 +202,12 @@ export default function ProfileScreen() {
                   { text: 'Cancel', style: 'cancel' },
                   { 
                     text: 'Force Logout', 
-                    onPress: () => {
+                    onPress: async () => {
                       setIsLoggingOut(true);
                       forceLogout();
+                      await new Promise(resolve => setTimeout(resolve, 200));
                       router.replace('/(auth)');
-                      setTimeout(() => setIsLoggingOut(false), 300);
+                      setIsLoggingOut(false);
                     }, 
                     style: 'destructive' 
                   }
@@ -221,12 +226,42 @@ export default function ProfileScreen() {
               const { user } = useUserStore.getState();
               Alert.alert(
                 'Auth State Debug',
-                `Authenticated: ${isAuthenticated}\nHas Token: ${!!token}\nUser: ${user?.username || 'None'}`,
+                `Authenticated: ${isAuthenticated}\nHas Token: ${!!token}\nToken: ${token ? 'exists' : 'null'}\nUser: ${user?.username || 'None'}`,
                 [{ text: 'OK' }]
               );
             }}
           >
             <Text style={styles.debugButtonText}>Check Auth State</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.debugButton, { backgroundColor: colors.secondary }]} 
+            onPress={() => {
+              console.log('=== MANUAL LOGOUT TEST ===');
+              logout();
+              console.log('Logout called, checking state...');
+              setTimeout(() => {
+                const { isAuthenticated, token } = useAuthStore.getState();
+                console.log('State after logout:', { isAuthenticated, hasToken: !!token });
+                Alert.alert(
+                  'Logout Test',
+                  `Auth after logout: ${isAuthenticated}\nToken after logout: ${!!token}`,
+                  [{ text: 'OK' }]
+                );
+              }, 100);
+            }}
+          >
+            <Text style={styles.debugButtonText}>Test Logout Only</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.debugButton, { backgroundColor: '#9333ea' }]} 
+            onPress={() => {
+              console.log('=== MANUAL NAVIGATION TEST ===');
+              router.replace('/(auth)');
+            }}
+          >
+            <Text style={styles.debugButtonText}>Test Navigation to Auth</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

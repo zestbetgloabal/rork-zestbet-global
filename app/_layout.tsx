@@ -62,8 +62,13 @@ function RootLayoutNav() {
   
   // Debug: Log auth state changes
   React.useEffect(() => {
-    console.log('Auth state changed:', { isAuthenticated, hasToken: !!token });
-  }, [isAuthenticated, token]);
+    console.log('=== AUTH STATE CHANGED ===', { 
+      isAuthenticated, 
+      hasToken: !!token, 
+      token: token ? 'exists' : 'null',
+      currentSegments: segments.join('/') 
+    });
+  }, [isAuthenticated, token, segments]);
   
   useEffect(() => {
     // Handle navigation based on authentication state
@@ -77,46 +82,42 @@ function RootLayoutNav() {
         currentPath: segments.join('/') 
       });
       
-      // If the user is not authenticated and not in the auth group or legal group, redirect to auth
-      if (!isAuthenticated && !token && !isInAuthGroup && !isInLegalGroup) {
-        console.log('Redirecting to auth - user not authenticated');
-        router.replace('/(auth)');
-        return;
+      // Priority 1: If user is logged out and in tabs or protected routes, redirect immediately
+      if (!isAuthenticated && !token) {
+        const currentRoute = segments[0];
+        const protectedRoutes = ['(tabs)', 'bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'live-events', 'create-challenge', 'challenge'];
+        
+        if (protectedRoutes.includes(currentRoute) && !isInAuthGroup && !isInLegalGroup) {
+          console.log('Redirecting to auth - user not authenticated in protected route');
+          router.replace('/(auth)');
+          return;
+        }
+        
+        // Also check if not in auth or legal group at all
+        if (!isInAuthGroup && !isInLegalGroup) {
+          console.log('Redirecting to auth - user not authenticated');
+          router.replace('/(auth)');
+          return;
+        }
       }
       
-      // If the user is authenticated and in the auth group, redirect to tabs
+      // Priority 2: If the user is authenticated and in the auth group, redirect to tabs
       if (isAuthenticated && token && isInAuthGroup) {
         console.log('Redirecting to tabs - user authenticated');
         router.replace('/(tabs)');
         return;
       }
-      
-      // Special case: if user was logged out (no token, no auth) and is in tabs, redirect to auth
-      if (!isAuthenticated && !token && segments[0] === '(tabs)') {
-        console.log('User logged out, redirecting from tabs to auth');
-        router.replace('/(auth)');
-        return;
-      }
-      
-      // Additional check: if user is in any protected route without auth, redirect
-      const protectedRoutes = ['bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'live-events', 'create-challenge', 'challenge'];
-      const currentRoute = segments[0];
-      if (!isAuthenticated && !token && protectedRoutes.includes(currentRoute)) {
-        console.log('Redirecting from protected route to auth');
-        router.replace('/(auth)');
-        return;
-      }
     };
     
-    // Immediate check for logout scenarios
+    // Immediate check for logout scenarios - no delay
     if (!isAuthenticated && !token && segments[0] === '(tabs)') {
-      console.log('Immediate logout redirect');
+      console.log('Immediate logout redirect from tabs');
       router.replace('/(auth)');
       return;
     }
     
-    // Small delay for other navigation scenarios
-    const timeoutId = setTimeout(handleNavigation, 50);
+    // Small delay for other navigation scenarios to avoid race conditions
+    const timeoutId = setTimeout(handleNavigation, 100);
     
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);
