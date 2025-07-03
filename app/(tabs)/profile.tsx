@@ -10,7 +10,7 @@ import ZestCurrency from '@/components/ZestCurrency';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { logout, forceLogout } = useAuthStore();
   const { user } = useUserStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -18,18 +18,29 @@ export default function ProfileScreen() {
     try {
       setIsLoggingOut(true);
       
-      // Call logout immediately
+      // Try normal logout first
       logout();
       
-      // Small delay to ensure state is updated
+      // Give time for cleanup and navigation
       setTimeout(() => {
         setIsLoggingOut(false);
-      }, 500);
+        // The navigation will be handled by the root layout
+      }, 1000);
       
     } catch (error) {
-      console.error('Logout error:', error);
-      setIsLoggingOut(false);
-      Alert.alert('Logout Failed', 'There was an error logging out. Please try again.');
+      console.error('Normal logout error, trying force logout:', error);
+      
+      try {
+        // Try force logout as fallback
+        forceLogout();
+        setTimeout(() => {
+          setIsLoggingOut(false);
+        }, 500);
+      } catch (forceError) {
+        console.error('Force logout error:', forceError);
+        setIsLoggingOut(false);
+        Alert.alert('Logout Failed', 'There was an error logging out. Please restart the app.');
+      }
     }
   };
 
@@ -152,6 +163,32 @@ export default function ProfileScreen() {
           ) : (
             <Text style={styles.logoutText}>Logout</Text>
           )}
+        </TouchableOpacity>
+        
+        {/* Debug button for testing force logout */}
+        <TouchableOpacity 
+          style={[styles.logoutButton, { backgroundColor: colors.warning, marginTop: 8 }]} 
+          onPress={() => {
+            Alert.alert(
+              'Force Logout',
+              'This will force logout immediately. Use only if normal logout fails.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Force Logout', 
+                  onPress: () => {
+                    setIsLoggingOut(true);
+                    forceLogout();
+                    setTimeout(() => setIsLoggingOut(false), 500);
+                  }, 
+                  style: 'destructive' 
+                }
+              ]
+            );
+          }}
+          disabled={isLoggingOut}
+        >
+          <Text style={styles.logoutText}>Force Logout (Debug)</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
