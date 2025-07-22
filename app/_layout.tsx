@@ -85,7 +85,7 @@ function RootLayoutNav() {
       // Priority 1: If user is logged out and in tabs or protected routes, redirect immediately
       if (!isAuthenticated && !token) {
         const currentRoute = segments[0];
-        const protectedRoutes = ['(tabs)', 'bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'live-events', 'create-challenge', 'challenge'];
+        const protectedRoutes = ['(tabs)', 'bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'create-challenge', 'challenge'];
         
         if (protectedRoutes.includes(currentRoute) && !isInAuthGroup && !isInLegalGroup) {
           console.log('Redirecting to auth - user not authenticated in protected route');
@@ -205,18 +205,7 @@ function RootLayoutNav() {
             title: "Profile",
           }} 
         />
-        <Stack.Screen 
-          name="live-events/[id]" 
-          options={{ 
-            title: "Live Event",
-          }} 
-        />
-        <Stack.Screen 
-          name="live-events/schedule" 
-          options={{ 
-            title: "Event Schedule",
-          }} 
-        />
+
         <Stack.Screen 
           name="create-challenge" 
           options={{ 

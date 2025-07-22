@@ -445,17 +445,7 @@ export const useAuthStore = create<AuthState>()(
             console.log('Failed to clear badge store:', e);
           }
           
-          // Clear live event store
-          try {
-            const { useLiveEventStore } = await import('./liveEventStore');
-            const liveEventState = useLiveEventStore.getState();
-            if (liveEventState && typeof liveEventState.reset === 'function') {
-              liveEventState.reset();
-              console.log('Live event store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear live event store:', e);
-          }
+
           
           // Clear AI store
           try {
