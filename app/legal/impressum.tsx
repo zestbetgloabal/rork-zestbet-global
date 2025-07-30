@@ -5,11 +5,11 @@ import colors from '@/constants/colors';
 
 export default function ImpressumScreen() {
   const handleEmailPress = () => {
-    Linking.openURL('mailto:info@zestbet.com');
+    Linking.openURL('mailto:zestbetglobal@gmail.com');
   };
   
   const handlePhonePress = () => {
-    Linking.openURL('tel:+4930123456789');
+    Linking.openURL('tel:015164055107');
   };
   
   const handleMapPress = () => {
@@ -45,14 +45,14 @@ export default function ImpressumScreen() {
           <Pressable style={styles.contactItem} onPress={handleEmailPress}>
             <Mail size={20} color={colors.primary} />
             <Text style={styles.contactText}>
-              info@zestbet.com
+              zestbetglobal@gmail.com
             </Text>
           </Pressable>
           
           <Pressable style={styles.contactItem} onPress={handlePhonePress}>
             <Phone size={20} color={colors.primary} />
             <Text style={styles.contactText}>
-              +49 30 123 456 789
+              015164055107
             </Text>
           </Pressable>
         </View>
