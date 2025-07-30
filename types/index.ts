@@ -327,6 +327,15 @@ export interface SocialPostAttachment {
   description?: string;
 }
 
+// Language types
+export type Language = 'en' | 'de' | 'es';
+
+export interface LanguageState {
+  currentLanguage: Language;
+  setLanguage: (language: Language) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}
+
 // Add this helper function to utils/helpers.ts if it doesn't exist
 export function getTimeRemaining(date: Date) {
   const total = new Date(date).getTime() - new Date().getTime();
