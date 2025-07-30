@@ -13,7 +13,7 @@ export default function ImpressumScreen() {
   };
   
   const handleMapPress = () => {
-    Linking.openURL('https://maps.google.com/?q=Friedrichstraße+123,+10117+Berlin,+Germany');
+    Linking.openURL('https://maps.google.com/?q=Nordlicht+6,+31275+Lehrte,+Germany');
   };
   
   return (
@@ -38,10 +38,7 @@ export default function ImpressumScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Managing Directors</Text>
           <Text style={styles.paragraph}>
-            Max Mustermann
-          </Text>
-          <Text style={styles.paragraph}>
-            Erika Musterfrau
+            Erhan Berse
           </Text>
         </View>
         
@@ -51,8 +48,8 @@ export default function ImpressumScreen() {
           <Pressable style={styles.contactItem} onPress={handleMapPress}>
             <MapPin size={20} color={colors.primary} />
             <Text style={styles.contactText}>
-              Friedrichstraße 123{'\n'}
-              10117 Berlin{'\n'}
+              Nordlicht 6{'\n'}
+              31275 Lehrte{'\n'}
               Germany
             </Text>
           </Pressable>
@@ -78,10 +75,10 @@ export default function ImpressumScreen() {
             According to § 55 Abs. 2 RStV:
           </Text>
           <Text style={styles.paragraph}>
-            Max Mustermann{'\n'}
+            Erhan Berse{'\n'}
             ZestBet GmbH{'\n'}
-            Friedrichstraße 123{'\n'}
-            10117 Berlin{'\n'}
+            Nordlicht 6{'\n'}
+            31275 Lehrte{'\n'}
             Germany
           </Text>
         </View>
