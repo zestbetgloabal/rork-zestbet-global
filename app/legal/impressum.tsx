@@ -22,19 +22,7 @@ export default function ImpressumScreen() {
         <Text style={styles.title}>Impressum</Text>
         <Text style={styles.subtitle}>Company Information</Text>
         
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ZestBet GmbH</Text>
-          <Text style={styles.paragraph}>
-            Registered in the Commercial Register of Berlin
-          </Text>
-          <Text style={styles.paragraph}>
-            Registration Number: HRB 123456
-          </Text>
-          <Text style={styles.paragraph}>
-            VAT ID: DE123456789
-          </Text>
-        </View>
-        
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Managing Directors</Text>
           <Text style={styles.paragraph}>
@@ -76,7 +64,6 @@ export default function ImpressumScreen() {
           </Text>
           <Text style={styles.paragraph}>
             Erhan Berse{'\n'}
-            ZestBet GmbH{'\n'}
             Nordlicht 6{'\n'}
             31275 Lehrte{'\n'}
             Germany
