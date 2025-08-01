@@ -365,6 +365,12 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false 
           });
           
+          // Clear user state
+          const { useUserStore } = await import('./userStore');
+          const { logout: userLogout } = useUserStore.getState();
+          userLogout();
+          console.log('User state cleared');
+          
           console.log('=== LOGOUT COMPLETED ===');
           
         } catch (error) {
@@ -376,6 +382,15 @@ export const useAuthStore = create<AuthState>()(
             error: null, 
             isLoading: false 
           });
+          
+          // Also try to clear user state
+          try {
+            const { useUserStore } = await import('./userStore');
+            const { logout: userLogout } = useUserStore.getState();
+            userLogout();
+          } catch (userError) {
+            console.error('Error clearing user state:', userError);
+          }
         }
       },
       
