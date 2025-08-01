@@ -47,13 +47,7 @@ export default function LiveEventsScreen() {
                 icon={<Plus size={18} color="white" />}
                 style={{ paddingHorizontal: 12 }}
               />
-              <Button
-                title="Schedule"
-                onPress={() => router.push('/live-events/schedule')}
-                variant="outline"
-                icon={<Calendar size={18} color={colors.primary} />}
-                style={{ paddingHorizontal: 12 }}
-              />
+
             </View>
           )
         }}
