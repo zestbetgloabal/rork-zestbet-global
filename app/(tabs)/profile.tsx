@@ -23,6 +23,9 @@ export default function ProfileScreen() {
       await logout();
       console.log('Profile: Logout function completed');
       
+      // Small delay to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Force navigation immediately without waiting
       console.log('Profile: Navigating to auth');
       router.replace('/(auth)');
@@ -38,6 +41,7 @@ export default function ProfileScreen() {
   };
 
   const confirmLogout = () => {
+    console.log('Profile: Logout button pressed');
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -45,7 +49,10 @@ export default function ProfileScreen() {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Logout', 
-          onPress: handleLogout, 
+          onPress: () => {
+            console.log('Profile: Logout confirmed');
+            handleLogout();
+          }, 
           style: 'destructive' 
         }
       ]
