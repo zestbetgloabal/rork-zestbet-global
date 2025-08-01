@@ -352,133 +352,30 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
-        // Clear auth state immediately
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false 
-        });
-        
-        console.log('Auth state cleared');
-        
-        // Clear all stores and storage
         try {
-          // Clear user store
-          try {
-            const { useUserStore } = await import('./userStore');
-            useUserStore.getState().logout();
-            console.log('User store cleared');
-          } catch (e) {
-            console.log('Failed to clear user store:', e);
-          }
-          
-          // Clear bet store
-          try {
-            const { useBetStore } = await import('./betStore');
-            const betState = useBetStore.getState();
-            if (betState && typeof betState.reset === 'function') {
-              betState.reset();
-              console.log('Bet store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear bet store:', e);
-          }
-          
-          // Clear challenge store
-          try {
-            const { useChallengeStore } = await import('./challengeStore');
-            const challengeState = useChallengeStore.getState();
-            if (challengeState && typeof challengeState.reset === 'function') {
-              challengeState.reset();
-              console.log('Challenge store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear challenge store:', e);
-          }
-          
-          // Clear impact store
-          try {
-            const { useImpactStore } = await import('./impactStore');
-            const impactState = useImpactStore.getState();
-            if (impactState && typeof impactState.reset === 'function') {
-              impactState.reset();
-              console.log('Impact store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear impact store:', e);
-          }
-          
-          // Clear mission store
-          try {
-            const { useMissionStore } = await import('./missionStore');
-            const missionState = useMissionStore.getState();
-            if (missionState && typeof missionState.reset === 'function') {
-              missionState.reset();
-              console.log('Mission store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear mission store:', e);
-          }
-          
-          // Clear leaderboard store
-          try {
-            const { useLeaderboardStore } = await import('./leaderboardStore');
-            const leaderboardState = useLeaderboardStore.getState();
-            if (leaderboardState && typeof leaderboardState.reset === 'function') {
-              leaderboardState.reset();
-              console.log('Leaderboard store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear leaderboard store:', e);
-          }
-          
-          // Clear badge store
-          try {
-            const { useBadgeStore } = await import('./badgeStore');
-            const badgeState = useBadgeStore.getState();
-            if (badgeState && typeof badgeState.reset === 'function') {
-              badgeState.reset();
-              console.log('Badge store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear badge store:', e);
-          }
-          
-
-          
-          // Clear AI store
-          try {
-            const { useAIStore } = await import('./aiStore');
-            const aiState = useAIStore.getState();
-            if (aiState && typeof aiState.reset === 'function') {
-              aiState.reset();
-              console.log('AI store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear AI store:', e);
-          }
-          
-          // Clear chat store
-          try {
-            const { useChatStore } = await import('./chatStore');
-            const chatState = useChatStore.getState();
-            if (chatState && typeof chatState.reset === 'function') {
-              chatState.reset();
-              console.log('Chat store cleared');
-            }
-          } catch (e) {
-            console.log('Failed to clear chat store:', e);
-          }
-          
-          // Clear AsyncStorage completely
+          // Clear AsyncStorage completely first
           await AsyncStorage.clear();
           console.log('AsyncStorage cleared');
+          
+          // Clear auth state
+          set({ 
+            token: null, 
+            isAuthenticated: false, 
+            error: null, 
+            isLoading: false 
+          });
           
           console.log('=== LOGOUT COMPLETED ===');
           
         } catch (error) {
-          console.error('Error clearing storage during logout:', error);
+          console.error('Error during logout:', error);
+          // Still clear auth state even if storage clear fails
+          set({ 
+            token: null, 
+            isAuthenticated: false, 
+            error: null, 
+            isLoading: false 
+          });
         }
       },
       
