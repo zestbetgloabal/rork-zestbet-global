@@ -353,23 +353,25 @@ export const useAuthStore = create<AuthState>()(
         console.log('=== LOGOUT STARTED ===');
         
         try {
-          // Clear AsyncStorage completely first
-          await AsyncStorage.clear();
-          console.log('AsyncStorage cleared');
-          
-          // Clear auth state
+          // Clear auth state first
           set({ 
             token: null, 
             isAuthenticated: false, 
             error: null, 
             isLoading: false 
           });
+          console.log('Auth state cleared');
           
           // Clear user state
           const { useUserStore } = await import('./userStore');
           const { logout: userLogout } = useUserStore.getState();
           userLogout();
           console.log('User state cleared');
+          
+          // Clear specific storage keys instead of all AsyncStorage
+          await AsyncStorage.removeItem('auth-storage');
+          await AsyncStorage.removeItem('user-storage');
+          console.log('Storage keys cleared');
           
           console.log('=== LOGOUT COMPLETED ===');
           

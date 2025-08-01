@@ -23,20 +23,17 @@ export default function ProfileScreen() {
       await logout();
       console.log('Profile: Logout function completed');
       
-      // Wait a moment for state to propagate
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Navigate to auth screen
+      // Force navigation immediately without waiting
       console.log('Profile: Navigating to auth');
       router.replace('/(auth)');
       
-      setIsLoggingOut(false);
       console.log('Profile: Logout process completed');
       
     } catch (error) {
       console.error('Logout error:', error);
-      setIsLoggingOut(false);
       Alert.alert('Error', 'Logout failed. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
