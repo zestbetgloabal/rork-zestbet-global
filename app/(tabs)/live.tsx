@@ -11,7 +11,7 @@ export default function LiveEventsScreen() {
   const router = useRouter();
   const { events, fetchEvents, isLoading } = useLiveEventStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'live' | 'upcoming'>('all');
+  const [filter, setFilter] = useState<'all' | 'live'>('all');
   
   useEffect(() => {
     fetchEvents();
@@ -26,12 +26,10 @@ export default function LiveEventsScreen() {
   const filteredEvents = events.filter(event => {
     if (filter === 'all') return true;
     if (filter === 'live') return event.status === 'live';
-    if (filter === 'upcoming') return event.status === 'upcoming';
     return true;
   });
   
   const liveEvents = events.filter(event => event.status === 'live');
-  const upcomingEvents = events.filter(event => event.status === 'upcoming');
   
   return (
     <View style={styles.container}>
@@ -68,12 +66,7 @@ export default function LiveEventsScreen() {
           <Text style={[styles.filterText, filter === 'live' && styles.activeFilterText]}>Live Now</Text>
         </Pressable>
         
-        <Pressable
-          style={[styles.filterButton, filter === 'upcoming' && styles.activeFilterButton]}
-          onPress={() => setFilter('upcoming')}
-        >
-          <Text style={[styles.filterText, filter === 'upcoming' && styles.activeFilterText]}>Upcoming</Text>
-        </Pressable>
+
       </View>
       
       {liveEvents.length > 0 && filter === 'all' && (
@@ -110,16 +103,7 @@ export default function LiveEventsScreen() {
             tintColor={colors.primary}
           />
         }
-        ListHeaderComponent={
-          filter === 'all' && upcomingEvents.length > 0 ? (
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <Calendar size={20} color={colors.text} />
-                <Text style={styles.sectionTitle}>Upcoming Events</Text>
-              </View>
-            </View>
-          ) : null
-        }
+
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Sparkles size={48} color={colors.primary} />
@@ -127,8 +111,6 @@ export default function LiveEventsScreen() {
             <Text style={styles.emptyDescription}>
               {filter === 'live' 
                 ? "Es gibt gerade keine Live-Events. Schau später wieder vorbei oder erstelle dein eigenes Event."
-                : filter === 'upcoming'
-                ? "Es sind noch keine Events geplant. Erstelle dein eigenes Event oder schau später wieder vorbei."
                 : "Es gibt keine Events anzuzeigen. Ziehe nach unten, um zu aktualisieren."}
             </Text>
             <View style={styles.emptyButtonContainer}>
