@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, Pressable, Platform } from 'react-native
 import { useRouter } from 'expo-router';
 import { LiveEvent } from '@/types';
 import colors from '@/constants/colors';
-import { Calendar, Clock, Users } from 'lucide-react-native';
+import { Calendar, Clock, Users, User } from 'lucide-react-native';
 import { formatDate, formatTime, getTimeRemaining, formatCompactNumber } from '@/utils/helpers';
 
 interface LiveEventCardProps {
@@ -16,6 +16,7 @@ export default function LiveEventCard({ event, compact = false }: LiveEventCardP
   
   const isUpcoming = event.status === 'upcoming';
   const isLive = event.status === 'live';
+  const isUserCreated = event.participants.some(p => p.role === 'host' && p.username !== 'ZestHost');
   
   const timeRemaining = isUpcoming ? getTimeRemaining(event.startTime) : null;
   
@@ -40,6 +41,11 @@ export default function LiveEventCard({ event, compact = false }: LiveEventCardP
             style={styles.compactImage}
           />
           {isLive && <View style={styles.liveIndicator}><Text style={styles.liveText}>LIVE</Text></View>}
+          {isUserCreated && (
+            <View style={[styles.userCreatedIndicator, styles.compactUserCreated]}>
+              <User size={12} color="white" />
+            </View>
+          )}
         </View>
         <View style={styles.compactContent}>
           <Text style={styles.compactTitle} numberOfLines={1}>{event.title}</Text>
@@ -72,6 +78,12 @@ export default function LiveEventCard({ event, compact = false }: LiveEventCardP
           style={styles.image}
         />
         {isLive && <View style={styles.liveIndicator}><Text style={styles.liveText}>LIVE</Text></View>}
+        {isUserCreated && (
+          <View style={styles.userCreatedIndicator}>
+            <User size={14} color="white" />
+            <Text style={styles.userCreatedText}>User Event</Text>
+          </View>
+        )}
       </View>
       
       <View style={styles.content}>
@@ -252,5 +264,26 @@ const styles = StyleSheet.create({
   compactInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  userCreatedIndicator: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userCreatedText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 10,
+    marginLeft: 4,
+  },
+  compactUserCreated: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
 });

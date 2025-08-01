@@ -4,7 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useLiveEventStore } from '@/store/liveEventStore';
 import LiveEventCard from '@/components/LiveEventCard';
 import colors from '@/constants/colors';
-import { Calendar, Sparkles, Video } from 'lucide-react-native';
+import { Calendar, Sparkles, Video, Plus } from 'lucide-react-native';
 import Button from '@/components/Button';
 
 export default function LiveEventsScreen() {
@@ -37,14 +37,24 @@ export default function LiveEventsScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{
-          title: 'Challenge Fieber Live',
+          title: 'Live Events',
           headerRight: () => (
-            <Button
-              title="Schedule"
-              onPress={() => router.push('/live-events/schedule')}
-              variant="outline"
-              icon={<Calendar size={18} color={colors.primary} />}
-            />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Button
+                title="Erstellen"
+                onPress={() => router.push('/create-live-event')}
+                variant="primary"
+                icon={<Plus size={18} color="white" />}
+                style={{ paddingHorizontal: 12 }}
+              />
+              <Button
+                title="Schedule"
+                onPress={() => router.push('/live-events/schedule')}
+                variant="outline"
+                icon={<Calendar size={18} color={colors.primary} />}
+                style={{ paddingHorizontal: 12 }}
+              />
+            </View>
           )
         }}
       />
@@ -119,22 +129,31 @@ export default function LiveEventsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Sparkles size={48} color={colors.primary} />
-            <Text style={styles.emptyTitle}>No events found</Text>
+            <Text style={styles.emptyTitle}>Keine Events gefunden</Text>
             <Text style={styles.emptyDescription}>
               {filter === 'live' 
-                ? "There are no live events right now. Check back later or explore upcoming events."
+                ? "Es gibt gerade keine Live-Events. Schau später wieder vorbei oder erstelle dein eigenes Event."
                 : filter === 'upcoming'
-                ? "There are no upcoming events scheduled yet. Check back later."
-                : "There are no events to display. Pull down to refresh."}
+                ? "Es sind noch keine Events geplant. Erstelle dein eigenes Event oder schau später wieder vorbei."
+                : "Es gibt keine Events anzuzeigen. Ziehe nach unten, um zu aktualisieren."}
             </Text>
-            {filter !== 'all' && (
+            <View style={styles.emptyButtonContainer}>
               <Button
-                title="Show All Events"
-                onPress={() => setFilter('all')}
-                variant="outline"
+                title="Event erstellen"
+                onPress={() => router.push('/create-live-event')}
+                variant="primary"
                 style={styles.emptyButton}
+                icon={<Plus size={18} color="white" />}
               />
-            )}
+              {filter !== 'all' && (
+                <Button
+                  title="Alle Events anzeigen"
+                  onPress={() => setFilter('all')}
+                  variant="outline"
+                  style={styles.emptyButton}
+                />
+              )}
+            </View>
           </View>
         }
       />
@@ -222,7 +241,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 20,
   },
+  emptyButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
   emptyButton: {
-    minWidth: 160,
+    minWidth: 140,
   },
 });

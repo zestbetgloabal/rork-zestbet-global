@@ -2,6 +2,22 @@ import { create } from 'zustand';
 import { LiveEvent, LiveChallenge, LiveInteraction } from '@/types';
 import { generateRandomId } from '@/utils/helpers';
 
+interface CreateUserEventData {
+  title: string;
+  description: string;
+  type: 'bet' | 'challenge';
+  visibility: 'public' | 'private';
+  difficulty: 'easy' | 'medium' | 'hard';
+  duration: number; // in seconds
+  maxParticipants: number;
+  hasFunding: boolean;
+  fundingGoal?: number;
+  scheduledTime: 'now' | 'later';
+  thumbnailUrl: string;
+  creatorId: string;
+  creatorUsername: string;
+}
+
 interface LiveEventState {
   events: LiveEvent[];
   currentEvent: LiveEvent | null;
@@ -12,6 +28,7 @@ interface LiveEventState {
   // Actions
   fetchEvents: () => Promise<void>;
   fetchEventById: (id: string) => Promise<LiveEvent | null>;
+  createUserEvent: (eventData: CreateUserEventData) => Promise<boolean>;
   joinEvent: (eventId: string, role?: 'host' | 'participant' | 'viewer') => Promise<boolean>;
   leaveEvent: (eventId: string) => Promise<boolean>;
   sendInteraction: (interaction: Omit<LiveInteraction, 'id' | 'timestamp'>) => Promise<boolean>;
@@ -104,10 +121,17 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
     
     try {
       // In a real app, this would be an API call
-      // For now, we'll use mock data
+      // For now, we'll use mock data and any user-created events
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
       
-      set({ events: mockEvents, isLoading: false });
+      // Get existing events (including user-created ones) and merge with mock data
+      const { events: existingEvents } = get();
+      const userCreatedEvents = existingEvents.filter(event => 
+        !mockEvents.some(mockEvent => mockEvent.id === event.id)
+      );
+      
+      const allEvents = [...userCreatedEvents, ...mockEvents];
+      set({ events: allEvents, isLoading: false });
     } catch (error) {
       set({ error: 'Failed to fetch events', isLoading: false });
     }
@@ -121,12 +145,65 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
       // For now, we'll use mock data
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
       
-      const event = mockEvents.find(e => e.id === id) || null;
+      const { events } = get();
+      const event = events.find(e => e.id === id) || null;
       set({ currentEvent: event, isLoading: false });
       return event;
     } catch (error) {
       set({ error: 'Failed to fetch event', isLoading: false });
       return null;
+    }
+  },
+  
+  createUserEvent: async (eventData: CreateUserEventData) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      // In a real app, this would be an API call
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      
+      const newEvent: LiveEvent = {
+        id: generateRandomId(),
+        title: eventData.title,
+        description: eventData.description,
+        status: eventData.scheduledTime === 'now' ? 'live' : 'upcoming',
+        startTime: eventData.scheduledTime === 'now' ? new Date() : new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now if scheduled
+        thumbnailUrl: eventData.thumbnailUrl,
+        participants: [
+          {
+            id: eventData.creatorId,
+            username: eventData.creatorUsername,
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000',
+            role: 'host'
+          }
+        ],
+        viewerCount: eventData.scheduledTime === 'now' ? 1 : 0,
+        fundingGoal: eventData.hasFunding ? eventData.fundingGoal : undefined,
+        fundingRaised: 0,
+        challenges: eventData.type === 'challenge' ? [
+          {
+            id: generateRandomId(),
+            title: `${eventData.title} - Hauptchallenge`,
+            description: eventData.description,
+            difficulty: eventData.difficulty,
+            duration: eventData.duration,
+            status: 'upcoming',
+            participants: [],
+            type: 'solo',
+            aiGenerated: false
+          }
+        ] : []
+      };
+      
+      // Add the new event to the events list
+      const { events } = get();
+      const updatedEvents = [newEvent, ...events];
+      
+      set({ events: updatedEvents, isLoading: false });
+      return true;
+    } catch (error) {
+      set({ error: 'Failed to create user event', isLoading: false });
+      return false;
     }
   },
   
