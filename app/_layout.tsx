@@ -83,11 +83,11 @@ function RootLayoutNav() {
       });
       
       // Priority 1: If user is logged out, redirect immediately from any protected route
-      if (!isAuthenticated && !token) {
+      if (!isAuthenticated || !token) {
         const currentRoute = segments[0];
-        const protectedRoutes = ['(tabs)', 'bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'create-challenge', 'challenge'];
+        const protectedRoutes = ['(tabs)', 'bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'create-challenge', 'challenge', 'live-events', 'modal'];
         
-        if (protectedRoutes.includes(currentRoute) || (!isInAuthGroup && !isInLegalGroup)) {
+        if (protectedRoutes.includes(currentRoute) || (!isInAuthGroup && !isInLegalGroup && currentRoute !== '+not-found')) {
           console.log('Redirecting to auth - user not authenticated');
           router.replace('/(auth)');
           return;
@@ -102,8 +102,10 @@ function RootLayoutNav() {
       }
     };
     
-    // Immediate navigation without any delay
-    handleNavigation();
+    // Use a small timeout to ensure state updates are processed
+    const timeoutId = setTimeout(handleNavigation, 50);
+    
+    return () => clearTimeout(timeoutId);
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);
   
   return (
