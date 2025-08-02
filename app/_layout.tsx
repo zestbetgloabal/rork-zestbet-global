@@ -82,19 +82,12 @@ function RootLayoutNav() {
         currentPath: segments.join('/') 
       });
       
-      // Priority 1: If user is logged out and in tabs or protected routes, redirect immediately
+      // Priority 1: If user is logged out, redirect immediately from any protected route
       if (!isAuthenticated && !token) {
         const currentRoute = segments[0];
         const protectedRoutes = ['(tabs)', 'bet', 'propose-bet', 'invite', 'wallet', 'profile-edit', 'ai-recommendations', 'user-preferences', 'profile', 'create-challenge', 'challenge'];
         
-        if (protectedRoutes.includes(currentRoute) && !isInAuthGroup && !isInLegalGroup) {
-          console.log('Redirecting to auth - user not authenticated in protected route');
-          router.replace('/(auth)');
-          return;
-        }
-        
-        // Also check if not in auth or legal group at all
-        if (!isInAuthGroup && !isInLegalGroup) {
+        if (protectedRoutes.includes(currentRoute) || (!isInAuthGroup && !isInLegalGroup)) {
           console.log('Redirecting to auth - user not authenticated');
           router.replace('/(auth)');
           return;
@@ -109,17 +102,8 @@ function RootLayoutNav() {
       }
     };
     
-    // Immediate check for logout scenarios - no delay
-    if (!isAuthenticated && !token && segments[0] === '(tabs)') {
-      console.log('Immediate logout redirect from tabs');
-      router.replace('/(auth)');
-      return;
-    }
-    
-    // Small delay for other navigation scenarios to avoid race conditions
-    const timeoutId = setTimeout(handleNavigation, 100);
-    
-    return () => clearTimeout(timeoutId);
+    // Immediate navigation without any delay
+    handleNavigation();
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);
   
   return (

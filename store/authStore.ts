@@ -398,66 +398,37 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
+        // Clear auth state immediately and synchronously
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false 
+        });
+        console.log('Auth state cleared');
+        
         try {
-          // Clear auth state immediately
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
-            isLoading: false 
-          });
-          console.log('Auth state cleared');
-          
           // Clear user state
           const { useUserStore } = await import('./userStore');
           const { logout: userLogout } = useUserStore.getState();
           userLogout();
           console.log('User state cleared');
           
-          // Force clear AsyncStorage keys
-          try {
-            await AsyncStorage.multiRemove(['auth-storage', 'user-storage']);
+          // Clear AsyncStorage in background (don't await)
+          AsyncStorage.multiRemove(['auth-storage', 'user-storage']).then(() => {
             console.log('Storage keys cleared');
-          } catch (storageError) {
+          }).catch((storageError) => {
             console.error('Storage clear error:', storageError);
             // Try individual removal as fallback
-            try {
-              await AsyncStorage.removeItem('auth-storage');
-              await AsyncStorage.removeItem('user-storage');
-              console.log('Storage keys cleared individually');
-            } catch (individualError) {
-              console.error('Individual storage clear error:', individualError);
-            }
-          }
+            AsyncStorage.removeItem('auth-storage').catch(() => {});
+            AsyncStorage.removeItem('user-storage').catch(() => {});
+          });
           
           console.log('=== LOGOUT COMPLETED ===');
           
         } catch (error) {
           console.error('Error during logout:', error);
-          // Force clear auth state even if other operations fail
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
-            isLoading: false 
-          });
-          
-          // Force clear user state
-          try {
-            const { useUserStore } = await import('./userStore');
-            const { logout: userLogout } = useUserStore.getState();
-            userLogout();
-          } catch (userError) {
-            console.error('Error clearing user state:', userError);
-          }
-          
-          // Force clear storage as last resort
-          try {
-            await AsyncStorage.clear();
-            console.log('All storage cleared as fallback');
-          } catch (clearError) {
-            console.error('Complete storage clear failed:', clearError);
-          }
+          // Auth state is already cleared above, so logout is still successful
         }
       },
       

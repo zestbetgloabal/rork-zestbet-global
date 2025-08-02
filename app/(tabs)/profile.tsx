@@ -19,14 +19,11 @@ export default function ProfileScreen() {
       setIsLoggingOut(true);
       console.log('Profile: Starting logout process');
       
-      // Call logout function (now async)
+      // Call logout function
       await logout();
       console.log('Profile: Logout function completed');
       
-      // Small delay to ensure state is updated
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Force navigation immediately without waiting
+      // Force navigation to auth screen
       console.log('Profile: Navigating to auth');
       router.replace('/(auth)');
       
