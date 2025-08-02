@@ -19,19 +19,19 @@ export default function ProfileScreen() {
       setIsLoggingOut(true);
       console.log('Profile: Starting logout process');
       
-      // Call logout function and wait for completion
+      // Call logout function - it will immediately clear auth state
       await logout();
       console.log('Profile: Logout function completed');
       
-      // The navigation will be handled automatically by the _layout.tsx
-      // based on the authentication state change
+      // Navigation will be handled automatically by _layout.tsx
+      // No need to manually navigate as auth state change triggers it
       
     } catch (error) {
       console.error('Logout error:', error);
       Alert.alert('Error', 'Logout failed. Please try again.');
-    } finally {
       setIsLoggingOut(false);
     }
+    // Don't set isLoggingOut to false here as component will unmount
   };
 
   const confirmLogout = () => {

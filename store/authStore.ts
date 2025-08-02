@@ -398,38 +398,30 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
+        // Immediately clear auth state to trigger navigation
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false 
+        });
+        console.log('Auth state cleared immediately');
+        
         try {
-          // Clear user state first
+          // Clear user state
           const { useUserStore } = await import('./userStore');
           const { logout: userLogout } = useUserStore.getState();
           userLogout();
           console.log('User state cleared');
           
-          // Clear AsyncStorage synchronously
+          // Clear AsyncStorage
           await AsyncStorage.multiRemove(['auth-storage', 'user-storage']);
           console.log('Storage cleared');
-          
-          // Clear auth state last to ensure everything is cleaned up
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
-            isLoading: false 
-          });
-          console.log('Auth state cleared');
           
           console.log('=== LOGOUT COMPLETED ===');
           
         } catch (error) {
-          console.error('Error during logout:', error);
-          // Force clear auth state even if there's an error
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
-            isLoading: false 
-          });
-          
+          console.error('Error during logout cleanup:', error);
           // Try to clear storage individually as fallback
           try {
             await AsyncStorage.removeItem('auth-storage');
