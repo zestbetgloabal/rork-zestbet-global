@@ -35,6 +35,7 @@ interface AuthState {
   clearError: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
+  loginWithFacebook: () => Promise<boolean>;
   loginWithBiometrics: () => Promise<boolean>;
 }
 
@@ -300,6 +301,51 @@ export const useAuthStore = create<AuthState>()(
           return true;
         } catch (error) {
           set({ error: 'Failed to login with Apple. Please try again.', isLoading: false });
+          return false;
+        }
+      },
+      
+      loginWithFacebook: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          // In a real app, this would integrate with Facebook Login
+          // Simulating API delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Set mock token
+          set({ token: 'mock-facebook-jwt-token', isLoading: false, isAuthenticated: true });
+          
+          // Set user data
+          const { useUserStore } = await import('./userStore');
+          const { setUser } = useUserStore.getState();
+          setUser({
+            id: '1',
+            username: 'facebook_user',
+            zestBalance: 100,
+            points: 0,
+            inviteCode: 'ZEST123',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+            biography: 'Facebook user on ZestBet. Ready to make predictions!',
+            socialMedia: {
+              instagram: '',
+              twitter: '',
+              facebook: '',
+              linkedin: '',
+              tiktok: '',
+              youtube: '',
+              snapchat: '',
+              website: ''
+            },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString(),
+            agbConsent: true,
+            privacyConsent: true,
+            consentDate: new Date().toISOString()
+          });
+          
+          return true;
+        } catch (error) {
+          set({ error: 'Failed to login with Facebook. Please try again.', isLoading: false });
           return false;
         }
       },

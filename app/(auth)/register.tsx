@@ -14,11 +14,13 @@ import { Eye, EyeOff, Check, Square } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import Button from '@/components/Button';
 import AppleSignInButton from '@/components/AppleSignInButton';
+import FacebookSignInButton from '@/components/FacebookSignInButton';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 import colors from '@/constants/colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register, isLoading, error, clearError, loginWithGoogle, loginWithApple } = useAuthStore();
+  const { register, isLoading, error, clearError, loginWithGoogle, loginWithApple, loginWithFacebook } = useAuthStore();
   
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -119,6 +121,17 @@ export default function RegisterScreen() {
     }
   };
   
+  const handleFacebookLogin = async () => {
+    try {
+      const success = await loginWithFacebook();
+      if (success) {
+        router.replace('/(tabs)');
+      }
+    } catch (error) {
+      Alert.alert('Facebook Login Error', 'Failed to login with Facebook');
+    }
+  };
+  
   const toggleAgbConsent = () => {
     setAgbConsent(!agbConsent);
   };
@@ -150,14 +163,17 @@ export default function RegisterScreen() {
         <Text style={styles.socialLoginText}>Sign up with</Text>
         
         <View style={styles.socialButtonsRow}>
-          <Pressable
-            style={styles.socialButton}
+          <GoogleSignInButton
             onPress={handleGoogleLogin}
+            loading={isLoading}
             disabled={isLoading}
-          >
-            <Text style={styles.googleIcon}>G</Text>
-            <Text style={styles.socialButtonLabel}>Google</Text>
-          </Pressable>
+          />
+          
+          <FacebookSignInButton
+            onPress={handleFacebookLogin}
+            loading={isLoading}
+            disabled={isLoading}
+          />
         </View>
         
         {Platform.OS === 'ios' && (
@@ -377,32 +393,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
     marginBottom: 16,
-  },
-  socialButton: {
-    width: 120,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  socialButtonLabel: {
-    fontSize: 14,
-    color: colors.text,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primary,
   },
   appleButton: {
     width: '100%',
