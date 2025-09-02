@@ -8,7 +8,18 @@ const listLiveEventsSchema = z.object({
   offset: z.number().min(0).default(0),
 });
 
-export default publicProcedure
+const placeBetSchema = z.object({
+  eventId: z.string(),
+  betType: z.enum(["home", "draw", "away", "yes", "no", "over", "under"]),
+  amount: z.number().min(1),
+  odds: z.number().min(1),
+});
+
+const getBettingDataSchema = z.object({
+  eventId: z.string(),
+});
+
+export const listLiveEventsProcedure = publicProcedure
   .input(listLiveEventsSchema)
   .query(async ({ input }) => {
     const { category, status, limit, offset } = input;
@@ -75,3 +86,91 @@ export default publicProcedure
       hasMore: offset + limit < filteredEvents.length,
     };
   });
+
+export const placeLiveBetProcedure = publicProcedure
+  .input(placeBetSchema)
+  .mutation(async ({ input }) => {
+    const { eventId, betType, amount, odds } = input;
+    
+    // TODO: Implement actual bet placement
+    // - Validate user balance
+    // - Create bet record
+    // - Update event betting data
+    // - Broadcast to WebRTC peers
+    
+    // Mock response
+    const betId = `bet_${Date.now()}`;
+    
+    return {
+      success: true,
+      betId,
+      message: "Bet placed successfully",
+      newBalance: 950, // Mock new balance
+      betDetails: {
+        id: betId,
+        eventId,
+        betType,
+        amount,
+        odds,
+        potentialWin: amount * odds,
+        timestamp: new Date(),
+        status: "active"
+      }
+    };
+  });
+
+export const getLiveBettingDataProcedure = publicProcedure
+  .input(getBettingDataSchema)
+  .query(async ({ input }) => {
+    const { eventId } = input;
+    
+    // TODO: Implement real-time betting data fetching
+    // - Get current odds
+    // - Get recent bets
+    // - Get betting statistics
+    
+    // Mock data
+    return {
+      eventId,
+      currentOdds: {
+        home: 2.1,
+        draw: 3.2,
+        away: 2.8,
+      },
+      recentBets: [
+        {
+          id: "bet1",
+          username: "User123",
+          betType: "home",
+          amount: 50,
+          odds: 2.1,
+          timestamp: new Date(Date.now() - 30000),
+        },
+        {
+          id: "bet2",
+          username: "BetMaster",
+          betType: "away",
+          amount: 100,
+          odds: 2.8,
+          timestamp: new Date(Date.now() - 60000),
+        },
+      ],
+      totalBets: {
+        home: { count: 45, amount: 2250 },
+        draw: { count: 12, amount: 600 },
+        away: { count: 38, amount: 1900 },
+      },
+      myActiveBets: [
+        {
+          id: "mybet1",
+          betType: "home",
+          amount: 25,
+          odds: 2.2,
+          potentialWin: 55,
+          timestamp: new Date(Date.now() - 300000),
+        }
+      ]
+    };
+  });
+
+export default listLiveEventsProcedure;

@@ -16,6 +16,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useLiveEventStore } from '@/store/liveEventStore';
 import { useUserStore } from '@/store/userStore';
 import LiveChallengeCard from '@/components/LiveChallengeCard';
+import LiveBettingComponent from '@/components/LiveBettingComponent';
 import Button from '@/components/Button';
 import colors from '@/constants/colors';
 import { 
@@ -26,7 +27,8 @@ import {
   MessageCircle, 
   Send, 
   Share2, 
-  Users 
+  Users,
+  Zap
 } from 'lucide-react-native';
 import { formatDateTime, formatCurrency } from '@/utils/helpers';
 import { LiveInteraction } from '@/types';
@@ -50,6 +52,7 @@ export default function LiveEventDetailScreen() {
   const [donationAmount, setDonationAmount] = useState('5');
   const [showDonationPanel, setShowDonationPanel] = useState(false);
   const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'betting' | 'challenges' | 'participants'>('betting');
   
   // Fix: Properly type the ref to FlatList
   const scrollViewRef = useRef<FlatList<LiveInteraction>>(null);
@@ -240,32 +243,64 @@ export default function LiveEventDetailScreen() {
           )}
         </View>
         
-        {/* Tabs for Challenges and Chat */}
+        {/* Tabs for Betting, Chat, Challenges */}
         <View style={styles.tabsContainer}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabsScrollContent}
           >
-            <Pressable style={[styles.tab, styles.activeTab]}>
-              <Text style={[styles.tabText, styles.activeTabText]}>Live Chat</Text>
+            <Pressable 
+              style={[styles.tab, activeTab === 'betting' && styles.activeTab]}
+              onPress={() => setActiveTab('betting')}
+            >
+              <Zap size={16} color={activeTab === 'betting' ? colors.primary : colors.textSecondary} />
+              <Text style={[styles.tabText, activeTab === 'betting' && styles.activeTabText]}>Live Betting</Text>
             </Pressable>
-            <Pressable style={styles.tab}>
-              <Text style={styles.tabText}>Challenges</Text>
+            <Pressable 
+              style={[styles.tab, activeTab === 'chat' && styles.activeTab]}
+              onPress={() => setActiveTab('chat')}
+            >
+              <MessageCircle size={16} color={activeTab === 'chat' ? colors.primary : colors.textSecondary} />
+              <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Chat</Text>
             </Pressable>
-            <Pressable style={styles.tab}>
-              <Text style={styles.tabText}>Participants</Text>
+            <Pressable 
+              style={[styles.tab, activeTab === 'challenges' && styles.activeTab]}
+              onPress={() => setActiveTab('challenges')}
+            >
+              <Text style={[styles.tabText, activeTab === 'challenges' && styles.activeTabText]}>Challenges</Text>
             </Pressable>
-            <Pressable style={styles.tab}>
-              <Text style={styles.tabText}>About</Text>
+            <Pressable 
+              style={[styles.tab, activeTab === 'participants' && styles.activeTab]}
+              onPress={() => setActiveTab('participants')}
+            >
+              <Users size={16} color={activeTab === 'participants' ? colors.primary : colors.textSecondary} />
+              <Text style={[styles.tabText, activeTab === 'participants' && styles.activeTabText]}>Participants</Text>
             </Pressable>
           </ScrollView>
         </View>
         
-        {/* Chat and Interaction Area */}
+        {/* Content Area */}
         <View style={styles.interactionArea}>
-          {/* Donation Panel */}
-          {showDonationPanel && (
+          {/* Live Betting Tab */}
+          {activeTab === 'betting' && isLive && (
+            <LiveBettingComponent
+              eventId={currentEvent.id}
+              userId={user?.id || 'guest'}
+              username={user?.username || 'Guest'}
+              userBalance={user?.zestBalance || 0}
+              onBetPlaced={(betDetails) => {
+                console.log('Bet placed:', betDetails);
+                // Handle bet placement success
+              }}
+            />
+          )}
+          
+          {/* Chat Tab */}
+          {activeTab === 'chat' && (
+            <>
+              {/* Donation Panel */}
+              {showDonationPanel && (
             <View style={styles.donationPanel}>
               <Text style={styles.donationPanelTitle}>Support this event</Text>
               <Text style={styles.donationPanelDescription}>
@@ -360,26 +395,50 @@ export default function LiveEventDetailScreen() {
             </Pressable>
           </View>
           
-          {/* Message Input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Send a message..."
-              value={message}
-              onChangeText={setMessage}
-              multiline
-            />
-            <Pressable 
-              style={[
-                styles.sendButton,
-                !message.trim() && styles.disabledSendButton
-              ]}
-              onPress={handleSendMessage}
-              disabled={!message.trim()}
-            >
-              <Send size={20} color="white" />
-            </Pressable>
-          </View>
+              {/* Message Input */}
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Send a message..."
+                  value={message}
+                  onChangeText={setMessage}
+                  multiline
+                />
+                <Pressable 
+                  style={[
+                    styles.sendButton,
+                    !message.trim() && styles.disabledSendButton
+                  ]}
+                  onPress={handleSendMessage}
+                  disabled={!message.trim()}
+                >
+                  <Send size={20} color="white" />
+                </Pressable>
+              </View>
+            </>
+          )}
+          
+          {/* Challenges Tab */}
+          {activeTab === 'challenges' && (
+            <View style={styles.challengesContainer}>
+              <Text style={styles.tabContentTitle}>Live Challenges</Text>
+              <Text style={styles.tabContentDescription}>
+                Participate in real-time challenges during the event
+              </Text>
+              {/* Add challenge content here */}
+            </View>
+          )}
+          
+          {/* Participants Tab */}
+          {activeTab === 'participants' && (
+            <View style={styles.participantsContainer}>
+              <Text style={styles.tabContentTitle}>Event Participants</Text>
+              <Text style={styles.tabContentDescription}>
+                {currentEvent.viewerCount} viewers watching this event
+              </Text>
+              {/* Add participants list here */}
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -513,6 +572,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginRight: 16,
@@ -524,6 +585,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     color: colors.textSecondary,
+    marginLeft: 6,
   },
   activeTabText: {
     color: colors.primary,
@@ -718,5 +780,30 @@ const styles = StyleSheet.create({
   },
   disabledSendButton: {
     backgroundColor: colors.border,
+  },
+  challengesContainer: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  participantsContainer: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabContentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  tabContentDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

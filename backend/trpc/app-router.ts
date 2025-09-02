@@ -25,7 +25,11 @@ import walletBalanceRoute from "./routes/wallet/balance/route";
 import walletDepositRoute from "./routes/wallet/deposit/route";
 
 // Live events routes
-import listLiveEventsRoute from "./routes/live-events/list/route";
+import { 
+  listLiveEventsProcedure, 
+  placeLiveBetProcedure, 
+  getLiveBettingDataProcedure 
+} from "./routes/live-events/list/route";
 
 export const appRouter = createTRPCRouter({
   // Example routes (keep for testing)
@@ -67,7 +71,9 @@ export const appRouter = createTRPCRouter({
   
   // Live events
   liveEvents: createTRPCRouter({
-    list: listLiveEventsRoute,
+    list: listLiveEventsProcedure,
+    placeBet: placeLiveBetProcedure,
+    getBettingData: getLiveBettingDataProcedure,
   }),
 });
 
