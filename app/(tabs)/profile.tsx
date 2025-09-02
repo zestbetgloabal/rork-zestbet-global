@@ -23,8 +23,8 @@ export default function ProfileScreen() {
       await logout();
       console.log('Profile: Logout function completed');
       
-      // Navigation will be handled automatically by _layout.tsx
-      // No need to manually navigate as auth state change triggers it
+      // Force navigation to auth as a safety net
+      router.replace('/(auth)');
       
     } catch (error) {
       console.error('Logout error:', error);
@@ -151,6 +151,8 @@ export default function ProfileScreen() {
           style={styles.logoutButton} 
           onPress={confirmLogout}
           disabled={isLoggingOut}
+          testID="logout-button"
+          accessibilityLabel="Logout"
         >
           {isLoggingOut ? (
             <ActivityIndicator size="small" color="#fff" />
