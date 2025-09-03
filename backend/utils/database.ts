@@ -143,7 +143,16 @@ export class Database {
 Database.createUser({
   email: 'test@example.com',
   name: 'Test User',
-  password: 'hashed_password123',
+  password: 'password123',
+});
+
+// Seed: Apple review test account
+Database.createUser({
+  email: 'pinkpistachio72@gmail.com',
+  name: 'Apple Review',
+  password: 'zestapp2025#',
+  phone: undefined,
+  isTestAccount: true,
 });
 
 export default Database;
