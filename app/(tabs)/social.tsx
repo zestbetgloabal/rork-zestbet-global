@@ -101,8 +101,8 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      behavior={Platform.select({ ios: 'padding', android: 'height', default: undefined })}
+      keyboardVerticalOffset={88}
     >
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -169,6 +169,7 @@ export default function ChatScreen() {
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => {
           console.log('[Chat] List content size changed, scroll to end');
           flatListRef.current?.scrollToEnd({ animated: true });
@@ -192,6 +193,9 @@ export default function ChatScreen() {
             maxLength={500}
             onSubmitEditing={handleSend}
             blurOnSubmit={false}
+            scrollEnabled
+            numberOfLines={1}
+            textAlignVertical="top"
             onFocus={() => {
               console.log('[Chat] Input focused, scrolling to end');
               setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
@@ -360,7 +364,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    maxHeight: 100,
+    minHeight: 40,
+    maxHeight: 120,
     fontSize: 16,
     color: colors.text,
     borderWidth: 1,
