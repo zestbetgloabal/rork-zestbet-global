@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LiveEvent } from '@/types';
 import colors from '@/constants/colors';
@@ -122,12 +122,12 @@ export default function LiveEventCard({ event, compact = false }: LiveEventCardP
               <View 
                 style={[
                   styles.fundingProgress, 
-                  { width: `${Math.min(100, (((event.fundingRaised || 0) / event.fundingGoal) * 100))}%` }
+                  { width: `${event.fundingGoal && event.fundingGoal > 0 ? Math.min(100, (((event.fundingRaised ?? 0) / event.fundingGoal) * 100)) : 0}%` }
                 ]} 
               />
             </View>
             <Text style={styles.fundingText}>
-              ${event.fundingRaised || 0} of ${event.fundingGoal} raised
+              {`${event.fundingRaised ?? 0} of ${event.fundingGoal ?? 0} raised`}
             </Text>
           </View>
         )}
