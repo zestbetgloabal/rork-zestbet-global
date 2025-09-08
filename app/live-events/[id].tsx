@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   FlatList,
   Alert,
-  Platform
+  Platform,
+  KeyboardAvoidingView
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useLiveEventStore } from '@/store/liveEventStore';
@@ -298,7 +299,11 @@ export default function LiveEventDetailScreen() {
           
           {/* Chat Tab */}
           {activeTab === 'chat' && (
-            <>
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={0}
+            >
               {/* Donation Panel */}
               {showDonationPanel && (
             <View style={styles.donationPanel}>
@@ -371,6 +376,14 @@ export default function LiveEventDetailScreen() {
                 <Text style={styles.emptyChatText}>No messages yet. Be the first to say hello!</Text>
               </View>
             }
+            onContentSizeChange={() => {
+              console.log('[LiveEvent Chat] List content changed, scroll to end');
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
+            onLayout={() => {
+              console.log('[LiveEvent Chat] List layout, scroll to end');
+              setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 0);
+            }}
           />
           
           {/* Action Buttons */}
@@ -400,9 +413,19 @@ export default function LiveEventDetailScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Send a message..."
+                  placeholderTextColor={colors.textSecondary}
                   value={message}
                   onChangeText={setMessage}
                   multiline
+                  onFocus={() => {
+                    console.log('[LiveEvent Chat] Input focused, scroll to end');
+                    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 50);
+                  }}
+                  onContentSizeChange={() => {
+                    console.log('[LiveEvent Chat] Input size changed, scroll to end');
+                    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 0);
+                  }}
+                  testID="live-chat-input"
                 />
                 <Pressable 
                   style={[
@@ -415,7 +438,7 @@ export default function LiveEventDetailScreen() {
                   <Send size={20} color="white" />
                 </Pressable>
               </View>
-            </>
+            </KeyboardAvoidingView>
           )}
           
           {/* Challenges Tab */}
