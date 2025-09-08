@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -9,48 +9,77 @@ import {
   ActivityIndicator,
   Keyboard,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Modal,
+  TouchableOpacity,
+  Image,
+  ScrollView
 } from 'react-native';
-import { Send, Users } from 'lucide-react-native';
+import { Send, Users, UserPlus, ChevronLeft } from 'lucide-react-native';
 import { useChatStore } from '@/store/chatStore';
 import ChatMessage from '@/components/ChatMessage';
 import colors from '@/constants/colors';
-import { ChatMessage as ChatMessageType } from '@/types';
+import { ChatMessage as ChatMessageType, ChatParticipant } from '@/types';
 
 export default function ChatScreen() {
-  const { messages, currentRoom, isLoading, fetchMessages, sendMessage } = useChatStore();
-  const [inputText, setInputText] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
+  const { 
+    messages, 
+    currentRoom, 
+    isLoading, 
+    fetchMessages, 
+    sendMessage,
+    friends,
+    startDirectMessage,
+    sendDirectMessage,
+    getDirectMessages,
+  } = useChatStore();
+
+  const [inputText, setInputText] = useState<string>('');
+  const [isSending, setIsSending] = useState<boolean>(false);
+  const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
+  const [activeDM, setActiveDM] = useState<ChatParticipant | null>(null);
+  const flatListRef = useRef<FlatList<ChatMessageType>>(null);
   
   useEffect(() => {
     fetchMessages();
-  }, []);
+  }, [fetchMessages]);
+  
+  const currentMessages = useMemo<ChatMessageType[]>(() => {
+    if (activeDM) return getDirectMessages(activeDM.id);
+    return messages;
+  }, [activeDM, getDirectMessages, messages]);
   
   useEffect(() => {
-    // Auto-scroll to bottom when new messages arrive
-    if (messages.length > 0) {
+    if (currentMessages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages]);
+  }, [currentMessages]);
   
   const handleSend = async () => {
     if (!inputText.trim() || isSending) return;
-    
     setIsSending(true);
-    const success = await sendMessage(inputText);
-    
+    let success = false;
+    if (activeDM) {
+      success = await sendDirectMessage(activeDM.id, inputText);
+    } else {
+      success = await sendMessage(inputText);
+    }
     if (success) {
       setInputText('');
       Keyboard.dismiss();
     }
-    
     setIsSending(false);
   };
   
-  const renderMessage = ({ item, index }: { item: ChatMessageType; index: number }) => {
+  const handleStartDM = async (participant: ChatParticipant) => {
+    await startDirectMessage(participant);
+    setActiveDM(participant);
+    setIsPickerOpen(false);
+  };
+
+  const renderMessage = ({ item }: { item: ChatMessageType }) => {
     const isCurrentUser = item.senderId === 'current_user';
     return (
       <ChatMessage 
@@ -74,36 +103,79 @@ export default function ChatScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Chat Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Users size={20} color={colors.primary} />
+          {activeDM ? (
+            <Pressable
+              onPress={() => setActiveDM(null)}
+              style={styles.backButton}
+              accessibilityRole="button"
+              testID="chat-back-button"
+            >
+              <ChevronLeft size={20} color={colors.primary} />
+            </Pressable>
+          ) : (
+            <Users size={20} color={colors.primary} />
+          )}
           <View style={styles.headerText}>
-            <Text style={styles.roomName}>{currentRoom?.name || 'Chat'}</Text>
-            <Text style={styles.participantCount}>
-              {currentRoom?.participants.length || 0} members
+            <Text style={styles.roomName} testID="chat-title">
+              {activeDM ? activeDM.username : (currentRoom?.name ?? 'Chat')}
+            </Text>
+            <Text style={styles.participantCount} testID="chat-subtitle">
+              {activeDM ? 'Direktnachricht' : `${currentRoom?.participants.length ?? 0} Mitglieder`}
             </Text>
           </View>
+          <Pressable
+            onPress={() => setIsPickerOpen(true)}
+            style={styles.dmButton}
+            accessibilityRole="button"
+            testID="open-dm-picker"
+          >
+            <UserPlus size={20} color={colors.primary} />
+          </Pressable>
         </View>
+        {!activeDM && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.friendsScroller}
+          >
+            {friends.map((f) => (
+              <TouchableOpacity
+                key={f.id}
+                onPress={() => handleStartDM(f)}
+                style={styles.friendChip}
+                accessibilityRole="button"
+                testID={`friend-chip-${f.id}`}
+              >
+                {f.avatar ? (
+                  <Image source={{ uri: f.avatar }} style={styles.friendAvatar} />
+                ) : (
+                  <View style={styles.friendAvatarPlaceholder} />
+                )}
+                <Text style={styles.friendName} numberOfLines={1}>{f.username}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </View>
       
-      {/* Messages List */}
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={currentMessages}
         renderItem={renderMessage}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
+        testID="chat-list"
       />
       
-      {/* Input Area */}
       <View style={styles.inputContainer}>
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="Type a message..."
+            placeholder={activeDM ? `Nachricht an ${activeDM.username}...` : 'Nachricht schreiben...'}
             placeholderTextColor={colors.textSecondary}
             value={inputText}
             onChangeText={setInputText}
@@ -111,15 +183,17 @@ export default function ChatScreen() {
             maxLength={500}
             onSubmitEditing={handleSend}
             blurOnSubmit={false}
+            testID="chat-input"
           />
           
           <Pressable 
             style={[
               styles.sendButton,
-              (!inputText.trim() || isSending) && styles.disabledSendButton
+              (!inputText.trim() || isSending) ? styles.disabledSendButton : null
             ]}
             onPress={handleSend}
             disabled={!inputText.trim() || isSending}
+            testID="send-button"
           >
             {isSending ? (
               <ActivityIndicator size="small" color="white" />
@@ -129,6 +203,42 @@ export default function ChatScreen() {
           </Pressable>
         </View>
       </View>
+
+      <Modal
+        visible={isPickerOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsPickerOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Freund auswählen</Text>
+            <ScrollView style={styles.modalList}>
+              {friends.map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  style={styles.modalItem}
+                  onPress={() => handleStartDM(f)}
+                  testID={`dm-select-${f.id}`}
+                >
+                  {f.avatar ? (
+                    <Image source={{ uri: f.avatar }} style={styles.modalAvatar} />
+                  ) : (
+                    <View style={styles.modalAvatarPlaceholder} />
+                  )}
+                  <View style={styles.modalTextWrap}>
+                    <Text style={styles.modalName}>{f.username}</Text>
+                    <Text style={styles.modalSub}>{f.isOnline ? 'Online' : 'Offline'}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Pressable style={styles.modalClose} onPress={() => setIsPickerOpen(false)} testID="close-dm-picker">
+              <Text style={styles.modalCloseText}>Schließen</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -154,14 +264,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  backButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  dmButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
   headerText: {
-    marginLeft: 12,
+    marginLeft: 8,
     flex: 1,
   },
   roomName: {
@@ -173,6 +292,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  friendsScroller: {
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  friendChip: {
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  friendAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginBottom: 4,
+  },
+  friendAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.border,
+    marginBottom: 4,
+  },
+  friendName: {
+    fontSize: 12,
+    color: colors.text,
+    maxWidth: 72,
   },
   messagesList: {
     flex: 1,
@@ -216,5 +361,71 @@ const styles = StyleSheet.create({
   },
   disabledSendButton: {
     backgroundColor: colors.border,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  modalList: {
+    maxHeight: 340,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  modalAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  modalAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.border,
+    marginRight: 12,
+  },
+  modalTextWrap: {
+    flex: 1,
+  },
+  modalName: {
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  modalSub: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  modalClose: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalCloseText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
