@@ -5,25 +5,25 @@ import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../trpc/app-router";
 import { createContext } from "../trpc/create-context";
 
-// Create Hono app
 const app = new Hono();
 
-// Enable CORS for all routes
 app.use("*", cors({
-  origin: ["http://localhost:3000", "https://*.amplifyapp.com"],
-  credentials: true,
+  origin: "*",
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization"],
+  credentials: false,
 }));
 
-// Health check endpoint
 app.get("/", (c) => {
-  return c.json({ 
-    status: "ok", 
-    message: "ZestBet API is running",
-    timestamp: new Date().toISOString()
+  return c.json({
+    status: "ok",
+    message: "ZestBet API (Lambda) is running",
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Mount tRPC router
+app.get("/health", (c) => c.text("ok"));
+
 app.use(
   "/trpc/*",
   trpcServer({
@@ -33,5 +33,4 @@ app.use(
   })
 );
 
-// Export handler for AWS Lambda
 export const handler = handle(app);
