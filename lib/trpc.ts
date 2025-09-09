@@ -5,18 +5,21 @@ import superjson from "superjson";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-  }
-  throw new Error("No base url found, please set EXPO_PUBLIC_RORK_API_BASE_URL");
-};
-
-const getTrpcUrl = () => {
+const getTrpcUrl = (): string => {
   const explicit = process.env.EXPO_PUBLIC_TRPC_URL;
   if (explicit) return explicit;
-  const base = getBaseUrl();
-  return `${base}/api/trpc`;
+
+  const amplifyFunctionUrl = process.env.EXPO_PUBLIC_AMPLIFY_FUNCTION_URL;
+  if (amplifyFunctionUrl) {
+    const base = amplifyFunctionUrl.replace(/\/$/, "");
+    return `${base}/trpc`;
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/api/trpc`;
+  }
+
+  throw new Error("TRPC URL not configured. Set EXPO_PUBLIC_TRPC_URL or EXPO_PUBLIC_AMPLIFY_FUNCTION_URL.");
 };
 
 export const trpcClient = trpc.createClient({
