@@ -8,16 +8,18 @@ import { createContext } from "../trpc/create-context";
 const app = new Hono();
 
 const allowedOrigins = [
+  "https://zestapp.online",
   "https://www.zestapp.online",
   "http://localhost:8081",
   "http://localhost:19006",
   "http://127.0.0.1:19006",
+  "http://localhost:3000",
 ];
 
 app.use("*", cors({
   origin: (origin) => {
-    if (!origin) return "*"; // Lambda Function URLs may not send Origin on health checks
-    return allowedOrigins.includes(origin) ? origin : "https://www.zestapp.online";
+    if (!origin) return "*";
+    return allowedOrigins.includes(origin) ? origin : "https://zestapp.online";
   },
   allowMethods: ["GET", "POST", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
@@ -30,6 +32,10 @@ app.get("/", (c) => {
     message: "ZestBet API (Lambda) is running",
     timestamp: new Date().toISOString(),
     allowedOrigins,
+    env: {
+      node: process.version,
+      region: process.env.AWS_REGION ?? null,
+    },
   });
 });
 
