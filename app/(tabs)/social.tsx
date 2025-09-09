@@ -20,6 +20,7 @@ import { useChatStore } from '@/store/chatStore';
 import ChatMessage from '@/components/ChatMessage';
 import colors from '@/constants/colors';
 import { ChatMessage as ChatMessageType, ChatParticipant } from '@/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ChatScreen() {
   const { 
@@ -39,6 +40,8 @@ export default function ChatScreen() {
   const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
   const [activeDM, setActiveDM] = useState<ChatParticipant | null>(null);
   const flatListRef = useRef<FlatList<ChatMessageType>>(null);
+  const insets = useSafeAreaInsets();
+  const [inputContainerHeight, setInputContainerHeight] = useState<number>(72 + (Platform.OS === 'ios' ? 24 : 12));
   
   useEffect(() => {
     fetchMessages();
@@ -56,6 +59,20 @@ export default function ChatScreen() {
       }, 100);
     }
   }, [currentMessages]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      console.log('[Chat] keyboardDidShow -> scrollToEnd');
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      console.log('[Chat] keyboardDidHide');
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   
   const handleSend = async () => {
     if (!inputText.trim() || isSending) return;
@@ -167,7 +184,7 @@ export default function ChatScreen() {
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         style={styles.messagesList}
-        contentContainerStyle={styles.messagesContent}
+        contentContainerStyle={[styles.messagesContent, { paddingBottom: inputContainerHeight + 8 + (Platform.OS === 'ios' ? insets.bottom : 0) }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => {
@@ -178,10 +195,17 @@ export default function ChatScreen() {
           console.log('[Chat] List layout, scroll to end');
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 0);
         }}
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         testID="chat-list"
       />
       
-      <View style={styles.inputContainer}>
+      <View style={styles.inputContainer} onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h && Math.abs(h - inputContainerHeight) > 1) {
+            console.log('[Chat] inputContainer height set to', h);
+            setInputContainerHeight(h);
+          }
+        }}>
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
