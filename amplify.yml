@@ -7,6 +7,9 @@ frontend:
     build:
       commands:
         - npx expo export --platform web --output-dir dist --clear
+    postBuild:
+      commands:
+        - cp dist/index.html dist/200.html || copy dist/index.html dist/200.html
   artifacts:
     baseDirectory: dist
     files:
