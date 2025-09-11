@@ -10,6 +10,7 @@ frontend:
     postBuild:
       commands:
         - cp dist/index.html dist/200.html || copy dist/index.html dist/200.html
+        - cp dist/index.html dist/404.html || copy dist/index.html dist/404.html
   artifacts:
     baseDirectory: dist
     files:
