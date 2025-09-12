@@ -7,7 +7,7 @@ frontend:
     build:
       commands:
         - 'echo Starting Expo web export'
-        - 'npx expo export --platform web --output-dir dist --clear --no-bundler'
+        - 'npx expo export --platform web --output-dir dist --clear'
         - 'echo Finding generated web entry file'
         - 'ENTRY_FILE=$(find dist/_expo/static/js/web -maxdepth 1 -type f -name "entry-*.js" | head -n 1) && echo ENTRY_FILE=$ENTRY_FILE'
         - 'if [ -z "$ENTRY_FILE" ]; then echo ERROR Could not find entry js; ls -lah dist/_expo/static/js/web || true; exit 1; fi'
