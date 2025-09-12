@@ -6,8 +6,22 @@ frontend:
         - npm install
     build:
       commands:
+        - echo "Starting Expo web export"
         - npx expo export --platform web --output-dir dist --clear --no-bundler
-        - sed -i 's|</head>|<script type="module" src="_expo/static/js/web/entry-00eeb7ada0bec032ab0846d793a7adf8.js"></script></head>|' dist/index.html
+        - echo "Looking for generated web entry file"
+        - ENTRY_FILE=$(find dist/_expo/static/js/web -maxdepth 1 -type f -name 'entry-*.js' | head -n 1)
+        - |
+          if [ -z "$ENTRY_FILE" ]; then
+            echo "ERROR: Could not find entry-*.js in dist/_expo/static/js/web";
+            echo "Listing dist/_expo/static/js/web for debugging:";
+            ls -lah dist/_expo/static/js/web || true;
+            exit 1;
+          fi
+        - ENTRY_BASENAME=$(basename "$ENTRY_FILE")
+        - echo "Found web entry: $ENTRY_BASENAME"
+        - |
+          sed -i "s#</head>#<script type=\"module\" src=\"/_expo/static/js/web/${ENTRY_BASENAME}\"></script></head>#" dist/index.html
+        - echo "Injected web entry into index.html"
     postBuild:
       commands:
         - cp dist/index.html dist/200.html || copy dist/index.html dist/200.html
