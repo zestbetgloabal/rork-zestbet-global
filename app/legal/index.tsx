@@ -29,9 +29,15 @@ export default function LegalIndexScreen() {
           />
           
           <LegalLink 
-            title="Privacy Policy" 
-            description="How we collect, use, and protect your data"
+            title="Privacy Policy (DE)" 
+            description="Wie wir deine Daten erheben, verwenden und schützen"
             onPress={() => router.push('/legal/datenschutz')}
+          />
+
+          <LegalLink 
+            title="Privacy Policy (EN)" 
+            description="How we collect, use, and protect your data"
+            onPress={() => router.push('/legal/privacy')}
           />
           
           <LegalLink 

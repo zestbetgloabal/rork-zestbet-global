@@ -82,7 +82,7 @@ export default function PrivacyPolicyScreen() {
           <Text style={styles.paragraph}><Text style={styles.bold}>Berichtigung:</Text> Korrektur falscher Daten.</Text>
           <Text style={styles.paragraph}><Text style={styles.bold}>Löschung:</Text> Löschung deiner Daten (sofern keine gesetzliche Aufbewahrungspflicht besteht).</Text>
           <Text style={styles.paragraph}><Text style={styles.bold}>Widerspruch:</Text> Ablehnung der Datenverarbeitung für Analysen oder andere nicht zwingende Zwecke.</Text>
-          <Text style={styles.paragraph}><Text style={styles.bold}>Datenübertragbarkeit:</Text> Erhalt deiner Daten in einem strukturierten Format. Kontaktiere uns unter support@zestapp.online oder nutze die Funktion zum Löschen/Inaktivsetzen deines Kontos direkt in der App.</Text>
+          <Text style={styles.paragraph}><Text style={styles.bold}>Datenübertragbarkeit:</Text> Erhalt deiner Daten in einem strukturierten Format. Kontaktiere uns unter kontakt@zestapp.online oder nutze die Funktion zum Löschen/Inaktivsetzen deines Kontos direkt in der App.</Text>
 
           <Text style={styles.sectionTitle}>Kinder</Text>
           <Text style={styles.paragraph}>ZestApp ist für Nutzer ab 13 Jahren gedacht. Wir sammeln wissentlich keine Daten von Kindern unter 13 Jahren. Wenn wir feststellen, dass solche Daten gesammelt wurden, löschen wir sie umgehend.</Text>
@@ -95,7 +95,7 @@ export default function PrivacyPolicyScreen() {
           <Text style={styles.paragraph}>Wir können diese Richtlinie aktualisieren. Änderungen werden auf zestapp.online/privacy veröffentlicht. Bei wesentlichen Änderungen informieren wir dich in der App oder per E-Mail.</Text>
 
           <Text style={styles.sectionTitle}>Kontakt</Text>
-          <Text style={styles.paragraph}>Fragen oder Anfragen zu deinen Daten? Schreib uns: E-Mail: Kontakt@zestapp.online</Text>
+          <Text style={styles.paragraph}>Fragen oder Anfragen zu deinen Daten? Schreib uns: E-Mail: kontakt@zestapp.online</Text>
         </View>
       </ScrollView>
     </DatenschutzErrorBoundary>

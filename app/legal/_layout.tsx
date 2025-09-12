@@ -38,6 +38,12 @@ export default function LegalLayout() {
       <Stack.Screen 
         name="datenschutz" 
         options={{ 
+          title: "Datenschutz",
+        }} 
+      />
+      <Stack.Screen 
+        name="privacy" 
+        options={{ 
           title: "Privacy Policy",
         }} 
       />

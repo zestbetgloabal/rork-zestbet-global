@@ -145,6 +145,16 @@ export default function ProfileScreen() {
             <Text style={styles.menuItemText}>Legal Information</Text>
             <Feather name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push('/legal/datenschutz')}
+            testID="privacy-link"
+          >
+            <Feather name="shield" size={20} color={colors.primary} />
+            <Text style={styles.menuItemText}>Datenschutz</Text>
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity 
