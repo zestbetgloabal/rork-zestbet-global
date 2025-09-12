@@ -1,4 +1,4 @@
-version: 1
+textversion: 1
 frontend:
   phases:
     preBuild:
@@ -6,7 +6,8 @@ frontend:
         - npm install
     build:
       commands:
-        - npx expo export --platform web --output-dir dist --clear
+        - npx expo export --platform web --output-dir dist --clear --no-bundler
+        - sed -i 's|</head>|<script type="module" src="_expo/static/js/web/entry-00eeb7ada0bec032ab0846d793a7adf8.js"></script></head>|' dist/index.html
     postBuild:
       commands:
         - cp dist/index.html dist/200.html || copy dist/index.html dist/200.html
