@@ -208,15 +208,25 @@ export default function ProfileScreen() {
         <Pressable 
           style={styles.actionButton}
           onPress={() => router.push('/legal')}
+          testID="settings-legal"
         >
           <Settings size={20} color={colors.text} />
           <Text style={styles.actionText}>Settings & Legal</Text>
+        </Pressable>
+        <Pressable 
+          style={styles.actionButton}
+          onPress={() => router.push('/account-settings')}
+          testID="account-settings-link"
+        >
+          <Settings size={20} color={colors.text} />
+          <Text style={styles.actionText}>Account</Text>
         </Pressable>
         
         <Pressable 
           style={[styles.actionButton, styles.logoutButton]}
           onPress={confirmLogout}
           disabled={isLoggingOut}
+          testID="logout-link"
         >
           <LogOut size={20} color={colors.error} />
           <Text style={[styles.actionText, styles.logoutText]}>

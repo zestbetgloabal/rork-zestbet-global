@@ -179,6 +179,13 @@ function RootLayoutNav() {
             title: "Profile",
           }} 
         />
+        <Stack.Screen 
+          name="account-settings" 
+          options={{ 
+            title: "Account",
+            presentation: "modal",
+          }} 
+        />
 
         <Stack.Screen 
           name="create-challenge" 

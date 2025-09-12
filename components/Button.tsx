@@ -14,7 +14,7 @@ import colors from '@/constants/colors';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
@@ -22,6 +22,7 @@ interface ButtonProps {
   iconPosition?: 'left' | 'right';
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  testID?: string;
 }
 
 export default function Button({
@@ -34,7 +35,8 @@ export default function Button({
   icon,
   iconPosition = 'left',
   style,
-  textStyle
+  textStyle,
+  testID,
 }: ButtonProps) {
   const getButtonStyle = () => {
     let buttonStyle = {};
@@ -52,6 +54,9 @@ export default function Button({
         break;
       case 'danger':
         buttonStyle = styles.dangerButton;
+        break;
+      case 'ghost':
+        buttonStyle = styles.ghostButton;
         break;
     }
     
@@ -93,6 +98,9 @@ export default function Button({
       case 'danger':
         textStyleObj = styles.dangerText;
         break;
+      case 'ghost':
+        textStyleObj = styles.ghostText;
+        break;
     }
     
     // Size text styles
@@ -122,6 +130,7 @@ export default function Button({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.7}
+      testID={testID}
     >
       {loading ? (
         <ActivityIndicator 
@@ -184,6 +193,9 @@ const styles = StyleSheet.create({
   dangerButton: {
     backgroundColor: colors.error,
   },
+  ghostButton: {
+    backgroundColor: 'transparent',
+  },
   
   // Size styles
   smallButton: {
@@ -216,6 +228,9 @@ const styles = StyleSheet.create({
   },
   dangerText: {
     color: 'white',
+  },
+  ghostText: {
+    color: colors.text,
   },
   
   // Text size styles

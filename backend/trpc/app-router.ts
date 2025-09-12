@@ -19,6 +19,7 @@ import listChallengesRoute from "./routes/challenges/list/route";
 
 // User routes
 import userProfileRoutes from "./routes/user/profile/route";
+import userAccountRoutes from "./routes/user/account/route";
 
 // Wallet routes
 import walletBalanceRoute from "./routes/wallet/balance/route";
@@ -61,6 +62,8 @@ export const appRouter = createTRPCRouter({
   user: createTRPCRouter({
     profile: userProfileRoutes.get,
     updateProfile: userProfileRoutes.update,
+    deleteAccount: userAccountRoutes.deleteAccount,
+    deactivateAccount: userAccountRoutes.deactivateAccount,
   }),
   
   // Wallet
