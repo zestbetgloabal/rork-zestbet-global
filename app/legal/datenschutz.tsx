@@ -96,6 +96,14 @@ export default function PrivacyPolicyScreen() {
 
           <Text style={styles.sectionTitle}>Kontakt</Text>
           <Text style={styles.paragraph}>Fragen oder Anfragen zu deinen Daten? Schreib uns: E-Mail: kontakt@zestapp.online</Text>
+
+          <Text style={styles.sectionTitle} testID="privacy-address-title">Verantwortliche Stelle / Postanschrift</Text>
+          <Text style={styles.paragraph} testID="privacy-address-text">
+            ZestApp / ZestBet Global GmbH{"\n"}
+            Nordlicht 6{"\n"}
+            31275 Lehrte{"\n"}
+            Germany
+          </Text>
         </View>
       </ScrollView>
     </DatenschutzErrorBoundary>
