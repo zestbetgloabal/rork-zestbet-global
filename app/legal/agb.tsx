@@ -2,88 +2,91 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import colors from '@/constants/colors';
 
+class TermsErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.log('AGB page error', error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.container} testID="agb-error">
+          <View style={styles.content}>
+            <Text style={styles.title}>Fehler</Text>
+            <Text style={styles.paragraph}>Die AGB konnten nicht geladen werden. Bitte versuche es erneut.</Text>
+          </View>
+        </View>
+      );
+    }
+    return this.props.children as React.ReactElement;
+  }
+}
+
 export default function TermsScreen() {
+  console.log('Render AGB (DE) for ZestApp');
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Terms and Conditions</Text>
-        <Text style={styles.lastUpdated}>Last updated: June 1, 2025</Text>
-        
-        <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
-        <Text style={styles.paragraph}>
-          By accessing or using ZestBet, you agree to be bound by these Terms and Conditions. If you do not agree to all the terms and conditions, you may not access or use our services.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>2. Description of Service</Text>
-        <Text style={styles.paragraph}>
-          ZestBet is a social betting platform that allows users to place bets on various events and outcomes. A portion of all bets is contributed to charitable causes selected by the platform.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>3. User Accounts</Text>
-        <Text style={styles.paragraph}>
-          To use certain features of ZestBet, you must register for an account. You are responsible for maintaining the confidentiality of your account information and for all activities that occur under your account.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>4. Betting Rules</Text>
-        <Text style={styles.paragraph}>
-          4.1. All bets are final once placed and cannot be canceled or refunded.
-        </Text>
-        <Text style={styles.paragraph}>
-          4.2. ZestBet reserves the right to void any bet in case of technical errors, fraud, or other circumstances that compromise the integrity of the betting process.
-        </Text>
-        <Text style={styles.paragraph}>
-          4.3. Users must be at least 18 years old to place bets on the platform.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>5. Virtual Currency</Text>
-        <Text style={styles.paragraph}>
-          5.1. ZestBet uses a virtual currency called "Zest" for all betting activities on the platform.
-        </Text>
-        <Text style={styles.paragraph}>
-          5.2. Zest has no real-world monetary value and cannot be exchanged for real money.
-        </Text>
-        <Text style={styles.paragraph}>
-          5.3. Users receive a daily allocation of free Zest and can purchase additional Zest through the platform.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>6. Charitable Contributions</Text>
-        <Text style={styles.paragraph}>
-          6.1. A portion of all bets placed on ZestBet is contributed to charitable causes.
-        </Text>
-        <Text style={styles.paragraph}>
-          6.2. ZestBet selects the charitable organizations that receive contributions and determines the amount of each contribution.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>7. Prohibited Activities</Text>
-        <Text style={styles.paragraph}>
-          Users are prohibited from engaging in any illegal or fraudulent activities on the platform, including but not limited to:
-        </Text>
-        <Text style={styles.paragraph}>
-          7.1. Creating multiple accounts to receive additional free Zest.
-        </Text>
-        <Text style={styles.paragraph}>
-          7.2. Using automated systems or bots to place bets.
-        </Text>
-        <Text style={styles.paragraph}>
-          7.3. Manipulating the outcome of events on which bets are placed.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>8. Termination</Text>
-        <Text style={styles.paragraph}>
-          ZestBet reserves the right to terminate or suspend any user account at any time for violation of these Terms and Conditions or for any other reason at our sole discretion.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>9. Changes to Terms</Text>
-        <Text style={styles.paragraph}>
-          ZestBet may modify these Terms and Conditions at any time. Continued use of the platform after any such changes constitutes your acceptance of the new Terms and Conditions.
-        </Text>
-        
-        <Text style={styles.sectionTitle}>10. Contact Information</Text>
-        <Text style={styles.paragraph}>
-          If you have any questions about these Terms and Conditions, please contact us at support@zestbet.com.
-        </Text>
-      </View>
-    </ScrollView>
+    <TermsErrorBoundary>
+      <ScrollView style={styles.container} testID="agb-scroll">
+        <View style={styles.content}>
+          <Text accessibilityRole="header" style={styles.title} testID="agb-title">Allgemeine Geschäftsbedingungen (AGB)</Text>
+          <Text style={styles.lastUpdated} testID="agb-updated">Letzte Aktualisierung: 12. September 2025</Text>
+
+          <Text style={styles.sectionTitle}>1. Geltungsbereich und Zustimmung</Text>
+          <Text style={styles.paragraph}>
+            Durch den Zugriff auf oder die Nutzung von ZestApp erklärst du dich mit diesen Allgemeinen Geschäftsbedingungen einverstanden. Wenn du den Bedingungen nicht zustimmst, darfst du unsere Dienste nicht nutzen.
+          </Text>
+
+          <Text style={styles.sectionTitle}>2. Leistungsbeschreibung</Text>
+          <Text style={styles.paragraph}>
+            ZestApp ist eine soziale Wett- und Challenge-Plattform, auf der Nutzer Wetten und Herausforderungen zu verschiedenen Ereignissen erstellen und daran teilnehmen können. Ein Teil der Aktivitäten kann wohltätige Zwecke unterstützen.
+          </Text>
+
+          <Text style={styles.sectionTitle}>3. Nutzerkonto</Text>
+          <Text style={styles.paragraph}>
+            Für bestimmte Funktionen ist eine Registrierung erforderlich. Du bist dafür verantwortlich, deine Zugangsdaten vertraulich zu behandeln und für alle Aktivitäten in deinem Konto.
+          </Text>
+
+          <Text style={styles.sectionTitle}>4. Wett- und Challenge-Regeln</Text>
+          <Text style={styles.paragraph}>4.1. Platzierte Wetten/Challenges sind grundsätzlich verbindlich und können nicht storniert oder erstattet werden.</Text>
+          <Text style={styles.paragraph}>4.2. ZestApp behält sich vor, Wetten/Challenges bei technischen Fehlern, Betrug oder Manipulation zu annullieren.</Text>
+          <Text style={styles.paragraph}>4.3. Nutzer müssen mindestens 18 Jahre alt sein, sofern nicht höhere Altersgrenzen nach lokalem Recht gelten.</Text>
+
+          <Text style={styles.sectionTitle}>5. Virtuelle Währung</Text>
+          <Text style={styles.paragraph}>5.1. Auf der Plattform wird eine virtuelle Währung namens „Zest“ verwendet.</Text>
+          <Text style={styles.paragraph}>5.2. „Zest“ hat keinen realen Geldwert und kann nicht in echtes Geld umgetauscht werden.</Text>
+          <Text style={styles.paragraph}>5.3. Nutzer erhalten ggf. tägliche kostenlose Zest und können zusätzliche Zest erwerben.</Text>
+
+          <Text style={styles.sectionTitle}>6. Wohltätige Beiträge</Text>
+          <Text style={styles.paragraph}>6.1. Ein Teil der Aktivitäten kann wohltätigen Organisationen zugutekommen.</Text>
+          <Text style={styles.paragraph}>6.2. ZestApp wählt die begünstigten Organisationen aus und bestimmt die Beitragshöhe.</Text>
+
+          <Text style={styles.sectionTitle}>7. Verbotene Aktivitäten</Text>
+          <Text style={styles.paragraph}>Untersagt sind u. a.:</Text>
+          <Text style={styles.paragraph}>7.1. Mehrfachkonten zur Erlangung zusätzlicher Gratis-Zest.</Text>
+          <Text style={styles.paragraph}>7.2. Einsatz automatisierter Systeme oder Bots.</Text>
+          <Text style={styles.paragraph}>7.3. Manipulation von Ereignissen oder Ergebnissen.</Text>
+
+          <Text style={styles.sectionTitle}>8. Kündigung und Sperrung</Text>
+          <Text style={styles.paragraph}>
+            ZestApp kann Konten jederzeit sperren oder kündigen, insbesondere bei Verstößen gegen diese AGB oder wenn die Integrität der Plattform gefährdet ist.
+          </Text>
+
+          <Text style={styles.sectionTitle}>9. Änderungen der AGB</Text>
+          <Text style={styles.paragraph}>
+            ZestApp kann diese AGB jederzeit ändern. Die fortgesetzte Nutzung nach Änderungen gilt als Zustimmung zu den aktualisierten AGB.
+          </Text>
+
+          <Text style={styles.sectionTitle}>10. Kontakt</Text>
+          <Text style={styles.paragraph}>Bei Fragen zu diesen AGB: kontakt@zestapp.online</Text>
+        </View>
+      </ScrollView>
+    </TermsErrorBoundary>
   );
 }
 

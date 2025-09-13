@@ -94,6 +94,10 @@ export default function PrivacyPolicyENScreen() {
           <Text style={styles.sectionTitle}>Changes to this policy</Text>
           <Text style={styles.paragraph}>We may update this policy. Changes will be published at zestapp.online/privacy. For significant changes, we will notify you in the app or via email.</Text>
 
+          <Text style={styles.sectionTitle}>Company Information</Text>
+          <Text style={styles.paragraph}>Legal entity: ZestApp</Text>
+          <Text style={styles.paragraph}>Postal address: [Please provide your full physical address to include here]</Text>
+
           <Text style={styles.sectionTitle}>Contact</Text>
           <Text style={styles.paragraph}>Questions or requests regarding your data? Contact us: Email: kontakt@zestapp.online</Text>
         </View>
