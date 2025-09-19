@@ -32,6 +32,11 @@ import {
   getLiveBettingDataProcedure 
 } from "./routes/live-events/list/route";
 
+// Live bets routes
+import listLiveBetMarketsRoute from "./routes/live-bets/list/route";
+import createLiveBetRoute from "./routes/live-bets/create/route";
+import liveBetsSubscribeRoute from "./routes/live-bets/subscribe/route";
+
 export const appRouter = createTRPCRouter({
   // Example routes (keep for testing)
   example: createTRPCRouter({
@@ -77,6 +82,13 @@ export const appRouter = createTRPCRouter({
     list: listLiveEventsProcedure,
     placeBet: placeLiveBetProcedure,
     getBettingData: getLiveBettingDataProcedure,
+  }),
+
+  // Live bets
+  liveBets: createTRPCRouter({
+    list: listLiveBetMarketsRoute,
+    create: createLiveBetRoute,
+    subscribe: liveBetsSubscribeRoute,
   }),
 });
 

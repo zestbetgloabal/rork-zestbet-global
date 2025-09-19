@@ -11,6 +11,8 @@ interface MockDatabase {
   transactions: any[];
   liveEvents: any[];
   socialPosts: any[];
+  liveBetMarkets: any[];
+  liveBetWagers: any[];
 }
 
 // In-memory mock database
@@ -21,6 +23,8 @@ const mockDB: MockDatabase = {
   transactions: [],
   liveEvents: [],
   socialPosts: [],
+  liveBetMarkets: [],
+  liveBetWagers: [],
 };
 
 // Database operations
@@ -136,6 +140,42 @@ export class Database {
     }
     
     return events;
+  }
+
+  // Live betting markets
+  static async listLiveBetMarkets(eventId: string) {
+    return mockDB.liveBetMarkets.filter((m) => m.eventId === eventId && m.status === 'open');
+  }
+
+  static async createLiveBetMarket(marketData: any) {
+    const market = {
+      id: `market_${Date.now()}`,
+      ...marketData,
+      status: 'open',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    mockDB.liveBetMarkets.push(market);
+    return market;
+  }
+
+  static async placeLiveBet(wagerData: any) {
+    const wager = {
+      id: `wager_${Date.now()}`,
+      ...wagerData,
+      status: 'active',
+      createdAt: new Date(),
+    };
+    mockDB.liveBetWagers.push(wager);
+    return wager;
+  }
+
+  static async adjustUserBalance(userId: string, delta: number) {
+    const user = await this.getUserById(userId);
+    if (!user) return null;
+    user.zestCoins = (user.zestCoins ?? 0) + delta;
+    user.updatedAt = new Date();
+    return user;
   }
 }
 

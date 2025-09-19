@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
   Clock,
   Zap
 } from 'lucide-react-native';
+import { trpc } from '@/lib/trpc';
 
 interface LiveBettingData {
   currentOdds: Record<string, number>;
@@ -33,6 +34,21 @@ interface LiveBettingData {
     timestamp: Date;
   }[];
   totalBets: Record<string, { count: number; amount: number }>;
+}
+
+interface LiveBetMarketOption {
+  id: string;
+  key: string;
+  label: string;
+  odds: number;
+}
+
+interface LiveBetMarket {
+  id: string;
+  eventId: string;
+  question: string;
+  options: LiveBetMarketOption[];
+  status: 'open' | 'settled' | 'void';
 }
 
 interface LiveBettingProps {
@@ -51,7 +67,7 @@ export default function LiveBettingComponent({
   onBetPlaced
 }: LiveBettingProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState<boolean>(false);
   const [bettingData, setBettingData] = useState<LiveBettingData>({
     currentOdds: {},
     recentBets: [],
@@ -59,17 +75,38 @@ export default function LiveBettingComponent({
   });
   const [selectedBetType, setSelectedBetType] = useState<string>('');
   const [betAmount, setBetAmount] = useState<string>('');
-  const [isPlacingBet, setIsPlacingBet] = useState(false);
-  const [participantCount, setParticipantCount] = useState(0);
+  const [isPlacingBet, setIsPlacingBet] = useState<boolean>(false);
+  const [participantCount, setParticipantCount] = useState<number>(0);
   const [oddsChanges, setOddsChanges] = useState<Record<string, 'up' | 'down' | 'same'>>({});
+  const [activeMarket, setActiveMarket] = useState<LiveBetMarket | null>(null);
   
   const previousOddsRef = useRef<Record<string, number>>({});
+
+  // Prefetch markets via tRPC to render UI quickly
+  const marketsQuery = trpc.liveBets.list.useQuery({ eventId }, {
+    enabled: !!eventId,
+    staleTime: 5_000,
+  });
+
+  useEffect(() => {
+    if (marketsQuery.data?.markets?.length) {
+      const market = marketsQuery.data.markets[0] as LiveBetMarket;
+      setActiveMarket(market);
+      const odds: Record<string, number> = {};
+      const totals: Record<string, { count: number; amount: number }> = {};
+      market.options.forEach(opt => {
+        odds[opt.key] = opt.odds;
+        totals[opt.key] = { count: 0, amount: 0 };
+      });
+      setBettingData(prev => ({ ...prev, currentOdds: odds, totalBets: totals }));
+    }
+  }, [marketsQuery.data]);
 
   useEffect(() => {
     // Initialize socket connection
     const socketUrl = Platform.OS === 'web' 
-      ? 'ws://localhost:3000' 
-      : 'ws://your-server-url.com';
+      ? (process.env.EXPO_PUBLIC_SOCKET_URL ?? 'ws://localhost:3001') 
+      : (process.env.EXPO_PUBLIC_SOCKET_URL ?? 'ws://localhost:3001');
     
     const newSocket = io(socketUrl, {
       transports: ['websocket'],
@@ -161,7 +198,9 @@ export default function LiveBettingComponent({
     };
   }, [eventId, userId, username]);
 
-  const handlePlaceBet = () => {
+  const liveBetCreate = trpc.liveBets.create.useMutation();
+
+  const handlePlaceBet = async () => {
     if (!socket || !connected) {
       Alert.alert('Connection Error', 'Not connected to live betting server');
       return;
@@ -191,14 +230,40 @@ export default function LiveBettingComponent({
 
     setIsPlacingBet(true);
 
-    socket.emit('place-live-bet', {
-      eventId,
-      userId,
-      username,
-      betType: selectedBetType,
-      amount,
-      odds
-    });
+    try {
+      if (!activeMarket) throw new Error('No active market');
+
+      const res = await liveBetCreate.mutateAsync({
+        eventId,
+        marketId: activeMarket.id,
+        optionKey: selectedBetType,
+        amount,
+      });
+
+      if (!res.success) {
+        throw new Error(res.message ?? 'Failed to place bet');
+      }
+
+      if (socket) {
+        socket.emit('place-live-bet', {
+          eventId,
+          userId,
+          username,
+          betType: selectedBetType,
+          amount,
+          odds
+        });
+      }
+
+      Alert.alert('Bet Placed!', res.message);
+      setBetAmount('');
+      setSelectedBetType('');
+      onBetPlaced?.(res.wager);
+    } catch (e: any) {
+      Alert.alert('Bet Error', e?.message ?? 'Unknown error');
+    } finally {
+      setIsPlacingBet(false);
+    }
   };
 
   const getBetTypeLabel = (betType: string): string => {

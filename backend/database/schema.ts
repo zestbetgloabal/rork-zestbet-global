@@ -65,6 +65,37 @@ export interface Transaction {
   createdAt: Date;
 }
 
+export interface LiveBetMarketOption {
+  id: string;
+  key: 'home' | 'draw' | 'away' | 'yes' | 'no' | 'over' | 'under' | string;
+  label: string;
+  odds: number;
+}
+
+export interface LiveBetMarket {
+  id: string;
+  eventId: string;
+  question: string; // e.g., "Wer gewinnt die nächste Runde?"
+  options: LiveBetMarketOption[];
+  status: 'open' | 'settled' | 'void';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LiveBetWager {
+  id: string;
+  marketId: string;
+  eventId: string;
+  userId: string;
+  optionKey: string;
+  amount: number;
+  oddsAtPlacement: number;
+  potentialWin: number;
+  status: 'active' | 'won' | 'lost' | 'void';
+  createdAt: Date;
+}
+
+
 export interface LiveEvent {
   id: string;
   title: string;
