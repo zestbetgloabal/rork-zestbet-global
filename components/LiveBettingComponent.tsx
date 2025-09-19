@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -200,6 +200,25 @@ export default function LiveBettingComponent({
 
   const liveBetCreate = trpc.liveBets.create.useMutation();
 
+  trpc.liveBets.subscribe.useSubscription(undefined, {
+    onData: (evt) => {
+      if (!evt) return;
+      if (typeof evt !== 'object' || !('type' in evt)) return;
+      if (evt.type === 'bet_win') {
+        const amount = (evt as any).amount ?? 0;
+        Alert.alert('Wette gewonnen!', `Du hast ${formatCurrency(amount)} erhalten.`, [{ text: 'OK' }]);
+      }
+      if (evt.type === 'market_settled') {
+        // Optionally inform about settlement
+        const winning = (evt as any).winningOptionKey ?? '';
+        console.log('Market settled. Winner:', winning);
+      }
+    },
+    onError: (err) => {
+      console.log('Subscription error', err?.message);
+    }
+  });
+
   const handlePlaceBet = async () => {
     if (!socket || !connected) {
       Alert.alert('Connection Error', 'Not connected to live betting server');
@@ -214,6 +233,17 @@ export default function LiveBettingComponent({
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid bet amount');
+      return;
+    }
+
+    const MIN_BET = 1;
+    const MAX_BET = 10000;
+    if (amount < MIN_BET) {
+      Alert.alert('Betrag zu niedrig', `Mindesteinsatz ist ${formatCurrency(MIN_BET)}`);
+      return;
+    }
+    if (amount > MAX_BET) {
+      Alert.alert('Betrag zu hoch', `Maximaleinsatz ist ${formatCurrency(MAX_BET)}`);
       return;
     }
 
@@ -409,6 +439,8 @@ export default function LiveBettingComponent({
               </Text>
             </View>
           )}
+
+          <Text style={styles.limitsText}>Limits: min 1 • max 10,000</Text>
 
           <Pressable
             style={[
@@ -630,6 +662,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginLeft: 8,
+  },
+  limitsText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
   },
   recentBetsContainer: {
     flex: 1,

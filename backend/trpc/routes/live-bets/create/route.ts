@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { protectedProcedure } from '../../../create-context';
 import Database from '../../../../utils/database';
+import pubsub from '../../../../services/pubsub';
 
 const inputSchema = z.object({
   eventId: z.string(),
@@ -20,9 +21,23 @@ export default protectedProcedure
       return { success: false as const, message: 'Market not found' };
     }
 
+    if (market.status !== 'open') {
+      return { success: false as const, message: 'Market is closed' };
+    }
+
     const option = market.options.find((o: any) => o.key === input.optionKey);
     if (!option) {
       return { success: false as const, message: 'Option not found' };
+    }
+
+    // Sensible limits and validations
+    const MIN_BET = 1;
+    const MAX_BET = 10000;
+    if (input.amount < MIN_BET) {
+      return { success: false as const, message: `Minimum bet is ${MIN_BET}` };
+    }
+    if (input.amount > MAX_BET) {
+      return { success: false as const, message: `Maximum bet is ${MAX_BET}` };
     }
 
     const user = await Database.getUserById(userId);
@@ -40,6 +55,12 @@ export default protectedProcedure
       amount: input.amount,
       oddsAtPlacement: option.odds,
       potentialWin: Number((input.amount * option.odds).toFixed(2)),
+    });
+
+    // Emit confirmation via pubsub for subscribers
+    pubsub.emit({
+      type: 'heartbeat',
+      message: 'bet_placed',
     });
 
     return {

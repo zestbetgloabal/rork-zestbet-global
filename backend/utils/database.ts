@@ -147,6 +147,17 @@ export class Database {
     return mockDB.liveBetMarkets.filter((m) => m.eventId === eventId && m.status === 'open');
   }
 
+  static async getMarketById(marketId: string) {
+    return mockDB.liveBetMarkets.find(m => m.id === marketId);
+  }
+
+  static async updateMarket(marketId: string, updates: any) {
+    const idx = mockDB.liveBetMarkets.findIndex(m => m.id === marketId);
+    if (idx === -1) return null;
+    mockDB.liveBetMarkets[idx] = { ...mockDB.liveBetMarkets[idx], ...updates, updatedAt: new Date() };
+    return mockDB.liveBetMarkets[idx];
+  }
+
   static async createLiveBetMarket(marketData: any) {
     const market = {
       id: `market_${Date.now()}`,
@@ -168,6 +179,17 @@ export class Database {
     };
     mockDB.liveBetWagers.push(wager);
     return wager;
+  }
+
+  static async getWagersByMarket(marketId: string) {
+    return mockDB.liveBetWagers.filter(w => w.marketId === marketId);
+  }
+
+  static async updateWagerStatus(wagerId: string, status: 'active'|'won'|'lost'|'void') {
+    const idx = mockDB.liveBetWagers.findIndex(w => w.id === wagerId);
+    if (idx === -1) return null;
+    mockDB.liveBetWagers[idx].status = status;
+    return mockDB.liveBetWagers[idx];
   }
 
   static async adjustUserBalance(userId: string, delta: number) {

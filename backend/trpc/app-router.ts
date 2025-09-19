@@ -36,6 +36,7 @@ import {
 import listLiveBetMarketsRoute from "./routes/live-bets/list/route";
 import createLiveBetRoute from "./routes/live-bets/create/route";
 import liveBetsSubscribeRoute from "./routes/live-bets/subscribe/route";
+import settleLiveBetRoute from "./routes/live-bets/settle/route";
 
 export const appRouter = createTRPCRouter({
   // Example routes (keep for testing)
@@ -89,6 +90,7 @@ export const appRouter = createTRPCRouter({
     list: listLiveBetMarketsRoute,
     create: createLiveBetRoute,
     subscribe: liveBetsSubscribeRoute,
+    settle: settleLiveBetRoute,
   }),
 });
 
