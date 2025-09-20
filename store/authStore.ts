@@ -65,9 +65,9 @@ export const useAuthStore = create<AuthState>()(
         try {
           // Use tRPC to authenticate with backend
           const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.login.mutate({ email, password }) as AuthResponse;
+          const result = await trpcClient.auth.login.mutate({ email, password });
           
-          if (result && result.success) {
+          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             // Set user data
@@ -112,49 +112,16 @@ export const useAuthStore = create<AuthState>()(
       register: async (params: RegisterParams) => {
         set({ isLoading: true, error: null });
         try {
-          // Use tRPC to register with backend
+          // Registration is currently restricted - backend will throw error
           const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.register.mutate({
+          await trpcClient.auth.register.mutate({
             email: params.email,
             password: params.password,
             name: params.username,
             phone: params.phone,
-          }) as AuthResponse;
+          });
           
-          if (result && result.success) {
-            set({ token: result.token, isLoading: false, isAuthenticated: true });
-            
-            // Set user data
-            const { useUserStore } = await import('./userStore');
-            const { setUser } = useUserStore.getState();
-            setUser({
-              id: result.user.id,
-              username: result.user.name,
-              zestBalance: 100,
-              points: 0,
-              inviteCode: `ZEST${Math.floor(1000 + Math.random() * 9000)}`,
-              avatar: params.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-              biography: params.biography || 'New user on ZestBet. Ready to make predictions!',
-              socialMedia: params.socialMedia || {
-                instagram: '',
-                twitter: '',
-                facebook: '',
-                linkedin: '',
-                tiktok: '',
-                youtube: '',
-                snapchat: '',
-                website: ''
-              },
-              dailyBetAmount: 0,
-              lastBetDate: new Date().toISOString(),
-              agbConsent: true,
-              privacyConsent: true,
-              consentDate: new Date().toISOString()
-            });
-            
-            return true;
-          }
-          
+          // This line should never be reached due to backend restriction
           return false;
         } catch (error: any) {
           const errorMessage = error?.message || 'Registration is currently restricted. Please contact support.';
@@ -238,20 +205,21 @@ export const useAuthStore = create<AuthState>()(
       loginWithGoogle: async () => {
         set({ isLoading: true, error: null });
         try {
-          // Mock Google token for demo - in real app this would come from Google SDK
-          const mockGoogleToken = 'mock-google-token';
-          const mockEmail = 'user@gmail.com'; // This would come from Google
-          const mockName = 'Google User';
+          // In production, this would integrate with real Google SDK
+          // For now, we reject all Google login attempts to force manual account creation
+          throw new Error('Google login is only available for existing accounts. Please contact support to create an account.');
           
+          /*
+          // This code would be used when Google SDK is properly integrated:
           const { trpcClient } = await import('@/lib/trpc');
           const result = await trpcClient.auth.socialLogin.mutate({
             provider: 'google',
-            token: mockGoogleToken,
-            email: mockEmail,
-            name: mockName,
-          }) as AuthResponse;
+            token: googleToken, // Real token from Google SDK
+            email: googleEmail, // Real email from Google
+            name: googleName,   // Real name from Google
+          });
           
-          if (result && result.success) {
+          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             const { useUserStore } = await import('./userStore');
@@ -285,6 +253,7 @@ export const useAuthStore = create<AuthState>()(
           }
           
           return false;
+          */
         } catch (error: any) {
           const errorMessage = error?.message || 'Google login is only available for existing accounts.';
           set({ error: errorMessage, isLoading: false });
@@ -295,20 +264,21 @@ export const useAuthStore = create<AuthState>()(
       loginWithApple: async () => {
         set({ isLoading: true, error: null });
         try {
-          // Mock Apple token for demo - in real app this would come from Apple SDK
-          const mockAppleToken = 'mock-apple-token';
-          const mockEmail = 'user@privaterelay.appleid.com';
-          const mockName = 'Apple User';
+          // In production, this would integrate with real Apple SDK
+          // For now, we reject all Apple login attempts to force manual account creation
+          throw new Error('Apple login is only available for existing accounts. Please contact support to create an account.');
           
+          /*
+          // This code would be used when Apple SDK is properly integrated:
           const { trpcClient } = await import('@/lib/trpc');
           const result = await trpcClient.auth.socialLogin.mutate({
             provider: 'apple',
-            token: mockAppleToken,
-            email: mockEmail,
-            name: mockName,
-          }) as AuthResponse;
+            token: appleToken, // Real token from Apple SDK
+            email: appleEmail, // Real email from Apple
+            name: appleName,   // Real name from Apple
+          });
           
-          if (result && result.success) {
+          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             const { useUserStore } = await import('./userStore');
@@ -342,6 +312,7 @@ export const useAuthStore = create<AuthState>()(
           }
           
           return false;
+          */
         } catch (error: any) {
           const errorMessage = error?.message || 'Apple login is only available for existing accounts.';
           set({ error: errorMessage, isLoading: false });
@@ -352,20 +323,21 @@ export const useAuthStore = create<AuthState>()(
       loginWithFacebook: async () => {
         set({ isLoading: true, error: null });
         try {
-          // Mock Facebook token for demo - in real app this would come from Facebook SDK
-          const mockFacebookToken = 'mock-facebook-token';
-          const mockEmail = 'user@facebook.com';
-          const mockName = 'Facebook User';
+          // In production, this would integrate with real Facebook SDK
+          // For now, we reject all Facebook login attempts to force manual account creation
+          throw new Error('Facebook login is only available for existing accounts. Please contact support to create an account.');
           
+          /*
+          // This code would be used when Facebook SDK is properly integrated:
           const { trpcClient } = await import('@/lib/trpc');
           const result = await trpcClient.auth.socialLogin.mutate({
             provider: 'facebook',
-            token: mockFacebookToken,
-            email: mockEmail,
-            name: mockName,
-          }) as AuthResponse;
+            token: facebookToken, // Real token from Facebook SDK
+            email: facebookEmail, // Real email from Facebook
+            name: facebookName,   // Real name from Facebook
+          });
           
-          if (result && result.success) {
+          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             const { useUserStore } = await import('./userStore');
@@ -399,6 +371,7 @@ export const useAuthStore = create<AuthState>()(
           }
           
           return false;
+          */
         } catch (error: any) {
           const errorMessage = error?.message || 'Facebook login is only available for existing accounts.';
           set({ error: errorMessage, isLoading: false });
