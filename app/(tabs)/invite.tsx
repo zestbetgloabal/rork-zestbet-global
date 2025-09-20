@@ -149,13 +149,28 @@ export default function InviteTab() {
   
   const handleShare = async () => {
     try {
+      if (Platform.OS === 'web') {
+        const nav = (navigator as any);
+        if (nav?.share) {
+          await nav.share({ title: 'Join me on ZestBet!', text: inviteMessage, url: inviteLink });
+          console.log('Web share invoked');
+          return;
+        }
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(inviteMessage + '\n' + inviteLink);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+          console.log('Copied invite to clipboard as web fallback');
+          return;
+        }
+      }
+
       const result = await Share.share({
         message: inviteMessage,
         title: 'Join me on ZestBet!',
         url: Platform.OS === 'ios' ? inviteLink : undefined,
       });
-      
-      if (result.action === Share.sharedAction) {
+      if ((result as any)?.action === (Share as any).sharedAction) {
         console.log('Invite shared successfully');
       }
     } catch (error) {
@@ -170,13 +185,21 @@ export default function InviteTab() {
     }
     
     try {
+      if (Platform.OS === 'web') {
+        const text = encodeURIComponent(inviteMessage);
+        const wa = `https://wa.me/?text=${text}`;
+        const tg = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${text}`;
+        const target = wa; // prefer WhatsApp
+        window.open(target, '_blank');
+        console.log('Opened web messenger share');
+        return;
+      }
+
       if (showContactForm) {
-        // Direct SMS with phone number
-        const phoneNumber = contactPhone.replace(/[^0-9+]/g, ''); // Clean phone number
+        const phoneNumber = contactPhone.replace(/[^0-9+]/g, '');
         const smsUrl = Platform.OS === 'ios' 
           ? `sms:${phoneNumber}&body=${encodeURIComponent(inviteMessage)}`
           : `sms:${phoneNumber}?body=${encodeURIComponent(inviteMessage)}`;
-        
         const canOpen = await Linking.canOpenURL(smsUrl);
         if (canOpen) {
           await Linking.openURL(smsUrl);
@@ -186,16 +209,13 @@ export default function InviteTab() {
           console.log('SMS not available on this device');
         }
       } else {
-        // Open SMS app with pre-filled message
         const smsUrl = Platform.OS === 'ios' 
           ? `sms:&body=${encodeURIComponent(inviteMessage)}`
           : `sms:?body=${encodeURIComponent(inviteMessage)}`;
-        
         const canOpen = await Linking.canOpenURL(smsUrl);
         if (canOpen) {
           await Linking.openURL(smsUrl);
         } else {
-          // Fallback to contact form
           setShowContactForm(true);
         }
       }
@@ -403,34 +423,56 @@ export default function InviteTab() {
           <Text style={styles.sectionTitle}>Share Invite</Text>
           
           <View style={styles.shareOptions}>
-            <Pressable style={styles.shareOption} onPress={handleShare}>
+            <Pressable testID="share-general" style={styles.shareOption} onPress={handleShare}>
               <View style={[styles.shareIconContainer, { backgroundColor: colors.primary }]}>
                 <Share2 size={24} color="white" />
               </View>
               <Text style={styles.shareOptionText}>Share</Text>
             </Pressable>
             
-            <Pressable style={styles.shareOption} onPress={handleSendSMS}>
+            <Pressable testID="share-sms" style={styles.shareOption} onPress={handleSendSMS}>
               <View style={[styles.shareIconContainer, { backgroundColor: colors.success }]}>
                 <MessageSquare size={24} color="white" />
               </View>
-              <Text style={styles.shareOptionText}>SMS</Text>
+              <Text style={styles.shareOptionText}>{Platform.OS === 'web' ? 'Messenger' : 'SMS'}</Text>
             </Pressable>
             
-            <Pressable style={styles.shareOption} onPress={handleSendEmail}>
+            <Pressable testID="share-email" style={styles.shareOption} onPress={handleSendEmail}>
               <View style={[styles.shareIconContainer, { backgroundColor: colors.secondary }]}>
                 <Mail size={24} color="white" />
               </View>
               <Text style={styles.shareOptionText}>Email</Text>
             </Pressable>
             
-            <Pressable style={styles.shareOption} onPress={handleSendToContacts}>
+            <Pressable testID="share-contacts" style={styles.shareOption} onPress={handleSendToContacts}>
               <View style={[styles.shareIconContainer, { backgroundColor: colors.primary }]}>
                 <Users size={24} color="white" />
               </View>
               <Text style={styles.shareOptionText}>Contacts</Text>
             </Pressable>
           </View>
+
+          <Pressable
+            testID="copy-invite-link"
+            onPress={async () => {
+              try {
+                if (Platform.OS === 'web' && navigator.clipboard) {
+                  await navigator.clipboard.writeText(inviteLink);
+                } else {
+                  await Clipboard.setStringAsync(inviteLink);
+                }
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+                console.log('Invite link copied');
+              } catch (e) {
+                console.error('Copy invite link failed', e);
+              }
+            }}
+            style={[styles.copyButton, { alignSelf: 'flex-start' }]}
+          >
+            <Copy size={20} color={colors.primary} />
+            <Text style={styles.copyButtonText}>{copied ? 'Link Copied!' : 'Copy Invite Link'}</Text>
+          </Pressable>
           
           <View style={styles.linkContainer}>
             <Text style={styles.linkTitle}>Invite Link</Text>
@@ -539,15 +581,20 @@ export default function InviteTab() {
                   <Pressable 
                     style={styles.quickInviteOption}
                     onPress={() => {
-                      if (activeLiveEvents.length > 0) {
-                        const event = activeLiveEvents[0];
-                        const inviteLink = generateLiveEventInviteLink(event.id);
-                        const message = `🔴 Join my live event: "${event.title}"\n\nWatch live at: ${inviteLink}`;
-                        const smsUrl = Platform.OS === 'ios' 
-                          ? `sms:&body=${encodeURIComponent(message)}`
-                          : `sms:?body=${encodeURIComponent(message)}`;
-                        Linking.openURL(smsUrl).catch(() => console.log('SMS not available'));
+                      const event = activeLiveEvents[0];
+                      const link = event ? generateLiveEventInviteLink(event.id) : inviteLink;
+                      const textMsg = event 
+                        ? `🔴 Join my live event: "${event.title}"\n\nWatch live at: ${link}`
+                        : inviteMessage;
+                      if (Platform.OS === 'web') {
+                        const wa = `https://wa.me/?text=${encodeURIComponent(textMsg)}`;
+                        window.open(wa, '_blank');
+                        return;
                       }
+                      const smsUrl = Platform.OS === 'ios' 
+                        ? `sms:&body=${encodeURIComponent(textMsg)}`
+                        : `sms:?body=${encodeURIComponent(textMsg)}`;
+                      Linking.openURL(smsUrl).catch(() => console.log('SMS not available'));
                     }}
                   >
                     <MessageSquare size={24} color={colors.primary} />
@@ -556,13 +603,18 @@ export default function InviteTab() {
                   <Pressable 
                     style={styles.quickInviteOption}
                     onPress={() => {
-                      if (activeLiveEvents.length > 0) {
-                        const event = activeLiveEvents[0];
-                        const inviteLink = generateLiveEventInviteLink(event.id);
-                        const message = `🔴 Join my live event: "${event.title}"\n\nWatch live at: ${inviteLink}`;
-                        const emailUrl = `mailto:?subject=${encodeURIComponent(`Join ${event.title} on ZestBet`)}&body=${encodeURIComponent(message)}`;
-                        Linking.openURL(emailUrl).catch(() => console.log('Email not available'));
+                      const event = activeLiveEvents[0];
+                      const link = event ? generateLiveEventInviteLink(event.id) : inviteLink;
+                      const textMsg = event 
+                        ? `🔴 Join my live event: "${event.title}"\n\nWatch live at: ${link}`
+                        : inviteMessage;
+                      const subject = event ? `Join ${event.title} on ZestBet` : 'Join me on ZestBet!';
+                      const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textMsg)}`;
+                      if (Platform.OS === 'web') {
+                        window.open(emailUrl, '_blank');
+                        return;
                       }
+                      Linking.openURL(emailUrl).catch(() => console.log('Email not available'));
                     }}
                   >
                     <Mail size={24} color={colors.primary} />
