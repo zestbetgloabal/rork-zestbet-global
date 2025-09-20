@@ -12,12 +12,15 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Share,
+  Linking,
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useLiveEventStore } from '@/store/liveEventStore';
 import { useUserStore } from '@/store/userStore';
+import * as Clipboard from 'expo-clipboard';
 
 import LiveBettingComponent from '@/components/LiveBettingComponent';
 import Button from '@/components/Button';
@@ -248,14 +251,11 @@ export default function LiveEventDetailScreen() {
   
   const copyInviteLink = async () => {
     try {
-      // For web compatibility, we'll use a simple approach
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(inviteLink);
       } else {
-        // For mobile, you would use expo-clipboard
-        console.log('Copying to clipboard:', inviteLink);
+        await Clipboard.setStringAsync(inviteLink);
       }
-      
       Alert.alert('Link Copied!', 'The invite link has been copied to your clipboard.');
     } catch (error) {
       console.error('Failed to copy link:', error);
@@ -332,6 +332,50 @@ export default function LiveEventDetailScreen() {
   const isLive = currentEvent.status === 'live';
   const isUpcoming = currentEvent.status === 'upcoming';
   
+  const shareInvite = async () => {
+    try {
+      if (!inviteLink) return;
+      if (Platform.OS === 'web') {
+        const nav = navigator as any;
+        const text = `Join my live event: ${currentEvent?.title}\n${inviteLink}`;
+        if (nav?.share) {
+          await nav.share({ title: 'Join my live event', text, url: inviteLink });
+          return;
+        }
+        await navigator.clipboard.writeText(text);
+        Alert.alert('Copied', 'Invite copied to clipboard. Paste it anywhere to share.');
+        return;
+      }
+      await Share.share({
+        title: 'Join my live event',
+        message: `Join my live event: ${currentEvent?.title}\n${inviteLink}`,
+        url: Platform.OS === 'ios' ? inviteLink : undefined,
+      });
+    } catch (e) {
+      console.log('Share failed', e);
+    }
+  };
+
+  const smsInvite = async () => {
+    try {
+      const text = `Join my live event: ${currentEvent?.title}\n${inviteLink}`;
+      if (Platform.OS === 'web') {
+        const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(wa, '_blank');
+        return;
+      }
+      const smsUrl = Platform.select({
+        ios: `sms:&body=${encodeURIComponent(text)}`,
+        android: `sms:?body=${encodeURIComponent(text)}`,
+        default: `sms:?body=${encodeURIComponent(text)}`,
+      });
+      const canOpen = await Linking.canOpenURL(smsUrl as string);
+      if (canOpen) await Linking.openURL(smsUrl as string);
+    } catch (e) {
+      console.log('SMS share failed', e);
+    }
+  };
+  
   return (
     <View style={styles.container}>
       <Stack.Screen 
@@ -346,7 +390,7 @@ export default function LiveEventDetailScreen() {
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>{currentEvent.title}</Text>
-        <Pressable style={styles.shareButton}>
+        <Pressable style={styles.shareButton} onPress={shareInvite} testID="live-share">
           <Share2 size={24} color={colors.text} />
         </Pressable>
       </View>
@@ -782,11 +826,11 @@ export default function LiveEventDetailScreen() {
               <View style={styles.quickActionsSection}>
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
                 <View style={styles.quickActionsGrid}>
-                  <Pressable style={styles.quickActionButton}>
+                  <Pressable style={styles.quickActionButton} onPress={smsInvite} testID="quick-sms-invite">
                     <Phone size={24} color={colors.primary} />
                     <Text style={styles.quickActionText}>Invite via SMS</Text>
                   </Pressable>
-                  <Pressable style={styles.quickActionButton}>
+                  <Pressable style={styles.quickActionButton} onPress={shareInvite} testID="quick-share">
                     <Share2 size={24} color={colors.primary} />
                     <Text style={styles.quickActionText}>Share on Social</Text>
                   </Pressable>
