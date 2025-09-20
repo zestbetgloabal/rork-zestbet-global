@@ -53,14 +53,27 @@ export default function InviteTab() {
   
   const inviteCode = user?.inviteCode || 'ZEST123';
   
+  const getPublicBaseUrl = () => {
+    try {
+      const envUrl = (process as any)?.env?.EXPO_PUBLIC_BASE_URL as string | undefined;
+      if (envUrl && /^https?:\/\//.test(envUrl)) {
+        return envUrl.replace(/\/$/, '');
+      }
+    } catch {}
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    return 'https://zestbet.app';
+  };
+
   const generateLiveEventInviteLink = (eventId: string) => {
-    const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://zestbet.app';
+    const baseUrl = getPublicBaseUrl();
     return `${baseUrl}/live-events/${eventId}?invite=${user?.id || 'guest'}`;
   };
   
   const shareLiveEventInvite = async (event: LiveEvent) => {
     const inviteLink = generateLiveEventInviteLink(event.id);
-    const message = `🔴 Join my live event: "${event.title}"\n\nWatch and participate live at: ${inviteLink}\n\nDownload ZestBet: https://zestbet.com/download`;
+    const message = `🔴 Join my live event: "${event.title}"\n\nWatch and participate live at: ${inviteLink}`;
     
     try {
       await Share.share({
@@ -114,12 +127,12 @@ export default function InviteTab() {
       return playStoreLink;
     } else {
       // For web or unknown platforms, use a universal link
-      return 'https://zestbet.com/download';
+      return getPublicBaseUrl();
     }
   };
   
   const getInviteLink = () => {
-    const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://zestbet.app';
+    const baseUrl = getPublicBaseUrl();
     return `${baseUrl}/invite/${inviteCode}?redirect=${encodeURIComponent(getStoreLink())}`;
   };
   
