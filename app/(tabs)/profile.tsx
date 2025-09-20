@@ -117,6 +117,15 @@ export default function ProfileScreen() {
           
           <TouchableOpacity 
             style={styles.menuItem}
+            onPress={() => router.push('/invite')}
+          >
+            <Feather name="users" size={20} color={colors.primary} />
+            <Text style={styles.menuItemText}>Invite Friends</Text>
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.menuItem}
             onPress={() => router.push('/user-preferences')}
           >
             <Feather name="settings" size={20} color={colors.primary} />
