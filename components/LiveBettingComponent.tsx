@@ -212,32 +212,30 @@ export default function LiveBettingComponent({
     }
   }, [subscriptionEnabled, marketsQuery]);
 
-  // Use subscription with conditional enabling
-  const subscriptionResult = trpc.liveBets.subscribe.useSubscription(undefined, {
-    enabled: subscriptionEnabled && Platform.OS !== 'web',
-    onData: (evt) => {
-      if (!evt) return;
-      if (typeof evt !== 'object' || !('type' in evt)) return;
-      if (evt.type === 'bet_win') {
-        const amount = (evt as any).amount ?? 0;
-        console.log(`Wette gewonnen! Du hast ${formatCurrency(amount)} erhalten.`);
-      }
-      if (evt.type === 'market_settled') {
-        const winning = (evt as any).winningOptionKey ?? '';
-        console.log('Market settled. Winner:', winning);
-      }
-    },
-    onError: (err) => {
-      console.log('Subscription error, falling back to polling:', err?.message);
-      setSubscriptionEnabled(false);
-    }
-  });
+  // Use subscription with conditional enabling - disabled for now due to HTTP link limitations
+  // const subscriptionResult = trpc.liveBets.subscribe.useSubscription(undefined, {
+  //   enabled: subscriptionEnabled && Platform.OS !== 'web',
+  //   onData: (evt) => {
+  //     if (!evt) return;
+  //     if (typeof evt !== 'object' || !('type' in evt)) return;
+  //     if (evt.type === 'bet_win') {
+  //       const amount = (evt as any).amount ?? 0;
+  //       Alert.alert('Wette gewonnen!', `Du hast ${formatCurrency(amount)} erhalten.`);
+  //     }
+  //     if (evt.type === 'market_settled') {
+  //       const winning = (evt as any).winningOptionKey ?? '';
+  //       Alert.alert('Market settled', `Winner: ${winning}`);
+  //     }
+  //   },
+  //   onError: (err) => {
+  //     console.log('Subscription error, falling back to polling:', err?.message);
+  //     setSubscriptionEnabled(false);
+  //   }
+  // });
 
-  // Disable subscription on web or if it fails
+  // Disable subscription for now due to HTTP link limitations
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      setSubscriptionEnabled(false);
-    }
+    setSubscriptionEnabled(false);
   }, []);
 
   const handlePlaceBet = async () => {

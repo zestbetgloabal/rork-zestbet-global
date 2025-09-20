@@ -205,40 +205,44 @@ export default function LiveEventDetailScreen() {
         {/* Stream View */}
         <View style={styles.streamContainer}>
           {isLive ? (
-            currentEvent.streamUrl ? (
-              // In a real app, this would be a video player component
-              <Image 
-                source={{ uri: currentEvent.thumbnailUrl }} 
-                style={styles.streamImage}
-              />
-            ) : (
-              <View style={styles.streamPlaceholder}>
-                <Text style={styles.streamPlaceholderText}>Live stream will appear here</Text>
+            <View style={styles.liveStreamContainer}>
+              {/* Simulated Live Stream - In production, use a proper video player */}
+              <View style={styles.streamContent}>
+                <Image 
+                  source={{ uri: currentEvent.thumbnailUrl || 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=450&fit=crop' }} 
+                  style={styles.streamImage}
+                />
+                <View style={styles.streamOverlay}>
+                  <View style={styles.streamPulse}>
+                    <View style={styles.pulseRing} />
+                    <View style={styles.pulseCore} />
+                  </View>
+                  <Text style={styles.liveStreamText}>🔴 LIVE STREAM</Text>
+                  <Text style={styles.streamDescription}>Event is streaming live</Text>
+                </View>
               </View>
-            )
+              
+              {/* Live Indicator and Viewer Count */}
+              <View style={styles.streamInfo}>
+                <View style={styles.liveIndicator}>
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
+                <View style={styles.viewerCount}>
+                  <Users size={14} color="white" />
+                  <Text style={styles.viewerCountText}>{currentEvent.viewerCount}</Text>
+                </View>
+              </View>
+            </View>
           ) : (
             <View style={styles.streamPlaceholder}>
               <Image 
-                source={{ uri: currentEvent.thumbnailUrl }} 
+                source={{ uri: currentEvent.thumbnailUrl || 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=450&fit=crop' }} 
                 style={styles.thumbnailImage}
               />
               <View style={styles.upcomingOverlay}>
                 <Text style={styles.upcomingText}>
                   {isUpcoming ? 'Starting ' + formatDateTime(currentEvent.startTime) : 'Event has ended'}
                 </Text>
-              </View>
-            </View>
-          )}
-          
-          {/* Live Indicator and Viewer Count */}
-          {isLive && (
-            <View style={styles.streamInfo}>
-              <View style={styles.liveIndicator}>
-                <Text style={styles.liveText}>LIVE</Text>
-              </View>
-              <View style={styles.viewerCount}>
-                <Users size={14} color="white" />
-                <Text style={styles.viewerCountText}>{currentEvent.viewerCount}</Text>
               </View>
             </View>
           )}
@@ -517,10 +521,62 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
   },
+  liveStreamContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  streamContent: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
   streamImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  streamOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  streamPulse: {
+    position: 'relative',
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 59, 48, 0.3)',
+    transform: [{ scale: 1.2 }],
+  },
+  pulseCore: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FF3B30',
+  },
+  liveStreamText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  streamDescription: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
   },
   streamPlaceholder: {
     width: '100%',
@@ -528,10 +584,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1a1a1a',
-  },
-  streamPlaceholderText: {
-    color: 'white',
-    fontSize: 16,
   },
   thumbnailImage: {
     width: '100%',

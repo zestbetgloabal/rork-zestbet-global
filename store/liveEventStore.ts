@@ -47,15 +47,15 @@ const mockEvents: LiveEvent[] = [
     id: '1',
     title: 'Challenge Fieber Live: Summer Edition',
     description: 'Join us for our weekly live challenge event! This week we have special summer-themed challenges.',
-    status: 'upcoming',
-    startTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+    status: 'live',
+    startTime: new Date(Date.now() - 30 * 60 * 1000), // Started 30 minutes ago
     thumbnailUrl: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=1000',
     participants: [
       { id: '1', username: 'ZestHost', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000', role: 'host' },
       { id: '2', username: 'ChallengeKing', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1000', role: 'participant' },
       { id: '3', username: 'GameMaster', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1000', role: 'participant' },
     ],
-    viewerCount: 0,
+    viewerCount: 127,
     fundingGoal: 500,
     fundingRaised: 125,
     sponsors: [
@@ -68,7 +68,7 @@ const mockEvents: LiveEvent[] = [
         description: 'Create a sculpture using only items you would find at the beach.',
         difficulty: 'medium',
         duration: 600, // 10 minutes
-        status: 'upcoming',
+        status: 'active',
         participants: [
           { id: '2', username: 'ChallengeKing' },
           { id: '3', username: 'GameMaster' }
@@ -82,7 +82,7 @@ const mockEvents: LiveEvent[] = [
         description: 'Test your knowledge about summer facts, movies, and activities.',
         difficulty: 'easy',
         duration: 300, // 5 minutes
-        status: 'upcoming',
+        status: 'active',
         participants: [
           { id: '2', username: 'ChallengeKing' },
           { id: '3', username: 'GameMaster' }
@@ -96,13 +96,13 @@ const mockEvents: LiveEvent[] = [
     id: '2',
     title: 'Challenge Fieber Live: Strategy Edition',
     description: 'A special edition focused on strategic challenges and puzzles.',
-    status: 'upcoming',
-    startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+    status: 'live',
+    startTime: new Date(Date.now() - 10 * 60 * 1000), // Started 10 minutes ago
     thumbnailUrl: 'https://images.unsplash.com/photo-1553481187-be93c21490a9?q=80&w=1000',
     participants: [
       { id: '1', username: 'ZestHost', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000', role: 'host' },
     ],
-    viewerCount: 0,
+    viewerCount: 89,
     fundingGoal: 300,
     fundingRaised: 50,
     challenges: []
@@ -187,7 +187,7 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
             description: eventData.description,
             difficulty: eventData.difficulty,
             duration: eventData.duration,
-            status: 'upcoming',
+            status: 'active',
             participants: [],
             type: 'solo',
             aiGenerated: false
@@ -417,7 +417,7 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
         description,
         difficulty,
         duration,
-        status: 'upcoming',
+        status: 'active',
         participants: [],
         type,
         aiGenerated: true
