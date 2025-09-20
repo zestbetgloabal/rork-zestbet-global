@@ -1,7 +1,8 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchLink, splitLink, wsLink, createWSClient } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
+import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -22,10 +23,44 @@ const getTrpcUrl = (): string => {
   throw new Error("TRPC URL not configured. Set EXPO_PUBLIC_TRPC_URL or EXPO_PUBLIC_AMPLIFY_FUNCTION_URL.");
 };
 
-// Use HTTP-only client for now to avoid subscription issues
+const getWsUrl = (): string => {
+  const httpUrl = getTrpcUrl();
+  return httpUrl.replace(/^http/, 'ws');
+};
+
+// Create WebSocket client for subscriptions (only on supported platforms)
+const createWebSocketClient = () => {
+  if (Platform.OS === 'web') {
+    try {
+      return createWSClient({
+        url: getWsUrl(),
+      });
+    } catch (error) {
+      console.warn('WebSocket not supported, falling back to HTTP only');
+      return null;
+    }
+  }
+  return null;
+};
+
+const wsClient = createWebSocketClient();
+
 export const trpcClient = trpc.createClient({
   links: [
-    httpBatchLink({ 
+    // Use WebSocket for subscriptions when available, HTTP for everything else
+    wsClient ? splitLink({
+      condition(op) {
+        return op.type === 'subscription';
+      },
+      true: wsLink({
+        client: wsClient,
+        transformer: superjson,
+      }),
+      false: httpBatchLink({ 
+        url: getTrpcUrl(), 
+        transformer: superjson 
+      }),
+    }) : httpBatchLink({ 
       url: getTrpcUrl(), 
       transformer: superjson 
     }),

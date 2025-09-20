@@ -203,7 +203,26 @@ export default function LiveBettingComponent({
 
 
 
-  // Use polling instead of subscriptions for better web compatibility
+  // Try to use subscription, fallback to polling if not supported
+  const liveBetSubscription = trpc.liveBets.subscribe.useSubscription(
+    undefined,
+    {
+      enabled: Platform.OS === 'web', // Only try subscriptions on web
+      onData: (data) => {
+        console.log('Live bet subscription data:', data);
+        if (data.type === 'bet_win') {
+          Alert.alert('🎉 Bet Won!', data.message || 'Congratulations!');
+        } else if (data.type === 'market_settled') {
+          Alert.alert('Market Settled', data.message || 'The market has been settled.');
+        }
+      },
+      onError: (error) => {
+        console.warn('Live bet subscription error:', error);
+      },
+    }
+  );
+
+  // Fallback polling for when subscriptions are not available
   useEffect(() => {
     const interval = setInterval(() => {
       marketsQuery.refetch();
