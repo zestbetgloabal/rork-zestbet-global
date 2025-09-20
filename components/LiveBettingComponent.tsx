@@ -104,11 +104,16 @@ export default function LiveBettingComponent({
   }, [marketsQuery.data]);
 
   useEffect(() => {
-    // Initialize socket connection
-    const socketUrl = Platform.OS === 'web' 
-      ? (process.env.EXPO_PUBLIC_SOCKET_URL ?? 'ws://localhost:3001') 
-      : (process.env.EXPO_PUBLIC_SOCKET_URL ?? 'ws://localhost:3001');
-    
+    const envUrl = process.env.EXPO_PUBLIC_SOCKET_URL;
+    const shouldUseSocket = Platform.OS !== 'web' && !!envUrl;
+
+    if (!shouldUseSocket) {
+      console.log('[LiveBetting] Skipping socket.io connection. Platform:', Platform.OS, 'URL present:', !!envUrl);
+      setConnected(true);
+      return () => {};
+    }
+
+    const socketUrl = envUrl ?? 'ws://localhost:3001';
     const newSocket = io(socketUrl, {
       transports: ['websocket'],
       timeout: 5000,
@@ -117,12 +122,11 @@ export default function LiveBettingComponent({
     newSocket.on('connect', () => {
       console.log('Connected to live betting server');
       setConnected(true);
-      
-      // Join the live event room
+
       newSocket.emit('join-live-event', {
         eventId,
         userId,
-        username
+        username,
       });
     });
 
@@ -133,13 +137,12 @@ export default function LiveBettingComponent({
 
     newSocket.on('betting-data-update', (data: LiveBettingData) => {
       console.log('Betting data updated:', data);
-      
-      // Track odds changes
+
       const changes: Record<string, 'up' | 'down' | 'same'> = {};
-      Object.keys(data.currentOdds).forEach(betType => {
+      Object.keys(data.currentOdds).forEach((betType) => {
         const currentOdds = data.currentOdds[betType];
         const previousOdds = previousOddsRef.current[betType];
-        
+
         if (previousOdds !== undefined) {
           if (currentOdds > previousOdds) {
             changes[betType] = 'up';
@@ -152,16 +155,15 @@ export default function LiveBettingComponent({
           changes[betType] = 'same';
         }
       });
-      
+
       setOddsChanges(changes);
       previousOddsRef.current = { ...data.currentOdds };
       setBettingData(data);
-      
-      // Clear odds change indicators after 2 seconds
+
       setTimeout(() => {
-        setOddsChanges(prev => {
+        setOddsChanges((prev) => {
           const cleared: Record<string, 'up' | 'down' | 'same'> = {};
-          Object.keys(prev).forEach(key => {
+          Object.keys(prev).forEach((key) => {
             cleared[key] = 'same';
           });
           return cleared;
@@ -197,7 +199,7 @@ export default function LiveBettingComponent({
     return () => {
       newSocket.disconnect();
     };
-  }, [eventId, userId, username]);
+  }, [eventId, userId, username, onBetPlaced]);
 
   const liveBetCreate = trpc.liveBets.create.useMutation();
 
@@ -231,11 +233,6 @@ export default function LiveBettingComponent({
   }, [marketsQuery]);
 
   const handlePlaceBet = async () => {
-    if (!socket || !connected) {
-      Alert.alert('Connection Error', 'Not connected to live betting server');
-      return;
-    }
-
     if (!selectedBetType) {
       Alert.alert('Select Bet Type', 'Please select a bet type first');
       return;
@@ -285,15 +282,17 @@ export default function LiveBettingComponent({
         throw new Error(res.message ?? 'Failed to place bet');
       }
 
-      if (socket) {
+      if (socket && connected) {
         socket.emit('place-live-bet', {
           eventId,
           userId,
           username,
           betType: selectedBetType,
           amount,
-          odds
+          odds,
         });
+      } else {
+        console.log('[LiveBetting] No socket connection, placed via tRPC only');
       }
 
       Alert.alert('Bet Placed!', res.message);
@@ -344,6 +343,7 @@ export default function LiveBettingComponent({
           isSelected && styles.selectedBetOption
         ]}
         onPress={() => setSelectedBetType(betType)}
+        testID={`bet-option-${betType}`}
       >
         <View style={styles.betOptionHeader}>
           <Text style={[
@@ -373,9 +373,9 @@ export default function LiveBettingComponent({
     );
   };
 
-  if (!connected) {
+  if (!connected && Platform.OS !== 'web') {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer} testID="live-connecting">
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Connecting to live betting...</Text>
       </View>
@@ -401,6 +401,7 @@ export default function LiveBettingComponent({
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.bettingOptions}
+        testID="betting-options"
       >
         {Object.entries(bettingData.currentOdds).map(([betType, odds]) =>
           renderBetOption(betType, odds)
@@ -460,6 +461,7 @@ export default function LiveBettingComponent({
             ]}
             onPress={handlePlaceBet}
             disabled={!betAmount || isPlacingBet}
+            testID="place-bet-button"
           >
             {isPlacingBet ? (
               <ActivityIndicator size="small" color="white" />
