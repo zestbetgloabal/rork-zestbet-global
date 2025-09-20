@@ -92,7 +92,11 @@ export default function LoginScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Log in to continue your betting journey</Text>
+      <Text style={styles.subtitle}>Log in with your approved account</Text>
+      
+      <View style={styles.noticeContainer}>
+        <Text style={styles.noticeText}>⚠️ Access is restricted to approved accounts only. Contact support for account creation.</Text>
+      </View>
       
       {error && (
         <View style={styles.errorContainer}>
@@ -317,5 +321,18 @@ const styles = StyleSheet.create({
   createAccountText: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  noticeContainer: {
+    backgroundColor: `${colors.warning || '#FFA500'}20`,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning || '#FFA500',
+  },
+  noticeText: {
+    color: colors.warning || '#FFA500',
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

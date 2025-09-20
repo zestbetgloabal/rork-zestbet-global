@@ -147,7 +147,11 @@ export default function RegisterScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Join ZestBet and start your betting journey</Text>
+      <Text style={styles.subtitle}>Registration is currently restricted</Text>
+      
+      <View style={styles.noticeContainer}>
+        <Text style={styles.noticeText}>🚫 New account registration is currently disabled. Only existing approved accounts can log in. Please contact support if you need access.</Text>
+      </View>
       
       {error && (
         <View style={styles.errorContainer}>
@@ -317,6 +321,7 @@ export default function RegisterScreen() {
           onPress={handleRegister}
           loading={isLoading}
           style={styles.registerButton}
+          disabled={true}
         />
       </View>
       
@@ -508,5 +513,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  noticeContainer: {
+    backgroundColor: `${colors.error}20`,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.error,
+  },
+  noticeText: {
+    color: colors.error,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

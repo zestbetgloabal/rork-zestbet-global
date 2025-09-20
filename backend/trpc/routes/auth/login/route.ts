@@ -15,10 +15,25 @@ export default publicProcedure
 
     const user = await Database.getUserByEmail(email);
 
-    if (!user || user.password !== password) {
+    if (!user) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
-        message: "Invalid credentials",
+        message: "Account not found. Only registered accounts are allowed.",
+      });
+    }
+
+    if (user.password !== password) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Invalid password.",
+      });
+    }
+
+    // Check if account is verified/approved
+    if (user.status === 'pending' || user.status === 'suspended') {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Account is not approved for login. Please contact support.",
       });
     }
 
@@ -29,6 +44,7 @@ export default publicProcedure
         email: user.email,
         name: user.name,
         avatar: user.avatar ?? null,
+        status: user.status,
       },
       token: "mock-jwt-token",
     };

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
+import Database from "../../../../utils/database";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -12,31 +13,20 @@ const registerSchema = z.object({
 export default publicProcedure
   .input(registerSchema)
   .mutation(async ({ input }) => {
-    const { email, password, name, phone } = input;
+    const { email } = input;
     
-    // TODO: Implement actual user creation logic
     // Check if user already exists
-    // Hash password
-    // Save to database
-    
-    // Mock implementation
-    if (email === "existing@example.com") {
+    const existingUser = await Database.getUserByEmail(email);
+    if (existingUser) {
       throw new TRPCError({
         code: "CONFLICT",
-        message: "User already exists",
+        message: "Account with this email already exists",
       });
     }
     
-    return {
-      success: true,
-      user: {
-        id: Date.now().toString(),
-        email,
-        name,
-        phone,
-        avatar: null,
-        createdAt: new Date(),
-      },
-      token: "mock-jwt-token",
-    };
+    // Registration is now restricted - only allow specific domains or manual approval
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Registration is currently restricted. Please contact support to create an account.",
+    });
   });

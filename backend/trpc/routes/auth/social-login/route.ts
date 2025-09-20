@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
+import Database from "../../../../utils/database";
 
 const socialLoginSchema = z.object({
   provider: z.enum(["google", "facebook", "apple"]),
@@ -13,14 +14,8 @@ const socialLoginSchema = z.object({
 export default publicProcedure
   .input(socialLoginSchema)
   .mutation(async ({ input }) => {
-    const { provider, token, email, name, avatar } = input;
+    const { provider, token, email, avatar } = input;
     
-    // TODO: Implement actual social login verification
-    // - Verify token with provider (Google, Facebook, Apple)
-    // - Extract user info from provider
-    // - Create or update user in database
-    
-    // Mock implementation
     if (!token || token === "invalid") {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -28,17 +23,37 @@ export default publicProcedure
       });
     }
     
-    return {
-      success: true,
-      user: {
-        id: Date.now().toString(),
-        email: email || `${provider}@example.com`,
-        name: name || `${provider} User`,
-        avatar,
-        provider,
-        createdAt: new Date(),
-      },
-      token: "mock-jwt-token",
-      isNewUser: false,
-    };
+    // Check if user exists with this email
+    if (email) {
+      const existingUser = await Database.getUserByEmail(email);
+      if (existingUser) {
+        // Check if account is approved
+        if (existingUser.status === 'pending' || existingUser.status === 'suspended') {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Account is not approved for login. Please contact support.",
+          });
+        }
+        
+        return {
+          success: true,
+          user: {
+            id: existingUser.id,
+            email: existingUser.email,
+            name: existingUser.name,
+            avatar: existingUser.avatar || avatar,
+            provider,
+            status: existingUser.status,
+          },
+          token: "mock-jwt-token",
+          isNewUser: false,
+        };
+      }
+    }
+    
+    // No existing account found - social registration is restricted
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Social login is only available for existing accounts. Please contact support to create an account.",
+    });
   });

@@ -50,50 +50,48 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would be an API call
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Use tRPC to authenticate with backend
+          const { trpcClient } = await import('@/lib/trpc');
+          const result = await trpcClient.auth.login.mutate({ email, password });
           
-          // Mock validation
-          if (email !== 'user@example.com' && password !== 'password') {
-            // For demo purposes, accept any credentials
-            // In a real app, this would validate against the backend
+          if (result.success) {
+            set({ token: result.token, isLoading: false, isAuthenticated: true });
+            
+            // Set user data
+            const { useUserStore } = await import('./userStore');
+            const { setUser } = useUserStore.getState();
+            setUser({
+              id: result.user.id,
+              username: result.user.name,
+              zestBalance: 100,
+              points: 0,
+              inviteCode: 'ZEST123',
+              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+              biography: 'Verified user on ZestBet. Ready to make predictions!',
+              socialMedia: {
+                instagram: '',
+                twitter: '',
+                facebook: '',
+                linkedin: '',
+                tiktok: '',
+                youtube: '',
+                snapchat: '',
+                website: ''
+              },
+              dailyBetAmount: 0,
+              lastBetDate: new Date().toISOString(),
+              agbConsent: true,
+              privacyConsent: true,
+              consentDate: new Date().toISOString()
+            });
+            
+            return true;
           }
           
-          // Set mock token
-          set({ token: 'mock-jwt-token', isLoading: false, isAuthenticated: true });
-          
-          // Set user data
-          const { useUserStore } = await import('./userStore');
-          const { setUser } = useUserStore.getState();
-          setUser({
-            id: '1',
-            username: email.split('@')[0],
-            zestBalance: 100,
-            points: 0,
-            inviteCode: 'ZEST123',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-            biography: 'New user on ZestBet. Ready to make predictions!',
-            socialMedia: {
-              instagram: '',
-              twitter: '',
-              facebook: '',
-              linkedin: '',
-              tiktok: '',
-              youtube: '',
-              snapchat: '',
-              website: ''
-            },
-            dailyBetAmount: 0,
-            lastBetDate: new Date().toISOString(),
-            agbConsent: true,
-            privacyConsent: true,
-            consentDate: new Date().toISOString()
-          });
-          
-          return true;
-        } catch (error) {
-          set({ error: 'Failed to login. Please check your credentials.', isLoading: false });
+          return false;
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Failed to login. Please check your credentials.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },
@@ -101,44 +99,53 @@ export const useAuthStore = create<AuthState>()(
       register: async (params: RegisterParams) => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would be an API call
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          
-          // Set mock token
-          set({ token: 'mock-jwt-token', isLoading: false, isAuthenticated: true });
-          
-          // Set user data
-          const { useUserStore } = await import('./userStore');
-          const { setUser } = useUserStore.getState();
-          setUser({
-            id: '1',
-            username: params.username,
-            zestBalance: 100, // Starting balance
-            points: 0,
-            inviteCode: `ZEST${Math.floor(1000 + Math.random() * 9000)}`, // Random 4-digit code
-            avatar: params.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-            biography: params.biography || 'New user on ZestBet. Ready to make predictions!',
-            socialMedia: params.socialMedia || {
-              instagram: '',
-              twitter: '',
-              facebook: '',
-              linkedin: '',
-              tiktok: '',
-              youtube: '',
-              snapchat: '',
-              website: ''
-            },
-            dailyBetAmount: 0,
-            lastBetDate: new Date().toISOString(),
-            agbConsent: true,
-            privacyConsent: true,
-            consentDate: new Date().toISOString()
+          // Use tRPC to register with backend
+          const { trpcClient } = await import('@/lib/trpc');
+          const result = await trpcClient.auth.register.mutate({
+            email: params.email,
+            password: params.password,
+            name: params.username,
+            phone: params.phone,
           });
           
-          return true;
-        } catch (error) {
-          set({ error: 'Failed to register. Please try again.', isLoading: false });
+          if (result.success) {
+            set({ token: result.token, isLoading: false, isAuthenticated: true });
+            
+            // Set user data
+            const { useUserStore } = await import('./userStore');
+            const { setUser } = useUserStore.getState();
+            setUser({
+              id: result.user.id,
+              username: result.user.name,
+              zestBalance: 100,
+              points: 0,
+              inviteCode: `ZEST${Math.floor(1000 + Math.random() * 9000)}`,
+              avatar: params.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+              biography: params.biography || 'New user on ZestBet. Ready to make predictions!',
+              socialMedia: params.socialMedia || {
+                instagram: '',
+                twitter: '',
+                facebook: '',
+                linkedin: '',
+                tiktok: '',
+                youtube: '',
+                snapchat: '',
+                website: ''
+              },
+              dailyBetAmount: 0,
+              lastBetDate: new Date().toISOString(),
+              agbConsent: true,
+              privacyConsent: true,
+              consentDate: new Date().toISOString()
+            });
+            
+            return true;
+          }
+          
+          return false;
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Registration is currently restricted. Please contact support.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },
@@ -218,44 +225,56 @@ export const useAuthStore = create<AuthState>()(
       loginWithGoogle: async () => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would integrate with Google Sign-In
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Mock Google token for demo - in real app this would come from Google SDK
+          const mockGoogleToken = 'mock-google-token';
+          const mockEmail = 'user@gmail.com'; // This would come from Google
+          const mockName = 'Google User';
           
-          // Set mock token
-          set({ token: 'mock-google-jwt-token', isLoading: false, isAuthenticated: true });
-          
-          // Set user data
-          const { useUserStore } = await import('./userStore');
-          const { setUser } = useUserStore.getState();
-          setUser({
-            id: '1',
-            username: 'google_user',
-            zestBalance: 100,
-            points: 0,
-            inviteCode: 'ZEST123',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-            biography: 'Google user on ZestBet. Ready to make predictions!',
-            socialMedia: {
-              instagram: '',
-              twitter: '',
-              facebook: '',
-              linkedin: '',
-              tiktok: '',
-              youtube: '',
-              snapchat: '',
-              website: ''
-            },
-            dailyBetAmount: 0,
-            lastBetDate: new Date().toISOString(),
-            agbConsent: true,
-            privacyConsent: true,
-            consentDate: new Date().toISOString()
+          const { trpcClient } = await import('@/lib/trpc');
+          const result = await trpcClient.auth.socialLogin.mutate({
+            provider: 'google',
+            token: mockGoogleToken,
+            email: mockEmail,
+            name: mockName,
           });
           
-          return true;
-        } catch (error) {
-          set({ error: 'Failed to login with Google. Please try again.', isLoading: false });
+          if (result.success) {
+            set({ token: result.token, isLoading: false, isAuthenticated: true });
+            
+            const { useUserStore } = await import('./userStore');
+            const { setUser } = useUserStore.getState();
+            setUser({
+              id: result.user.id,
+              username: result.user.name,
+              zestBalance: 100,
+              points: 0,
+              inviteCode: 'ZEST123',
+              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+              biography: 'Verified Google user on ZestBet. Ready to make predictions!',
+              socialMedia: {
+                instagram: '',
+                twitter: '',
+                facebook: '',
+                linkedin: '',
+                tiktok: '',
+                youtube: '',
+                snapchat: '',
+                website: ''
+              },
+              dailyBetAmount: 0,
+              lastBetDate: new Date().toISOString(),
+              agbConsent: true,
+              privacyConsent: true,
+              consentDate: new Date().toISOString()
+            });
+            
+            return true;
+          }
+          
+          return false;
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Google login is only available for existing accounts.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },
@@ -263,44 +282,56 @@ export const useAuthStore = create<AuthState>()(
       loginWithApple: async () => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would integrate with Apple Sign-In
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Mock Apple token for demo - in real app this would come from Apple SDK
+          const mockAppleToken = 'mock-apple-token';
+          const mockEmail = 'user@privaterelay.appleid.com';
+          const mockName = 'Apple User';
           
-          // Set mock token
-          set({ token: 'mock-apple-jwt-token', isLoading: false, isAuthenticated: true });
-          
-          // Set user data
-          const { useUserStore } = await import('./userStore');
-          const { setUser } = useUserStore.getState();
-          setUser({
-            id: '1',
-            username: 'apple_user',
-            zestBalance: 100,
-            points: 0,
-            inviteCode: 'ZEST123',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-            biography: 'Apple user on ZestBet. Ready to make predictions!',
-            socialMedia: {
-              instagram: '',
-              twitter: '',
-              facebook: '',
-              linkedin: '',
-              tiktok: '',
-              youtube: '',
-              snapchat: '',
-              website: ''
-            },
-            dailyBetAmount: 0,
-            lastBetDate: new Date().toISOString(),
-            agbConsent: true,
-            privacyConsent: true,
-            consentDate: new Date().toISOString()
+          const { trpcClient } = await import('@/lib/trpc');
+          const result = await trpcClient.auth.socialLogin.mutate({
+            provider: 'apple',
+            token: mockAppleToken,
+            email: mockEmail,
+            name: mockName,
           });
           
-          return true;
-        } catch (error) {
-          set({ error: 'Failed to login with Apple. Please try again.', isLoading: false });
+          if (result.success) {
+            set({ token: result.token, isLoading: false, isAuthenticated: true });
+            
+            const { useUserStore } = await import('./userStore');
+            const { setUser } = useUserStore.getState();
+            setUser({
+              id: result.user.id,
+              username: result.user.name,
+              zestBalance: 100,
+              points: 0,
+              inviteCode: 'ZEST123',
+              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+              biography: 'Verified Apple user on ZestBet. Ready to make predictions!',
+              socialMedia: {
+                instagram: '',
+                twitter: '',
+                facebook: '',
+                linkedin: '',
+                tiktok: '',
+                youtube: '',
+                snapchat: '',
+                website: ''
+              },
+              dailyBetAmount: 0,
+              lastBetDate: new Date().toISOString(),
+              agbConsent: true,
+              privacyConsent: true,
+              consentDate: new Date().toISOString()
+            });
+            
+            return true;
+          }
+          
+          return false;
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Apple login is only available for existing accounts.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },
@@ -308,44 +339,56 @@ export const useAuthStore = create<AuthState>()(
       loginWithFacebook: async () => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would integrate with Facebook Login
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Mock Facebook token for demo - in real app this would come from Facebook SDK
+          const mockFacebookToken = 'mock-facebook-token';
+          const mockEmail = 'user@facebook.com';
+          const mockName = 'Facebook User';
           
-          // Set mock token
-          set({ token: 'mock-facebook-jwt-token', isLoading: false, isAuthenticated: true });
-          
-          // Set user data
-          const { useUserStore } = await import('./userStore');
-          const { setUser } = useUserStore.getState();
-          setUser({
-            id: '1',
-            username: 'facebook_user',
-            zestBalance: 100,
-            points: 0,
-            inviteCode: 'ZEST123',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-            biography: 'Facebook user on ZestBet. Ready to make predictions!',
-            socialMedia: {
-              instagram: '',
-              twitter: '',
-              facebook: '',
-              linkedin: '',
-              tiktok: '',
-              youtube: '',
-              snapchat: '',
-              website: ''
-            },
-            dailyBetAmount: 0,
-            lastBetDate: new Date().toISOString(),
-            agbConsent: true,
-            privacyConsent: true,
-            consentDate: new Date().toISOString()
+          const { trpcClient } = await import('@/lib/trpc');
+          const result = await trpcClient.auth.socialLogin.mutate({
+            provider: 'facebook',
+            token: mockFacebookToken,
+            email: mockEmail,
+            name: mockName,
           });
           
-          return true;
-        } catch (error) {
-          set({ error: 'Failed to login with Facebook. Please try again.', isLoading: false });
+          if (result.success) {
+            set({ token: result.token, isLoading: false, isAuthenticated: true });
+            
+            const { useUserStore } = await import('./userStore');
+            const { setUser } = useUserStore.getState();
+            setUser({
+              id: result.user.id,
+              username: result.user.name,
+              zestBalance: 100,
+              points: 0,
+              inviteCode: 'ZEST123',
+              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+              biography: 'Verified Facebook user on ZestBet. Ready to make predictions!',
+              socialMedia: {
+                instagram: '',
+                twitter: '',
+                facebook: '',
+                linkedin: '',
+                tiktok: '',
+                youtube: '',
+                snapchat: '',
+                website: ''
+              },
+              dailyBetAmount: 0,
+              lastBetDate: new Date().toISOString(),
+              agbConsent: true,
+              privacyConsent: true,
+              consentDate: new Date().toISOString()
+            });
+            
+            return true;
+          }
+          
+          return false;
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Facebook login is only available for existing accounts.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },

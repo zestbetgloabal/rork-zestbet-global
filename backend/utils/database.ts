@@ -35,6 +35,7 @@ export class Database {
       id: Date.now().toString(),
       ...userData,
       zestCoins: 1000, // Starting bonus
+      status: userData.status || 'active', // active, pending, suspended
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -201,11 +202,12 @@ export class Database {
   }
 }
 
-// Initialize with some mock data
+// Initialize with approved accounts only
 Database.createUser({
   email: 'test@example.com',
   name: 'Test User',
   password: 'password123',
+  status: 'active',
 });
 
 // Seed: Apple review test account
@@ -215,6 +217,16 @@ Database.createUser({
   password: 'zestapp2025#',
   phone: undefined,
   isTestAccount: true,
+  status: 'active',
+});
+
+// Add admin account
+Database.createUser({
+  email: 'admin@zestbet.com',
+  name: 'ZestBet Admin',
+  password: 'admin2025!',
+  status: 'active',
+  role: 'admin',
 });
 
 export default Database;
