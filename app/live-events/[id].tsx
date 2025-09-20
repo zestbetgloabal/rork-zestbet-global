@@ -11,12 +11,14 @@ import {
   FlatList,
   Alert,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
 } from 'react-native';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useLiveEventStore } from '@/store/liveEventStore';
 import { useUserStore } from '@/store/userStore';
-import LiveChallengeCard from '@/components/LiveChallengeCard';
+
 import LiveBettingComponent from '@/components/LiveBettingComponent';
 import Button from '@/components/Button';
 import colors from '@/constants/colors';
@@ -37,6 +39,7 @@ import { LiveInteraction } from '@/types';
 export default function LiveEventDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { 
     currentEvent, 
     fetchEventById, 
@@ -54,6 +57,11 @@ export default function LiveEventDetailScreen() {
   const [showDonationPanel, setShowDonationPanel] = useState(false);
   const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'betting' | 'challenges' | 'participants'>('betting');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<CameraType>('back');
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [isStreamOwner, setIsStreamOwner] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
   
   // Fix: Properly type the ref to FlatList
   const scrollViewRef = useRef<FlatList<LiveInteraction>>(null);
@@ -63,7 +71,37 @@ export default function LiveEventDetailScreen() {
       fetchEventById(id as string);
       joinEvent(id as string);
     }
-  }, [id]);
+  }, [id, fetchEventById, joinEvent]);
+
+  useEffect(() => {
+    if (currentEvent && user) {
+      setIsStreamOwner(currentEvent.creatorId === user.id);
+    }
+  }, [currentEvent, user]);
+
+  const startStreaming = async () => {
+    if (!cameraPermission?.granted) {
+      const permission = await requestCameraPermission();
+      if (!permission.granted) {
+        Alert.alert('Camera Permission', 'Camera permission is required to start streaming.');
+        return;
+      }
+    }
+
+    setIsStreaming(true);
+    console.log('Starting live stream...');
+    // In a real implementation, you would start WebRTC streaming here
+  };
+
+  const stopStreaming = () => {
+    setIsStreaming(false);
+    console.log('Stopping live stream...');
+    // In a real implementation, you would stop WebRTC streaming here
+  };
+
+  const toggleCamera = () => {
+    setCameraFacing((current: CameraType) => (current === 'back' ? 'front' : 'back'));
+  };
   
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -123,7 +161,7 @@ export default function LiveEventDetailScreen() {
           `The AI has created a new challenge: "${challenge.title}"`
         );
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to generate challenge. Please try again.');
     } finally {
       setIsGeneratingChallenge(false);
@@ -206,26 +244,77 @@ export default function LiveEventDetailScreen() {
         <View style={styles.streamContainer}>
           {isLive ? (
             <View style={styles.liveStreamContainer}>
-              {/* Simulated Live Stream - In production, use a proper video player */}
-              <View style={styles.streamContent}>
-                <Image 
-                  source={{ uri: currentEvent.thumbnailUrl || 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=450&fit=crop' }} 
-                  style={styles.streamImage}
-                />
-                <View style={styles.streamOverlay}>
-                  <View style={styles.streamPulse}>
-                    <View style={styles.pulseRing} />
-                    <View style={styles.pulseCore} />
+              {/* Real Live Stream */}
+              {isStreamOwner && isStreaming ? (
+                // Stream owner's camera view
+                <View style={styles.streamContent}>
+                  <CameraView 
+                    ref={cameraRef}
+                    style={styles.cameraView}
+                    facing={cameraFacing}
+                  />
+                  
+                  {/* Camera Controls */}
+                  <View style={styles.cameraControls}>
+                    <Pressable style={styles.cameraControlButton} onPress={toggleCamera}>
+                      <Text style={styles.cameraControlText}>Flip</Text>
+                    </Pressable>
+                    <Pressable style={styles.stopStreamButton} onPress={stopStreaming}>
+                      <Text style={styles.stopStreamText}>Stop Stream</Text>
+                    </Pressable>
                   </View>
-                  <Text style={styles.liveStreamText}>🔴 LIVE STREAM</Text>
-                  <Text style={styles.streamDescription}>Event is streaming live</Text>
                 </View>
-              </View>
+              ) : isStreamOwner && !isStreaming ? (
+                // Stream owner's start streaming view
+                <View style={styles.streamContent}>
+                  <View style={styles.startStreamContainer}>
+                    <View style={styles.streamPulse}>
+                      <View style={styles.pulseRing} />
+                      <View style={styles.pulseCore} />
+                    </View>
+                    <Text style={styles.startStreamTitle}>Ready to go live?</Text>
+                    <Text style={styles.startStreamDescription}>
+                      Start your camera to begin streaming to your audience
+                    </Text>
+                    <Pressable style={styles.startStreamButton} onPress={startStreaming}>
+                      <Text style={styles.startStreamButtonText}>🔴 Go Live</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                // Viewer's stream view
+                <View style={styles.streamContent}>
+                  {isStreaming ? (
+                    // Show live stream (in real implementation, this would be WebRTC stream)
+                    <View style={styles.viewerStreamContainer}>
+                      <Image 
+                        source={{ uri: currentEvent.thumbnailUrl || 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&h=450&fit=crop' }} 
+                        style={styles.streamImage}
+                      />
+                      <View style={styles.liveStreamOverlay}>
+                        <Text style={styles.liveStreamText}>🔴 LIVE</Text>
+                        <Text style={styles.streamDescription}>Streaming now</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.waitingForStreamContainer}>
+                      <View style={styles.streamPulse}>
+                        <View style={styles.pulseRing} />
+                        <View style={styles.pulseCore} />
+                      </View>
+                      <Text style={styles.waitingStreamText}>Waiting for stream to start...</Text>
+                      <Text style={styles.waitingStreamDescription}>
+                        The host will begin streaming shortly
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
               
               {/* Live Indicator and Viewer Count */}
               <View style={styles.streamInfo}>
                 <View style={styles.liveIndicator}>
-                  <Text style={styles.liveText}>LIVE</Text>
+                  <Text style={styles.liveText}>{isStreaming ? 'LIVE' : 'WAITING'}</Text>
                 </View>
                 <View style={styles.viewerCount}>
                   <Users size={14} color="white" />
@@ -304,7 +393,7 @@ export default function LiveEventDetailScreen() {
           {/* Chat Tab */}
           {activeTab === 'chat' && (
             <KeyboardAvoidingView
-              style={{ flex: 1 }}
+              style={styles.keyboardAvoidingView}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               keyboardVerticalOffset={0}
             >
@@ -498,6 +587,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   backButton: {
     padding: 8,
   },
@@ -535,6 +627,116 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  cameraView: {
+    width: '100%',
+    height: '100%',
+  },
+  cameraControls: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cameraControlButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  cameraControlText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  stopStreamButton: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+  },
+  stopStreamText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  startStreamContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 40,
+  },
+  startStreamTitle: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  startStreamDescription: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 22,
+  },
+  startStreamButton: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 30,
+    elevation: 3,
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  startStreamButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  viewerStreamContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  liveStreamOverlay: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  waitingForStreamContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    padding: 40,
+  },
+  waitingStreamText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  waitingStreamDescription: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   streamOverlay: {
     position: 'absolute',

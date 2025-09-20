@@ -41,6 +41,8 @@ export interface LiveEvent {
   fundingRaised?: number;
   sponsors?: LiveSponsor[];
   challenges: LiveChallenge[];
+  creatorId: string;
+  creatorUsername: string;
 }
 
 export interface LiveParticipant {

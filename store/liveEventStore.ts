@@ -90,7 +90,9 @@ const mockEvents: LiveEvent[] = [
         type: 'team',
         aiGenerated: false
       }
-    ]
+    ],
+    creatorId: '1',
+    creatorUsername: 'ZestHost'
   },
   {
     id: '2',
@@ -105,7 +107,9 @@ const mockEvents: LiveEvent[] = [
     viewerCount: 89,
     fundingGoal: 300,
     fundingRaised: 50,
-    challenges: []
+    challenges: [],
+    creatorId: '1',
+    creatorUsername: 'ZestHost'
   }
 ];
 
@@ -192,7 +196,9 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
             type: 'solo',
             aiGenerated: false
           }
-        ] : []
+        ] : [],
+        creatorId: eventData.creatorId,
+        creatorUsername: eventData.creatorUsername
       };
       
       // Add the new event to the events list
