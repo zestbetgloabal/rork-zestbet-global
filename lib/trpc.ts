@@ -1,5 +1,5 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpLink } from "@trpc/client";
+import { splitLink, httpBatchLink, wsLink, createWSClient } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 
@@ -22,11 +22,25 @@ const getTrpcUrl = (): string => {
   throw new Error("TRPC URL not configured. Set EXPO_PUBLIC_TRPC_URL or EXPO_PUBLIC_AMPLIFY_FUNCTION_URL.");
 };
 
+const getTrpcWsUrl = (): string => {
+  const explicit = process.env.EXPO_PUBLIC_TRPC_WS_URL;
+  if (explicit) return explicit;
+  const httpUrl = getTrpcUrl();
+  if (httpUrl.startsWith("https://")) return httpUrl.replace("https://", "wss://");
+  if (httpUrl.startsWith("http://")) return httpUrl.replace("http://", "ws://");
+  return httpUrl.replace(/^/, "ws://");
+};
+
+const wsClient = createWSClient({
+  url: getTrpcWsUrl(),
+});
+
 export const trpcClient = trpc.createClient({
   links: [
-    httpLink({
-      url: getTrpcUrl(),
-      transformer: superjson,
+    splitLink({
+      condition: (op) => op.type === "subscription",
+      true: wsLink({ client: wsClient, transformer: superjson }),
+      false: httpBatchLink({ url: getTrpcUrl(), transformer: superjson }),
     }),
   ],
 });
