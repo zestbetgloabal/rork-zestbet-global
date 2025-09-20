@@ -19,12 +19,22 @@ export default function ProfileScreen() {
       setIsLoggingOut(true);
       console.log('Profile: Starting logout process');
       
-      // Call logout function - it will immediately clear auth state
+      // Call logout function - it will clear auth state and storage
       await logout();
       console.log('Profile: Logout function completed');
       
+      // Add a small delay to ensure state is cleared
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Force navigation to auth as a safety net
       router.replace('/(auth)');
+      
+      // For web, also reload the page to ensure complete state reset
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
       
     } catch (error) {
       console.error('Logout error:', error);

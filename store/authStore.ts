@@ -427,17 +427,8 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
-        // Immediately clear auth state to trigger navigation
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false 
-        });
-        console.log('Auth state cleared immediately');
-        
         try {
-          // Try backend logout (best-effort)
+          // Try backend logout first (best-effort)
           try {
             const { trpcClient } = await import('@/lib/trpc');
             await trpcClient.auth.logout.mutate();
@@ -452,34 +443,44 @@ export const useAuthStore = create<AuthState>()(
           userLogout();
           console.log('User state cleared');
           
-          // Clear persisted storage (native and web)
+          // Clear persisted storage completely
           try {
+            // Clear AsyncStorage
             await AsyncStorage.multiRemove(['auth-storage', 'user-storage']);
-            console.log('AsyncStorage multiRemove done');
+            console.log('AsyncStorage cleared');
           } catch (e) {
-            console.warn('AsyncStorage.multiRemove failed, falling back to removeItem', e);
+            console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
             try {
               await AsyncStorage.removeItem('auth-storage');
               await AsyncStorage.removeItem('user-storage');
+              console.log('AsyncStorage individual removal done');
             } catch (e2) {
-              console.warn('AsyncStorage removeItem fallback failed', e2);
+              console.warn('AsyncStorage individual removal failed', e2);
             }
           }
           
+          // Clear localStorage for web
           if (typeof window !== 'undefined') {
             try {
               window.localStorage?.removeItem('auth-storage');
               window.localStorage?.removeItem('user-storage');
-              console.log('localStorage keys removed');
+              console.log('localStorage cleared');
             } catch (lsErr) {
               console.warn('localStorage cleanup failed', lsErr);
             }
           }
           
-          console.log('=== LOGOUT COMPLETED ===');
-          
         } catch (error) {
           console.error('Error during logout cleanup:', error);
+        } finally {
+          // Always clear auth state at the end to ensure navigation happens
+          set({ 
+            token: null, 
+            isAuthenticated: false, 
+            error: null, 
+            isLoading: false 
+          });
+          console.log('Auth state cleared - logout complete');
         }
       },
       
