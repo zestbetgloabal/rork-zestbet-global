@@ -22,6 +22,19 @@ interface RegisterParams {
   };
 }
 
+interface AuthResponse {
+  success: boolean;
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatar?: string | null;
+    status?: string;
+  };
+  isNewUser?: boolean;
+}
+
 interface AuthState {
   token: string | null;
   isLoading: boolean;
@@ -52,9 +65,9 @@ export const useAuthStore = create<AuthState>()(
         try {
           // Use tRPC to authenticate with backend
           const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.login.mutate({ email, password });
+          const result = await trpcClient.auth.login.mutate({ email, password }) as AuthResponse;
           
-          if (result.success) {
+          if (result && result.success) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             // Set user data
@@ -106,9 +119,9 @@ export const useAuthStore = create<AuthState>()(
             password: params.password,
             name: params.username,
             phone: params.phone,
-          });
+          }) as AuthResponse;
           
-          if (result.success) {
+          if (result && result.success) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             // Set user data
@@ -236,9 +249,9 @@ export const useAuthStore = create<AuthState>()(
             token: mockGoogleToken,
             email: mockEmail,
             name: mockName,
-          });
+          }) as AuthResponse;
           
-          if (result.success) {
+          if (result && result.success) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             const { useUserStore } = await import('./userStore');
@@ -293,9 +306,9 @@ export const useAuthStore = create<AuthState>()(
             token: mockAppleToken,
             email: mockEmail,
             name: mockName,
-          });
+          }) as AuthResponse;
           
-          if (result.success) {
+          if (result && result.success) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             const { useUserStore } = await import('./userStore');
@@ -350,9 +363,9 @@ export const useAuthStore = create<AuthState>()(
             token: mockFacebookToken,
             email: mockEmail,
             name: mockName,
-          });
+          }) as AuthResponse;
           
-          if (result.success) {
+          if (result && result.success) {
             set({ token: result.token, isLoading: false, isAuthenticated: true });
             
             const { useUserStore } = await import('./userStore');
