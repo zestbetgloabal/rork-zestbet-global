@@ -61,24 +61,23 @@ export default function CreateLiveEventScreen() {
     };
     
     try {
-      const success = await createUserEvent(eventData);
-      if (success) {
-        Alert.alert(
-          'Erfolgreich!', 
-          scheduledTime === 'now' 
-            ? 'Dein Live-Event wurde erstellt und ist jetzt live!' 
-            : 'Dein Live-Event wurde geplant und wird zur gewählten Zeit gestartet.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back()
-            }
-          ]
-        );
+      console.log('[CreateLiveEvent] Creating event with data:', eventData);
+      const newEvent = await createUserEvent(eventData);
+      if (newEvent) {
+        if (scheduledTime === 'now') {
+          router.replace(`/live-events/${newEvent.id}`);
+        } else {
+          Alert.alert(
+            'Erfolgreich!',
+            'Dein Live-Event wurde geplant und wird zur gewählten Zeit gestartet.',
+          );
+          router.back();
+        }
       } else {
         Alert.alert('Fehler', 'Das Live-Event konnte nicht erstellt werden. Bitte versuche es erneut.');
       }
     } catch (error) {
+      console.error('[CreateLiveEvent] Error creating event', error);
       Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten.');
     }
   };
@@ -301,6 +300,7 @@ export default function CreateLiveEventScreen() {
           loading={isLoading}
           style={styles.createButton}
           icon={<Video size={20} color="white" />}
+          testID="create-live-event-button"
         />
       </View>
     </View>

@@ -28,7 +28,7 @@ interface LiveEventState {
   // Actions
   fetchEvents: () => Promise<void>;
   fetchEventById: (id: string) => Promise<LiveEvent | null>;
-  createUserEvent: (eventData: CreateUserEventData) => Promise<boolean>;
+  createUserEvent: (eventData: CreateUserEventData) => Promise<LiveEvent | null>;
   joinEvent: (eventId: string, role?: 'host' | 'participant' | 'viewer') => Promise<boolean>;
   leaveEvent: (eventId: string) => Promise<boolean>;
   sendInteraction: (interaction: Omit<LiveInteraction, 'id' | 'timestamp'>) => Promise<boolean>;
@@ -199,11 +199,11 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
       const { events } = get();
       const updatedEvents = [newEvent, ...events];
       
-      set({ events: updatedEvents, isLoading: false });
-      return true;
+      set({ events: updatedEvents, isLoading: false, currentEvent: newEvent });
+      return newEvent;
     } catch (error) {
       set({ error: 'Failed to create user event', isLoading: false });
-      return false;
+      return null;
     }
   },
   
