@@ -79,6 +79,7 @@ export default function LiveBettingComponent({
   const [participantCount, setParticipantCount] = useState<number>(0);
   const [oddsChanges, setOddsChanges] = useState<Record<string, 'up' | 'down' | 'same'>>({});
   const [activeMarket, setActiveMarket] = useState<LiveBetMarket | null>(null);
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState<boolean>(true);
   
   const previousOddsRef = useRef<Record<string, number>>({});
 
@@ -200,24 +201,44 @@ export default function LiveBettingComponent({
 
   const liveBetCreate = trpc.liveBets.create.useMutation();
 
-  trpc.liveBets.subscribe.useSubscription(undefined, {
+  // Use subscription with error handling and fallback to polling
+  useEffect(() => {
+    if (!subscriptionEnabled) {
+      // Fallback to polling every 5 seconds
+      const interval = setInterval(() => {
+        marketsQuery.refetch();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [subscriptionEnabled, marketsQuery]);
+
+  // Use subscription with conditional enabling
+  const subscriptionResult = trpc.liveBets.subscribe.useSubscription(undefined, {
+    enabled: subscriptionEnabled && Platform.OS !== 'web',
     onData: (evt) => {
       if (!evt) return;
       if (typeof evt !== 'object' || !('type' in evt)) return;
       if (evt.type === 'bet_win') {
         const amount = (evt as any).amount ?? 0;
-        Alert.alert('Wette gewonnen!', `Du hast ${formatCurrency(amount)} erhalten.`, [{ text: 'OK' }]);
+        console.log(`Wette gewonnen! Du hast ${formatCurrency(amount)} erhalten.`);
       }
       if (evt.type === 'market_settled') {
-        // Optionally inform about settlement
         const winning = (evt as any).winningOptionKey ?? '';
         console.log('Market settled. Winner:', winning);
       }
     },
     onError: (err) => {
-      console.log('Subscription error', err?.message);
+      console.log('Subscription error, falling back to polling:', err?.message);
+      setSubscriptionEnabled(false);
     }
   });
+
+  // Disable subscription on web or if it fails
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      setSubscriptionEnabled(false);
+    }
+  }, []);
 
   const handlePlaceBet = async () => {
     if (!socket || !connected) {

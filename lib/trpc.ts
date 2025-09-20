@@ -2,6 +2,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import { splitLink, httpBatchLink, wsLink, createWSClient } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
+import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -31,15 +32,26 @@ const getTrpcWsUrl = (): string => {
   return httpUrl.replace(/^/, "ws://");
 };
 
-const wsClient = createWSClient({
-  url: getTrpcWsUrl(),
-});
+// Create WebSocket client only if not on web or if explicitly configured
+let wsClient: ReturnType<typeof createWSClient> | null = null;
+try {
+  if (Platform.OS !== 'web' || process.env.EXPO_PUBLIC_TRPC_WS_URL) {
+    wsClient = createWSClient({
+      url: getTrpcWsUrl(),
+    });
+  }
+} catch (error) {
+  console.warn('WebSocket client creation failed:', error);
+  wsClient = null;
+}
 
 export const trpcClient = trpc.createClient({
   links: [
     splitLink({
       condition: (op) => op.type === "subscription",
-      true: wsLink({ client: wsClient, transformer: superjson }),
+      true: wsClient 
+        ? wsLink({ client: wsClient, transformer: superjson })
+        : httpBatchLink({ url: getTrpcUrl(), transformer: superjson }), // Fallback to HTTP for subscriptions
       false: httpBatchLink({ url: getTrpcUrl(), transformer: superjson }),
     }),
   ],
