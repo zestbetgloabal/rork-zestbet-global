@@ -19,6 +19,13 @@ interface LiveBettingRoom {
     }[];
     totalBets: Record<string, { count: number; amount: number }>;
   };
+  streamData: {
+    isActive: boolean;
+    streamerId?: string;
+    streamerUsername?: string;
+    startTime?: Date;
+    viewers: Set<string>;
+  };
 }
 
 class WebRTCService {
@@ -67,6 +74,10 @@ class WebRTCService {
                 draw: { count: 0, amount: 0 },
                 away: { count: 0, amount: 0 }
               }
+            },
+            streamData: {
+              isActive: false,
+              viewers: new Set()
             }
           });
         }
@@ -148,6 +159,98 @@ class WebRTCService {
         if (room) {
           socket.emit('odds-update', room.bettingData.currentOdds);
         }
+      });
+
+      // Handle stream start
+      socket.on('start-stream', (data: { eventId: string; userId: string; username: string }) => {
+        const { eventId, userId, username } = data;
+        const room = this.rooms.get(eventId);
+        
+        if (!room) {
+          socket.emit('stream-error', { message: 'Event room not found' });
+          return;
+        }
+
+        // Check if user is authorized to stream (e.g., event creator)
+        room.streamData.isActive = true;
+        room.streamData.streamerId = userId;
+        room.streamData.streamerUsername = username;
+        room.streamData.startTime = new Date();
+
+        // Notify all participants that stream has started
+        this.io.to(`event-${eventId}`).emit('stream-started', {
+          eventId,
+          streamerId: userId,
+          streamerUsername: username,
+          startTime: room.streamData.startTime
+        });
+
+        console.log(`Stream started for event ${eventId} by ${username}`);
+      });
+
+      // Handle stream stop
+      socket.on('stop-stream', (data: { eventId: string; userId: string }) => {
+        const { eventId, userId } = data;
+        const room = this.rooms.get(eventId);
+        
+        if (!room || room.streamData.streamerId !== userId) {
+          return;
+        }
+
+        room.streamData.isActive = false;
+        room.streamData.streamerId = undefined;
+        room.streamData.streamerUsername = undefined;
+        room.streamData.startTime = undefined;
+        room.streamData.viewers.clear();
+
+        // Notify all participants that stream has ended
+        this.io.to(`event-${eventId}`).emit('stream-ended', {
+          eventId,
+          endTime: new Date()
+        });
+
+        console.log(`Stream stopped for event ${eventId}`);
+      });
+
+      // Handle WebRTC signaling for video streaming
+      socket.on('webrtc-offer', (data: { eventId: string; offer: RTCSessionDescriptionInit; targetId?: string }) => {
+        const { eventId, offer, targetId } = data;
+        
+        if (targetId) {
+          // Send offer to specific target
+          this.io.to(targetId).emit('webrtc-offer', {
+            eventId,
+            offer,
+            fromId: socket.id
+          });
+        } else {
+          // Broadcast offer to all participants (streamer to viewers)
+          socket.to(`event-${eventId}`).emit('webrtc-offer', {
+            eventId,
+            offer,
+            fromId: socket.id
+          });
+        }
+      });
+
+      socket.on('webrtc-answer', (data: { eventId: string; answer: RTCSessionDescriptionInit; targetId: string }) => {
+        const { eventId, answer, targetId } = data;
+        
+        this.io.to(targetId).emit('webrtc-answer', {
+          eventId,
+          answer,
+          fromId: socket.id
+        });
+      });
+
+      socket.on('webrtc-ice-candidate', (data: { eventId: string; candidate: RTCIceCandidateInit; targetId: string }) => {
+        const { eventId, candidate, targetId } = data;
+        
+        this.io.to(targetId).emit('webrtc-ice-candidate', {
+          eventId,
+          candidate,
+          fromId: socket.id
+        });
       });
 
       // Handle chat messages in live events

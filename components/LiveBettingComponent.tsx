@@ -79,7 +79,7 @@ export default function LiveBettingComponent({
   const [participantCount, setParticipantCount] = useState<number>(0);
   const [oddsChanges, setOddsChanges] = useState<Record<string, 'up' | 'down' | 'same'>>({});
   const [activeMarket, setActiveMarket] = useState<LiveBetMarket | null>(null);
-  const [subscriptionEnabled, setSubscriptionEnabled] = useState<boolean>(true);
+
   
   const previousOddsRef = useRef<Record<string, number>>({});
 
@@ -201,42 +201,15 @@ export default function LiveBettingComponent({
 
   const liveBetCreate = trpc.liveBets.create.useMutation();
 
-  // Use subscription with error handling and fallback to polling
-  useEffect(() => {
-    if (!subscriptionEnabled) {
-      // Fallback to polling every 5 seconds
-      const interval = setInterval(() => {
-        marketsQuery.refetch();
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [subscriptionEnabled, marketsQuery]);
 
-  // Use subscription with conditional enabling - disabled for now due to HTTP link limitations
-  // const subscriptionResult = trpc.liveBets.subscribe.useSubscription(undefined, {
-  //   enabled: subscriptionEnabled && Platform.OS !== 'web',
-  //   onData: (evt) => {
-  //     if (!evt) return;
-  //     if (typeof evt !== 'object' || !('type' in evt)) return;
-  //     if (evt.type === 'bet_win') {
-  //       const amount = (evt as any).amount ?? 0;
-  //       Alert.alert('Wette gewonnen!', `Du hast ${formatCurrency(amount)} erhalten.`);
-  //     }
-  //     if (evt.type === 'market_settled') {
-  //       const winning = (evt as any).winningOptionKey ?? '';
-  //       Alert.alert('Market settled', `Winner: ${winning}`);
-  //     }
-  //   },
-  //   onError: (err) => {
-  //     console.log('Subscription error, falling back to polling:', err?.message);
-  //     setSubscriptionEnabled(false);
-  //   }
-  // });
 
-  // Disable subscription for now due to HTTP link limitations
+  // Use polling instead of subscriptions for better web compatibility
   useEffect(() => {
-    setSubscriptionEnabled(false);
-  }, []);
+    const interval = setInterval(() => {
+      marketsQuery.refetch();
+    }, 3000); // Poll every 3 seconds for live updates
+    return () => clearInterval(interval);
+  }, [marketsQuery]);
 
   const handlePlaceBet = async () => {
     if (!socket || !connected) {
