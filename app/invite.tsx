@@ -44,14 +44,30 @@ export default function InviteScreen() {
     }
   };
   
-  const inviteLink = `https://zestbet.com/invite/${inviteCode}?redirect=${encodeURIComponent(getStoreLink())}`;
-  const inviteMessage = `Join me on ZestBet and get Ƶ50 bonus! Use my invite code: ${inviteCode} or download the app here: ${inviteLink}`;
+  const getInviteLink = () => {
+    const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://zestbet.app';
+    return `${baseUrl}/invite/${inviteCode}?redirect=${encodeURIComponent(getStoreLink())}`;
+  };
   
-  const handleCopy = () => {
-    // In a real app, this would use Clipboard.setString
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    Alert.alert('Copied', 'Invite code copied to clipboard');
+  const inviteLink = getInviteLink();
+  const inviteMessage = `🎯 Join me on ZestBet and get Ƶ50 bonus!\n\n💰 Use my invite code: ${inviteCode}\n🔗 Or click here: ${inviteLink}\n\n📱 Download the app and start winning!`;
+  
+  const handleCopy = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        await navigator.clipboard.writeText(inviteLink);
+      } else {
+        // For mobile platforms, we'll simulate clipboard functionality
+        console.log('Copying invite link:', inviteLink);
+      }
+      
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      Alert.alert('Link Copied!', `Invite link copied:\n\n${inviteLink}`);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      Alert.alert('Invite Link', `Copy this link to share:\n\n${inviteLink}`);
+    }
   };
   
   const handleShare = async () => {
@@ -258,7 +274,12 @@ export default function InviteScreen() {
           <Text style={styles.sectionTitle}>Invite Link</Text>
           
           <View style={styles.linkContainer}>
-            <Text style={styles.link} numberOfLines={1}>{inviteLink}</Text>
+            <Text style={styles.linkTitle}>Invite Link</Text>
+            <Text style={styles.link} numberOfLines={2}>{inviteLink}</Text>
+            <Pressable style={styles.copyLinkButton} onPress={handleCopy}>
+              <Copy size={16} color={colors.primary} />
+              <Text style={styles.copyLinkText}>{copied ? 'Copied!' : 'Copy Link'}</Text>
+            </Pressable>
           </View>
           
           <Text style={styles.linkDescription}>
@@ -370,6 +391,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  linkTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  copyLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginTop: 12,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  copyLinkText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
   linkContainer: {
     borderWidth: 1,

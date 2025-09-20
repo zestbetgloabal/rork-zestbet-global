@@ -1,9 +1,22 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
+import { Pressable, StyleSheet } from 'react-native';
 import { Home, User, MessageCircle, Award, UserPlus } from 'lucide-react-native';
 import colors from '@/constants/colors';
+import { useRouter } from 'expo-router';
 
 export default function TabLayout() {
+  const router = useRouter();
+  
+  const InviteHeaderButton = () => (
+    <Pressable 
+      onPress={() => router.push('/invite')}
+      style={styles.inviteButton}
+    >
+      <UserPlus size={16} color="white" />
+    </Pressable>
+  );
+  
   return (
     <Tabs
       screenOptions={{
@@ -18,6 +31,7 @@ export default function TabLayout() {
         },
         headerTintColor: colors.text,
         headerShadowVisible: false,
+        headerRight: () => <InviteHeaderButton />,
       }}
     >
       <Tabs.Screen
@@ -58,3 +72,15 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  inviteButton: {
+    padding: 8,
+    marginRight: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+});

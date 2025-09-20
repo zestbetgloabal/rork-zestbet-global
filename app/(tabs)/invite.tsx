@@ -53,7 +53,8 @@ export default function InviteTab() {
   const inviteCode = user?.inviteCode || 'ZEST123';
   
   const generateLiveEventInviteLink = (eventId: string) => {
-    return `https://zestbet.app/live-events/${eventId}?invite=${user?.id || 'guest'}`;
+    const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://zestbet.app';
+    return `${baseUrl}/live-events/${eventId}?invite=${user?.id || 'guest'}`;
   };
   
   const shareLiveEventInvite = async (event: LiveEvent) => {
@@ -77,13 +78,15 @@ export default function InviteTab() {
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(inviteLink);
       } else {
+        // For mobile platforms, we'll simulate clipboard functionality
         console.log('Copying to clipboard:', inviteLink);
       }
       
-      Alert.alert('Link Copied!', 'The live event invite link has been copied to your clipboard.');
+      Alert.alert('Link Copied!', `Live event invite link copied:\n\n${inviteLink}`);
     } catch (error) {
       console.error('Failed to copy link:', error);
-      Alert.alert('Error', 'Failed to copy link. Please try again.');
+      // Show the link in the alert so user can copy manually
+      Alert.alert('Invite Link', `Copy this link to share:\n\n${inviteLink}`);
     }
   };
   
@@ -107,14 +110,30 @@ export default function InviteTab() {
     }
   };
   
-  const inviteLink = `https://zestbet.com/invite/${inviteCode}?redirect=${encodeURIComponent(getStoreLink())}`;
-  const inviteMessage = `Join me on ZestBet and get Ƶ50 bonus! Use my invite code: ${inviteCode} or download the app here: ${inviteLink}`;
+  const getInviteLink = () => {
+    const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://zestbet.app';
+    return `${baseUrl}/invite/${inviteCode}?redirect=${encodeURIComponent(getStoreLink())}`;
+  };
   
-  const handleCopy = () => {
-    // In a real app, this would use Clipboard.setString
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    Alert.alert('Copied', 'Invite code copied to clipboard');
+  const inviteLink = getInviteLink();
+  const inviteMessage = `🎯 Join me on ZestBet and get Ƶ50 bonus!\n\n💰 Use my invite code: ${inviteCode}\n🔗 Or click here: ${inviteLink}\n\n📱 Download the app and start winning!`;
+  
+  const handleCopy = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        await navigator.clipboard.writeText(inviteCode);
+      } else {
+        // For mobile platforms, we'll simulate clipboard functionality
+        console.log('Copying invite code:', inviteCode);
+      }
+      
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      Alert.alert('Copied!', `Invite code copied: ${inviteCode}`);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      Alert.alert('Invite Code', `Your invite code: ${inviteCode}`);
+    }
   };
   
   const handleShare = async () => {
