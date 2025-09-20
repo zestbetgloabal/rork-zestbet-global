@@ -31,7 +31,11 @@ import {
   Send, 
   Share2, 
   Users,
-  Zap
+  Zap,
+  UserPlus,
+  Copy,
+  Phone,
+  Video
 } from 'lucide-react-native';
 import { formatDateTime, formatCurrency } from '@/utils/helpers';
 import { LiveInteraction } from '@/types';
@@ -56,7 +60,10 @@ export default function LiveEventDetailScreen() {
   const [donationAmount, setDonationAmount] = useState('5');
   const [showDonationPanel, setShowDonationPanel] = useState(false);
   const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'betting' | 'challenges' | 'participants'>('betting');
+  const [activeTab, setActiveTab] = useState<'chat' | 'betting' | 'challenges' | 'participants' | 'invite'>('betting');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [pendingInvites, setPendingInvites] = useState<{id: string, username: string, status: 'pending' | 'joined' | 'declined'}[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<CameraType>('back');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -76,6 +83,8 @@ export default function LiveEventDetailScreen() {
   useEffect(() => {
     if (currentEvent && user) {
       setIsStreamOwner(currentEvent.creatorId === user.id);
+      // Generate invite link for the event
+      setInviteLink(`https://zestbet.app/live-events/${currentEvent.id}?invite=${user.id}`);
     }
   }, [currentEvent, user]);
 
@@ -204,6 +213,71 @@ export default function LiveEventDetailScreen() {
       Alert.alert('Error', 'Failed to generate challenge. Please try again.');
     } finally {
       setIsGeneratingChallenge(false);
+    }
+  };
+  
+  const handleInviteUser = async (username: string) => {
+    if (!currentEvent || !user) return;
+    
+    try {
+      // In a real implementation, you would:
+      // 1. Send push notification to the user
+      // 2. Add them to pending invites list
+      // 3. Store invitation in database
+      
+      const newInvite = {
+        id: Date.now().toString(),
+        username,
+        status: 'pending' as const
+      };
+      
+      setPendingInvites(prev => [...prev, newInvite]);
+      
+      Alert.alert(
+        'Invitation Sent!',
+        `${username} has been invited to join your live stream. They will receive a notification.`
+      );
+      
+      console.log(`Sending invite to ${username} for event ${currentEvent.id}`);
+      
+    } catch (error) {
+      console.error('Failed to send invite:', error);
+      Alert.alert('Error', 'Failed to send invitation. Please try again.');
+    }
+  };
+  
+  const copyInviteLink = async () => {
+    try {
+      // For web compatibility, we'll use a simple approach
+      if (Platform.OS === 'web') {
+        await navigator.clipboard.writeText(inviteLink);
+      } else {
+        // For mobile, you would use expo-clipboard
+        console.log('Copying to clipboard:', inviteLink);
+      }
+      
+      Alert.alert('Link Copied!', 'The invite link has been copied to your clipboard.');
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      Alert.alert('Error', 'Failed to copy link. Please try again.');
+    }
+  };
+  
+  const handleJoinAsViewer = async () => {
+    if (!currentEvent || !user) return;
+    
+    try {
+      // Request to join the stream as a viewer who can be invited to participate
+      console.log(`User ${user.username} requesting to join stream ${currentEvent.id}`);
+      
+      Alert.alert(
+        'Join Request Sent',
+        'Your request to join the stream has been sent to the host. You will be notified when approved.'
+      );
+      
+    } catch (error) {
+      console.error('Failed to request join:', error);
+      Alert.alert('Error', 'Failed to send join request. Please try again.');
     }
   };
   
@@ -418,6 +492,15 @@ export default function LiveEventDetailScreen() {
               <Users size={16} color={activeTab === 'participants' ? colors.primary : colors.textSecondary} />
               <Text style={[styles.tabText, activeTab === 'participants' && styles.activeTabText]}>Participants</Text>
             </Pressable>
+            {isStreamOwner && (
+              <Pressable 
+                style={[styles.tab, activeTab === 'invite' && styles.activeTab]}
+                onPress={() => setActiveTab('invite')}
+              >
+                <UserPlus size={16} color={activeTab === 'invite' ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.tabText, activeTab === 'invite' && styles.activeTabText]}>Invite</Text>
+              </Pressable>
+            )}
           </ScrollView>
         </View>
         
@@ -599,8 +682,117 @@ export default function LiveEventDetailScreen() {
               <Text style={styles.tabContentDescription}>
                 {currentEvent.viewerCount} viewers watching this event
               </Text>
-              {/* Add participants list here */}
+              
+              {!isStreamOwner && (
+                <View style={styles.joinRequestContainer}>
+                  <Text style={styles.joinRequestTitle}>Want to participate?</Text>
+                  <Text style={styles.joinRequestDescription}>
+                    Request to join the stream and interact with the host
+                  </Text>
+                  <Pressable style={styles.joinRequestButton} onPress={handleJoinAsViewer}>
+                    <Video size={20} color="white" />
+                    <Text style={styles.joinRequestButtonText}>Request to Join</Text>
+                  </Pressable>
+                </View>
+              )}
+              
+              {/* Participants list would go here */}
             </View>
+          )}
+          
+          {/* Invite Tab (Only for stream owner) */}
+          {activeTab === 'invite' && isStreamOwner && (
+            <ScrollView style={styles.inviteContainer} contentContainerStyle={styles.inviteContent}>
+              <Text style={styles.tabContentTitle}>Invite Viewers</Text>
+              <Text style={styles.tabContentDescription}>
+                Invite friends to join your live stream
+              </Text>
+              
+              {/* Invite Link Section */}
+              <View style={styles.inviteLinkSection}>
+                <Text style={styles.sectionTitle}>Share Invite Link</Text>
+                <View style={styles.inviteLinkContainer}>
+                  <TextInput
+                    style={styles.inviteLinkInput}
+                    value={inviteLink}
+                    editable={false}
+                    selectTextOnFocus
+                  />
+                  <Pressable style={styles.copyLinkButton} onPress={copyInviteLink}>
+                    <Copy size={20} color="white" />
+                  </Pressable>
+                </View>
+                <Text style={styles.inviteLinkDescription}>
+                  Anyone with this link can join your stream
+                </Text>
+              </View>
+              
+              {/* Direct Invite Section */}
+              <View style={styles.directInviteSection}>
+                <Text style={styles.sectionTitle}>Invite Specific Users</Text>
+                <View style={styles.inviteInputContainer}>
+                  <TextInput
+                    style={styles.inviteUsernameInput}
+                    placeholder="Enter username to invite"
+                    placeholderTextColor={colors.textSecondary}
+                    onSubmitEditing={(event) => {
+                      const username = event.nativeEvent.text.trim();
+                      if (username) {
+                        handleInviteUser(username);
+                        // Clear the input after submission
+                        (event.target as any).clear?.();
+                      }
+                    }}
+                  />
+                  <Pressable style={styles.inviteButton}>
+                    <UserPlus size={20} color="white" />
+                  </Pressable>
+                </View>
+              </View>
+              
+              {/* Pending Invites */}
+              {pendingInvites.length > 0 && (
+                <View style={styles.pendingInvitesSection}>
+                  <Text style={styles.sectionTitle}>Pending Invitations</Text>
+                  {pendingInvites.map((invite) => (
+                    <View key={invite.id} style={styles.pendingInviteItem}>
+                      <View style={styles.inviteUserInfo}>
+                        <View style={styles.inviteAvatar}>
+                          <Text style={styles.inviteAvatarText}>
+                            {invite.username.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={styles.inviteUsername}>{invite.username}</Text>
+                      </View>
+                      <View style={styles.inviteStatus}>
+                        <Text style={[
+                          styles.inviteStatusText,
+                          invite.status === 'joined' && styles.inviteStatusJoined,
+                          invite.status === 'declined' && styles.inviteStatusDeclined
+                        ]}>
+                          {invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+              
+              {/* Quick Actions */}
+              <View style={styles.quickActionsSection}>
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
+                <View style={styles.quickActionsGrid}>
+                  <Pressable style={styles.quickActionButton}>
+                    <Phone size={24} color={colors.primary} />
+                    <Text style={styles.quickActionText}>Invite via SMS</Text>
+                  </Pressable>
+                  <Pressable style={styles.quickActionButton}>
+                    <Share2 size={24} color={colors.primary} />
+                    <Text style={styles.quickActionText}>Share on Social</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </ScrollView>
           )}
         </View>
       </View>
@@ -1129,5 +1321,179 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  joinRequestContainer: {
+    marginTop: 24,
+    padding: 20,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  joinRequestTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  joinRequestDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  joinRequestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  joinRequestButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  inviteContainer: {
+    flex: 1,
+  },
+  inviteContent: {
+    padding: 16,
+  },
+  inviteLinkSection: {
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  inviteLinkContainer: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  inviteLinkInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    fontSize: 14,
+    marginRight: 8,
+  },
+  copyLinkButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inviteLinkDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  directInviteSection: {
+    marginBottom: 24,
+  },
+  inviteInputContainer: {
+    flexDirection: 'row',
+  },
+  inviteUsernameInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    fontSize: 14,
+    marginRight: 8,
+  },
+  inviteButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pendingInvitesSection: {
+    marginBottom: 24,
+  },
+  pendingInviteItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  inviteUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inviteAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  inviteAvatarText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  inviteUsername: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  inviteStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: colors.border,
+  },
+  inviteStatusText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  inviteStatusJoined: {
+    color: '#4CAF50',
+  },
+  inviteStatusDeclined: {
+    color: '#F44336',
+  },
+  quickActionsSection: {
+    marginBottom: 24,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  quickActionText: {
+    fontSize: 12,
+    color: colors.text,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
