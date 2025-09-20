@@ -437,27 +437,49 @@ export const useAuthStore = create<AuthState>()(
         console.log('Auth state cleared immediately');
         
         try {
+          // Try backend logout (best-effort)
+          try {
+            const { trpcClient } = await import('@/lib/trpc');
+            await trpcClient.auth.logout.mutate();
+            console.log('Backend session revoked');
+          } catch (apiErr) {
+            console.warn('Backend logout failed or not necessary', apiErr);
+          }
+
           // Clear user state
           const { useUserStore } = await import('./userStore');
           const { logout: userLogout } = useUserStore.getState();
           userLogout();
           console.log('User state cleared');
           
-          // Clear AsyncStorage
-          await AsyncStorage.multiRemove(['auth-storage', 'user-storage']);
-          console.log('Storage cleared');
+          // Clear persisted storage (native and web)
+          try {
+            await AsyncStorage.multiRemove(['auth-storage', 'user-storage']);
+            console.log('AsyncStorage multiRemove done');
+          } catch (e) {
+            console.warn('AsyncStorage.multiRemove failed, falling back to removeItem', e);
+            try {
+              await AsyncStorage.removeItem('auth-storage');
+              await AsyncStorage.removeItem('user-storage');
+            } catch (e2) {
+              console.warn('AsyncStorage removeItem fallback failed', e2);
+            }
+          }
+          
+          if (typeof window !== 'undefined') {
+            try {
+              window.localStorage?.removeItem('auth-storage');
+              window.localStorage?.removeItem('user-storage');
+              console.log('localStorage keys removed');
+            } catch (lsErr) {
+              console.warn('localStorage cleanup failed', lsErr);
+            }
+          }
           
           console.log('=== LOGOUT COMPLETED ===');
           
         } catch (error) {
           console.error('Error during logout cleanup:', error);
-          // Try to clear storage individually as fallback
-          try {
-            await AsyncStorage.removeItem('auth-storage');
-            await AsyncStorage.removeItem('user-storage');
-          } catch (storageError) {
-            console.error('Fallback storage clear error:', storageError);
-          }
         }
       },
       

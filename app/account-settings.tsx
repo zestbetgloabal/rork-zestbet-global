@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import Button from '@/components/Button';
@@ -53,6 +53,17 @@ export default function AccountSettingsScreen() {
     );
   };
 
+  const onLogout = useCallback(async () => {
+    try {
+      console.log('AccountSettings: onLogout pressed');
+      await logout();
+      console.log('AccountSettings: logout finished, navigating to /(auth)');
+      router.replace('/(auth)');
+    } catch (e) {
+      Alert.alert('Error', 'Could not log out. Please try again.');
+    }
+  }, [logout, router]);
+
   return (
     <View style={styles.container} testID="account-settings">
       <Stack.Screen
@@ -81,7 +92,7 @@ export default function AccountSettingsScreen() {
         />
         <Button
           title="Log out"
-          onPress={logout}
+          onPress={onLogout}
           variant="ghost"
           icon={<LogOut size={18} color={colors.textSecondary} />}
           disabled={isBusy}
