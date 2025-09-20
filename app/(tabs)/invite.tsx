@@ -5,14 +5,14 @@ import {
   StyleSheet, 
   Pressable, 
   TextInput,
-  Alert,
   Share,
   Platform,
   Linking,
-
   ScrollView,
   Image
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
 import { Copy, Share2, Mail, MessageSquare, Users, Gift, Video, UserPlus, ExternalLink } from 'lucide-react-native';
 import { useUserStore } from '@/store/userStore';
 import { useLiveEventStore } from '@/store/liveEventStore';
@@ -22,6 +22,7 @@ import colors from '@/constants/colors';
 import { useRouter } from 'expo-router';
 
 export default function InviteTab() {
+  const insets = useSafeAreaInsets();
   const { user } = useUserStore();
   const { events, fetchEvents } = useLiveEventStore();
   const router = useRouter();
@@ -66,27 +67,34 @@ export default function InviteTab() {
         message,
         title: `Join ${event.title} on ZestBet`,
       });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to share live event invite');
+    } catch {
+      console.log('Share cancelled or failed');
     }
   };
   
   const copyLiveEventLink = async (event: LiveEvent) => {
+    if (!event?.id?.trim() || event.id.length > 100) {
+      console.log('Invalid event ID');
+      return;
+    }
+    
     const inviteLink = generateLiveEventInviteLink(event.id);
     
     try {
       if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(inviteLink);
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(inviteLink);
+        } else {
+          console.log('Clipboard not available on web');
+          return;
+        }
       } else {
-        // For mobile platforms, we'll simulate clipboard functionality
-        console.log('Copying to clipboard:', inviteLink);
+        await Clipboard.setStringAsync(inviteLink);
       }
       
-      Alert.alert('Link Copied!', `Live event invite link copied:\n\n${inviteLink}`);
+      console.log('Link copied successfully');
     } catch (error) {
       console.error('Failed to copy link:', error);
-      // Show the link in the alert so user can copy manually
-      Alert.alert('Invite Link', `Copy this link to share:\n\n${inviteLink}`);
     }
   };
   
@@ -121,94 +129,112 @@ export default function InviteTab() {
   const handleCopy = async () => {
     try {
       if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(inviteCode);
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(inviteCode);
+        } else {
+          console.log('Clipboard not available on web');
+          return;
+        }
       } else {
-        // For mobile platforms, we'll simulate clipboard functionality
-        console.log('Copying invite code:', inviteCode);
+        await Clipboard.setStringAsync(inviteCode);
       }
       
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      Alert.alert('Copied!', `Invite code copied: ${inviteCode}`);
+      console.log('Invite code copied successfully');
     } catch (error) {
       console.error('Failed to copy:', error);
-      Alert.alert('Invite Code', `Your invite code: ${inviteCode}`);
     }
   };
   
   const handleShare = async () => {
     try {
-      await Share.share({
+      const result = await Share.share({
         message: inviteMessage,
+        title: 'Join me on ZestBet!',
+        url: Platform.OS === 'ios' ? inviteLink : undefined,
       });
+      
+      if (result.action === Share.sharedAction) {
+        console.log('Invite shared successfully');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to share invite');
+      console.error('Share error:', error);
     }
   };
   
   const handleSendSMS = async () => {
     if (showContactForm && contactPhone.trim() === '') {
-      Alert.alert('Error', 'Please enter a phone number');
+      console.log('Please enter a phone number');
       return;
     }
     
-    const phoneNumber = showContactForm ? contactPhone : '';
-    const smsUrl = Platform.OS === 'ios' 
-      ? `sms:${phoneNumber}&body=${encodeURIComponent(inviteMessage)}`
-      : `sms:${phoneNumber}?body=${encodeURIComponent(inviteMessage)}`;
-    
     try {
       if (showContactForm) {
-        setIsSending(true);
-        // Simulate sending SMS via API
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        setIsSending(false);
-        setContactPhone('');
-        setShowContactForm(false);
-        Alert.alert('Success', 'Invitation SMS sent successfully!');
-        return;
-      }
-      
-      const canOpen = await Linking.canOpenURL(smsUrl);
-      if (canOpen) {
-        await Linking.openURL(smsUrl);
+        // Direct SMS with phone number
+        const phoneNumber = contactPhone.replace(/[^0-9+]/g, ''); // Clean phone number
+        const smsUrl = Platform.OS === 'ios' 
+          ? `sms:${phoneNumber}&body=${encodeURIComponent(inviteMessage)}`
+          : `sms:${phoneNumber}?body=${encodeURIComponent(inviteMessage)}`;
+        
+        const canOpen = await Linking.canOpenURL(smsUrl);
+        if (canOpen) {
+          await Linking.openURL(smsUrl);
+          setContactPhone('');
+          setShowContactForm(false);
+        } else {
+          console.log('SMS not available on this device');
+        }
       } else {
-        setShowContactForm(true);
+        // Open SMS app with pre-filled message
+        const smsUrl = Platform.OS === 'ios' 
+          ? `sms:&body=${encodeURIComponent(inviteMessage)}`
+          : `sms:?body=${encodeURIComponent(inviteMessage)}`;
+        
+        const canOpen = await Linking.canOpenURL(smsUrl);
+        if (canOpen) {
+          await Linking.openURL(smsUrl);
+        } else {
+          // Fallback to contact form
+          setShowContactForm(true);
+        }
       }
     } catch (error) {
-      setIsSending(false);
-      Alert.alert('Error', 'Failed to send SMS. Please try again.');
+      console.error('SMS error:', error);
     }
   };
   
   const handleSendEmail = async () => {
     if (showContactForm && contactEmail.trim() === '') {
-      Alert.alert('Error', 'Please enter an email address');
+      console.log('Please enter an email address');
       return;
     }
     
     try {
       if (showContactForm) {
-        setIsSending(true);
-        // Simulate sending email via API
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        setIsSending(false);
-        setContactEmail('');
-        setShowContactForm(false);
-        Alert.alert('Success', 'Invitation email sent successfully!');
-        return;
-      }
-      
-      const emailUrl = `mailto:?subject=${encodeURIComponent('Join me on ZestBet!')}&body=${encodeURIComponent(inviteMessage)}`;
-      const canOpen = await Linking.canOpenURL(emailUrl);
-      if (canOpen) {
-        await Linking.openURL(emailUrl);
+        // Direct email with recipient
+        const emailUrl = `mailto:${contactEmail}?subject=${encodeURIComponent('Join me on ZestBet!')}&body=${encodeURIComponent(inviteMessage)}`;
+        const canOpen = await Linking.canOpenURL(emailUrl);
+        if (canOpen) {
+          await Linking.openURL(emailUrl);
+          setContactEmail('');
+          setShowContactForm(false);
+        } else {
+          console.log('Email not available on this device');
+        }
       } else {
-        setShowContactForm(true);
+        // Open email app with pre-filled message
+        const emailUrl = `mailto:?subject=${encodeURIComponent('Join me on ZestBet!')}&body=${encodeURIComponent(inviteMessage)}`;
+        const canOpen = await Linking.canOpenURL(emailUrl);
+        if (canOpen) {
+          await Linking.openURL(emailUrl);
+        } else {
+          // Fallback to contact form
+          setShowContactForm(true);
+        }
       }
     } catch (error) {
-      setIsSending(false);
-      Alert.alert('Error', 'Failed to send email. Please try again.');
+      console.error('Email error:', error);
     }
   };
   
@@ -225,38 +251,62 @@ export default function InviteTab() {
   // Direct send invite code function
   const handleDirectSend = async () => {
     if (!contactEmail && !contactPhone) {
-      Alert.alert('Error', 'Please enter an email address or phone number');
+      console.log('Please enter an email address or phone number');
       return;
     }
     
     setIsSending(true);
     
     try {
-      // In a real app, this would make an API call to send the invite
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      let emailSent = false;
+      let smsSent = false;
       
-      let message = 'Invitation sent successfully!';
-      if (contactEmail && contactPhone) {
-        message = 'Invitation sent via email and SMS!';
-      } else if (contactEmail) {
-        message = 'Invitation sent via email!';
-      } else if (contactPhone) {
-        message = 'Invitation sent via SMS!';
+      // Send email if provided
+      if (contactEmail) {
+        const emailUrl = `mailto:${contactEmail}?subject=${encodeURIComponent('Join me on ZestBet!')}&body=${encodeURIComponent(inviteMessage)}`;
+        const canOpenEmail = await Linking.canOpenURL(emailUrl);
+        if (canOpenEmail) {
+          await Linking.openURL(emailUrl);
+          emailSent = true;
+        }
       }
       
-      Alert.alert('Success', message);
+      // Send SMS if provided
+      if (contactPhone) {
+        const phoneNumber = contactPhone.replace(/[^0-9+]/g, ''); // Clean phone number
+        const smsUrl = Platform.OS === 'ios' 
+          ? `sms:${phoneNumber}&body=${encodeURIComponent(inviteMessage)}`
+          : `sms:${phoneNumber}?body=${encodeURIComponent(inviteMessage)}`;
+        const canOpenSMS = await Linking.canOpenURL(smsUrl);
+        if (canOpenSMS) {
+          await Linking.openURL(smsUrl);
+          smsSent = true;
+        }
+      }
+      
+      let message = 'Invitation prepared!';
+      if (emailSent && smsSent) {
+        message = 'Email and SMS apps opened with your invitation!';
+      } else if (emailSent) {
+        message = 'Email app opened with your invitation!';
+      } else if (smsSent) {
+        message = 'SMS app opened with your invitation!';
+      }
+      
+      console.log(message);
       setContactEmail('');
       setContactPhone('');
       setShowContactForm(false);
     } catch (error) {
-      Alert.alert('Error', 'Failed to send invitation. Please try again.');
+      console.error('Direct send error:', error);
     } finally {
       setIsSending(false);
     }
   };
   
   return (
-    <ScrollView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView style={styles.scrollView}>
       {/* Tab Selector */}
       <View style={styles.tabSelector}>
         <Pressable 
@@ -486,15 +536,42 @@ export default function InviteTab() {
               <View style={styles.quickInviteSection}>
                 <Text style={styles.sectionTitle}>Quick Invite Options</Text>
                 <View style={styles.quickInviteGrid}>
-                  <Pressable style={styles.quickInviteOption}>
+                  <Pressable 
+                    style={styles.quickInviteOption}
+                    onPress={() => {
+                      if (activeLiveEvents.length > 0) {
+                        const event = activeLiveEvents[0];
+                        const inviteLink = generateLiveEventInviteLink(event.id);
+                        const message = `🔴 Join my live event: "${event.title}"\n\nWatch live at: ${inviteLink}`;
+                        const smsUrl = Platform.OS === 'ios' 
+                          ? `sms:&body=${encodeURIComponent(message)}`
+                          : `sms:?body=${encodeURIComponent(message)}`;
+                        Linking.openURL(smsUrl).catch(() => console.log('SMS not available'));
+                      }
+                    }}
+                  >
                     <MessageSquare size={24} color={colors.primary} />
                     <Text style={styles.quickInviteText}>SMS Invite</Text>
                   </Pressable>
-                  <Pressable style={styles.quickInviteOption}>
+                  <Pressable 
+                    style={styles.quickInviteOption}
+                    onPress={() => {
+                      if (activeLiveEvents.length > 0) {
+                        const event = activeLiveEvents[0];
+                        const inviteLink = generateLiveEventInviteLink(event.id);
+                        const message = `🔴 Join my live event: "${event.title}"\n\nWatch live at: ${inviteLink}`;
+                        const emailUrl = `mailto:?subject=${encodeURIComponent(`Join ${event.title} on ZestBet`)}&body=${encodeURIComponent(message)}`;
+                        Linking.openURL(emailUrl).catch(() => console.log('Email not available'));
+                      }
+                    }}
+                  >
                     <Mail size={24} color={colors.primary} />
                     <Text style={styles.quickInviteText}>Email Invite</Text>
                   </Pressable>
-                  <Pressable style={styles.quickInviteOption}>
+                  <Pressable 
+                    style={styles.quickInviteOption}
+                    onPress={() => setShowContactForm(true)}
+                  >
                     <UserPlus size={24} color={colors.primary} />
                     <Text style={styles.quickInviteText}>Direct Invite</Text>
                   </Pressable>
@@ -504,7 +581,8 @@ export default function InviteTab() {
           )}
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -512,6 +590,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 16,
