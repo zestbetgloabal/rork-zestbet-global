@@ -67,6 +67,11 @@ export const config = {
     s3: {
       bucket: process.env.AWS_S3_BUCKET || 'zestbet-uploads',
     },
+    ses: {
+      region: process.env.AWS_SES_REGION || 'eu-central-1',
+      fromEmail: process.env.AWS_SES_FROM_EMAIL || 'noreply@zestbet.com',
+      fromName: process.env.AWS_SES_FROM_NAME || 'ZestBet',
+    },
   },
   
   // Redis configuration (for caching and sessions)

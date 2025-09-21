@@ -10,6 +10,9 @@ import logoutRoute from "./routes/auth/logout/route";
 import socialLoginRoute from "./routes/auth/social-login/route";
 import verifyEmailRoute from "./routes/auth/verify-email/route";
 import verifyPhoneRoute from "./routes/auth/verify-phone/route";
+import resendVerificationRoute from "./routes/auth/resend-verification/route";
+import forgotPasswordRoute from "./routes/auth/forgot-password/route";
+import resetPasswordRoute from "./routes/auth/reset-password/route";
 
 // Bet routes
 import createBetRoute from "./routes/bets/create/route";
@@ -52,6 +55,9 @@ export const appRouter = createTRPCRouter({
     socialLogin: socialLoginRoute,
     verifyEmail: verifyEmailRoute,
     verifyPhone: verifyPhoneRoute,
+    resendVerification: resendVerificationRoute,
+    forgotPassword: forgotPasswordRoute,
+    resetPassword: resetPasswordRoute,
   }),
   
   // Bets

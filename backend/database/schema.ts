@@ -16,6 +16,19 @@ export interface User {
     privacy: 'public' | 'friends' | 'private';
     language: string;
   };
+  // Email verification fields
+  emailVerified: boolean;
+  emailVerificationCode?: string;
+  verificationCodeExpiry?: Date;
+  // Phone verification fields
+  phoneVerified: boolean;
+  phoneVerificationCode?: string;
+  phoneVerificationExpiry?: Date;
+  // Account status
+  status: 'pending_verification' | 'active' | 'suspended' | 'banned';
+  // Password reset fields
+  passwordResetCode?: string;
+  passwordResetExpiry?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

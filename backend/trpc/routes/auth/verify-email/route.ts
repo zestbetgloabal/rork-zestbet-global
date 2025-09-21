@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
 import Database from "../../../../utils/database";
+import EmailService from "../../../../services/email";
 
 const verifyEmailSchema = z.object({
   email: z.string().email(),
@@ -53,9 +54,23 @@ export default publicProcedure
       status: user.phoneVerified ? 'active' : 'pending_verification',
     });
     
+    // Send welcome email if user is now fully verified
+    const isFullyVerified = user.phoneVerified;
+    if (isFullyVerified) {
+      try {
+        await EmailService.sendWelcomeEmail(user.email, user.name);
+        console.log(`Welcome email sent to ${user.email}`);
+      } catch (error) {
+        console.error('Failed to send welcome email:', error);
+        // Don't fail verification if welcome email fails
+      }
+    }
+    
     return {
       success: true,
-      message: "Email verified successfully!",
-      isFullyVerified: user.phoneVerified,
+      message: isFullyVerified 
+        ? "Email verified successfully! Welcome to ZestBet!" 
+        : "Email verified successfully! Please verify your phone number to complete registration.",
+      isFullyVerified,
     };
   });

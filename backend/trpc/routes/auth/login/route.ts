@@ -29,9 +29,7 @@ export default publicProcedure
       });
     }
 
-    // Temporarily allow login without verification for development
-    // TODO: Re-enable verification checks after implementing proper email validation
-    
+    // Check account status
     if (user.status === 'suspended') {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -39,7 +37,25 @@ export default publicProcedure
       });
     }
     
-    // Allow login for all non-suspended accounts temporarily
+    if (user.status === 'banned') {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Account is banned. Please contact support.",
+      });
+    }
+    
+    // Check if email verification is required
+    if (user.status === 'pending_verification' && !user.emailVerified) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Please verify your email address before logging in. Check your inbox for the verification code.",
+        cause: {
+          requiresEmailVerification: true,
+          email: user.email,
+        },
+      });
+    }
+    
     console.log(`User ${user.email} logging in with status: ${user.status}`);
 
     return {
@@ -50,6 +66,8 @@ export default publicProcedure
         name: user.name,
         avatar: user.avatar ?? null,
         status: user.status,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
       },
       token: "mock-jwt-token",
     };

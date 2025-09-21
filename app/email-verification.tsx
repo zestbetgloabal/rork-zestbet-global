@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { trpc } from '@/lib/trpc';
 import Button from '@/components/Button';
 import colors from '@/constants/colors';
 
@@ -70,19 +71,19 @@ export default function EmailVerificationScreen() {
     }
   };
   
+  const resendMutation = trpc.auth.resendVerification.useMutation();
+  
   const handleResendCode = async () => {
-    if (countdown > 0) return;
+    if (countdown > 0 || !email) return;
     
     setIsResending(true);
     
     try {
-      // In a real app, this would call an API to resend the code
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await resendMutation.mutateAsync({ email });
       setCountdown(60);
       Alert.alert('Success', 'Verification code has been resent to your email');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to resend verification code');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to resend verification code');
     } finally {
       setIsResending(false);
     }

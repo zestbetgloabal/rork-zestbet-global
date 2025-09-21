@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
 import Database from "../../../../utils/database";
+import EmailService from "../../../../services/email";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -35,10 +36,15 @@ function generateVerificationCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-// Function to send verification email (mock implementation)
-async function sendVerificationEmail(email: string, code: string): Promise<void> {
-  console.log(`Sending verification code ${code} to ${email}`);
-  // In production, integrate with email service (SendGrid, AWS SES, etc.)
+// Function to send verification email using AWS SES
+async function sendVerificationEmail(email: string, name: string, code: string): Promise<void> {
+  try {
+    await EmailService.sendVerificationEmail(email, name, code);
+    console.log(`Verification email sent to ${email}`);
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
+    throw error;
+  }
 }
 
 // Function to send verification SMS (mock implementation)
@@ -84,17 +90,16 @@ export default publicProcedure
     const emailVerificationCode = generateVerificationCode();
     const phoneVerificationCode = phone ? generateVerificationCode() : null;
     
-    // Temporarily create user as active for development
-    // TODO: Change back to 'pending_verification' after implementing proper email validation
+    // Create user with pending verification status
     const user = await Database.createUser({
       email,
       password, // In production, hash this password
       name,
       phone,
-      status: 'active', // Temporarily active instead of pending_verification
+      status: 'pending_verification', // User must verify email to activate account
       emailVerificationCode,
       phoneVerificationCode,
-      emailVerified: false, // Keep track for future implementation
+      emailVerified: false,
       phoneVerified: !phone, // If no phone provided, mark as verified
       verificationCodeExpiry: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
       provider: 'email',
@@ -105,13 +110,13 @@ export default publicProcedure
     
     // Send verification email
     try {
-      await sendVerificationEmail(email, emailVerificationCode);
-      console.log(`Verification email sent to ${email} with code: ${emailVerificationCode}`);
+      await sendVerificationEmail(email, name, emailVerificationCode);
+      console.log(`Verification email sent to ${email}`);
       
       // Send verification SMS if phone provided
       if (phone && phoneVerificationCode) {
         await sendVerificationSMS(phone, phoneVerificationCode);
-        console.log(`Verification SMS sent to ${phone} with code: ${phoneVerificationCode}`);
+        console.log(`Verification SMS sent to ${phone}`);
       }
     } catch (error) {
       console.error('Failed to send verification:', error);
@@ -121,9 +126,9 @@ export default publicProcedure
     
     return {
       success: true,
-      message: "Account created successfully! You can now log in.",
+      message: "Account created successfully! Please check your email for the verification code.",
       userId: user.id,
-      requiresEmailVerification: false, // Temporarily disabled
-      requiresPhoneVerification: false, // Temporarily disabled
+      requiresEmailVerification: true,
+      requiresPhoneVerification: !!phone,
     };
   });
