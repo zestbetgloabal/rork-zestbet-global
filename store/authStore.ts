@@ -404,17 +404,17 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
-        // Immediately clear auth state to trigger navigation
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false 
-        });
-        console.log('Auth state cleared immediately');
-        
         try {
-          // Clear user state
+          // Try backend logout first (best-effort)
+          try {
+            const { trpcClient } = await import('@/lib/trpc');
+            await trpcClient.auth.logout.mutate();
+            console.log('Backend session revoked');
+          } catch (apiErr) {
+            console.warn('Backend logout failed or not necessary', apiErr);
+          }
+          
+          // Clear user state first
           const { useUserStore } = await import('./userStore');
           const { logout: userLogout } = useUserStore.getState();
           userLogout();
@@ -456,25 +456,27 @@ export const useAuthStore = create<AuthState>()(
             try {
               for (const key of storageKeys) {
                 window.localStorage?.removeItem(key);
+                window.sessionStorage?.removeItem(key);
               }
-              console.log('localStorage cleared');
+              console.log('localStorage and sessionStorage cleared');
             } catch (lsErr) {
               console.warn('localStorage cleanup failed', lsErr);
             }
           }
           
-          // Try backend logout (best-effort, after state is cleared)
-          try {
-            const { trpcClient } = await import('@/lib/trpc');
-            await trpcClient.auth.logout.mutate();
-            console.log('Backend session revoked');
-          } catch (apiErr) {
-            console.warn('Backend logout failed or not necessary', apiErr);
-          }
-          
         } catch (error) {
           console.error('Error during logout cleanup:', error);
         }
+        
+        // Clear auth state AFTER cleanup to ensure proper state management
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false,
+          pendingVerification: null
+        });
+        console.log('Auth state cleared');
         
         console.log('=== LOGOUT COMPLETE ===');
       },
