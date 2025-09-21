@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 import WebRTCService from "./services/webrtc";
+import { loggerMiddleware, errorLoggerMiddleware } from "./middleware/logger";
 
 // Extend global type for WebRTC service
 declare global {
@@ -16,6 +17,23 @@ const app = new Hono();
 
 // Enable CORS for all routes
 app.use("*", cors());
+
+// Logging middleware
+app.use("*", async (c, next) => loggerMiddleware(c, next));
+app.use("*", async (c, next) => errorLoggerMiddleware(c, next));
+
+// Cache-control headers: never cache auth or trpc auth endpoints
+app.use("*", async (c, next) => {
+  await next();
+  const url = new URL(c.req.url);
+  const path = url.pathname.replace(/^\/api/, "");
+  const isAuthPath = path.startsWith("/auth") || path.startsWith("/trpc/auth");
+  if (isAuthPath) {
+    c.res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    c.res.headers.set("Pragma", "no-cache");
+    c.res.headers.set("Expires", "0");
+  }
+});
 
 // Mount tRPC router at /trpc
 app.use(
@@ -49,6 +67,9 @@ app.post("/auth/logout", (c) => {
   });
 
   headers.set("Content-Type", "application/json");
+  headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  headers.set("Pragma", "no-cache");
+  headers.set("Expires", "0");
 
   return new Response(JSON.stringify({ success: true }), {
     status: 200,

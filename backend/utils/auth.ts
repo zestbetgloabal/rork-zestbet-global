@@ -1,6 +1,6 @@
 import * as jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+const JWT_SECRET: jwt.Secret = (process.env.JWT_SECRET as string) || 'your-super-secret-jwt-key';
 
 export interface JWTPayload {
   userId: string;
@@ -34,16 +34,14 @@ export function isTokenBlacklisted(token: string | undefined | null): boolean {
 
 export function generateToken(
   payload: JWTPayload,
-  expiresIn: jwt.SignOptions['expiresIn'] = '15m'
+  expiresIn: string | number = '15m'
 ): string {
   if (!payload || typeof payload !== 'object' || !payload.userId || !payload.email || !payload.name) {
     throw new Error('Invalid JWT payload');
   }
   const options: jwt.SignOptions = {};
-  if (expiresIn) {
-    (options as any).expiresIn = expiresIn as any;
-  }
-  return jwt.sign(payload as any, JWT_SECRET as jwt.Secret, options);
+  (options as any).expiresIn = expiresIn as any;
+  return jwt.sign(payload as jwt.JwtPayload, JWT_SECRET, options);
 }
 
 export function verifyToken(token: string): JWTPayload | null {
