@@ -1,4 +1,5 @@
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
+import type { SignOptions } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
 
@@ -32,8 +33,9 @@ export function isTokenBlacklisted(token: string | undefined | null): boolean {
   return tokenBlacklist.some((t) => t.token === token && t.expiresAt > Date.now());
 }
 
-export function generateToken(payload: JWTPayload, expiresIn: string | number = '15m'): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+export function generateToken(payload: JWTPayload, options?: SignOptions): string {
+  const signOptions: SignOptions = { expiresIn: '15m', ...(options ?? {}) };
+  return jwt.sign(payload, JWT_SECRET as jwt.Secret, signOptions as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): JWTPayload | null {
@@ -42,7 +44,7 @@ export function verifyToken(token: string): JWTPayload | null {
       console.warn('JWT is blacklisted');
       return null;
     }
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET as jwt.Secret) as JWTPayload;
     return decoded;
   } catch (error) {
     console.error('JWT verification failed:', error);
