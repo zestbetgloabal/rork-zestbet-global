@@ -5,8 +5,8 @@ import Database from "../../../../utils/database";
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
-  name: z.string().min(2),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
+  name: z.string().min(2, "Name must be at least 2 characters long"),
   phone: z.string().optional(),
 });
 
@@ -57,8 +57,19 @@ export default publicProcedure
     if (existingUser) {
       throw new TRPCError({
         code: "CONFLICT",
-        message: "Account with this email already exists",
+        message: "An account with this email already exists. Please use a different email or try logging in.",
       });
+    }
+    
+    // Check if phone number is already used (if provided)
+    if (phone) {
+      const existingPhoneUser = await Database.getUserByPhone(phone);
+      if (existingPhoneUser) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "An account with this phone number already exists. Please use a different phone number.",
+        });
+      }
     }
     
     // Validate email domain to ensure it's from a real provider
@@ -84,23 +95,27 @@ export default publicProcedure
       phoneVerificationCode,
       emailVerified: false,
       phoneVerified: !phone, // If no phone provided, mark as verified
-      verificationCodeExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      verificationCodeExpiry: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+      provider: 'email',
+      zestCoins: 1000, // Starting bonus
     });
+    
+    console.log(`New user registered: ${email} with ID: ${user.id}`);
     
     // Send verification email
     try {
       await sendVerificationEmail(email, emailVerificationCode);
+      console.log(`Verification email sent to ${email} with code: ${emailVerificationCode}`);
       
       // Send verification SMS if phone provided
       if (phone && phoneVerificationCode) {
         await sendVerificationSMS(phone, phoneVerificationCode);
+        console.log(`Verification SMS sent to ${phone} with code: ${phoneVerificationCode}`);
       }
     } catch (error) {
       console.error('Failed to send verification:', error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to send verification code. Please try again.",
-      });
+      // Don't fail registration if email/SMS sending fails
+      console.warn('Continuing with registration despite verification sending failure');
     }
     
     return {

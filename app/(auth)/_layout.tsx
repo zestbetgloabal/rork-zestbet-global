@@ -17,13 +17,7 @@ export default function AuthLayout() {
         },
       }}
     >
-      <Stack.Screen 
-        name="index" 
-        options={{ 
-          title: "Welcome to ZestBet",
-          headerShown: false
-        }} 
-      />
+
       <Stack.Screen 
         name="login" 
         options={{ 

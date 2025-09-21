@@ -106,6 +106,12 @@ export default function EmailVerificationScreen() {
           We've sent a verification code to {email}. Please enter it below.
         </Text>
         
+        <View style={styles.testingNotice}>
+          <Text style={styles.testingText}>
+            🧪 For testing: Check the browser console or app logs for the verification code.
+          </Text>
+        </View>
+        
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -243,5 +249,18 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginTop: 'auto',
+  },
+  testingNotice: {
+    backgroundColor: `${colors.warning || colors.primary}20`,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning || colors.primary,
+  },
+  testingText: {
+    color: colors.warning || colors.primary,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

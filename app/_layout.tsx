@@ -80,12 +80,12 @@ function RootLayoutNav() {
       currentPath: segments.join('/') 
     });
     
-    // If user is not authenticated and not in auth or legal group, redirect to auth
+    // If user is not authenticated and not in auth or legal group, redirect to register
     if (!isAuthenticated || !token) {
       if (!isInAuthGroup && !isInLegalGroup) {
-        console.log('Redirecting to auth - user not authenticated');
+        console.log('Redirecting to register - user not authenticated');
         // Use immediate navigation for logout scenarios
-        router.replace('/(auth)');
+        router.replace('/(auth)/register');
       }
       return;
     }
@@ -101,8 +101,8 @@ function RootLayoutNav() {
   useEffect(() => {
     // Force immediate redirect when auth state changes to false
     if (!isAuthenticated && !token && !isInAuthGroup && !isInLegalGroup) {
-      console.log('Force redirect to auth due to logout');
-      router.replace('/(auth)');
+      console.log('Force redirect to register due to logout');
+      router.replace('/(auth)/register');
     }
   }, [isAuthenticated, token]);
   
@@ -208,6 +208,13 @@ function RootLayoutNav() {
           name="challenge/[id]" 
           options={{ 
             title: "Challenge Details",
+          }} 
+        />
+        <Stack.Screen 
+          name="email-verification" 
+          options={{ 
+            title: "Email Verification",
+            presentation: "card",
           }} 
         />
       </Stack>

@@ -52,6 +52,11 @@ export default function RegisterScreen() {
       return;
     }
     
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters long');
+      return;
+    }
+    
     if (!agbConsent) {
       Alert.alert('Error', 'You must accept the Terms and Conditions');
       return;
@@ -62,6 +67,8 @@ export default function RegisterScreen() {
       return;
     }
     
+    console.log('Starting registration process...');
+    
     // Attempt registration
     const result = await register({
       email: email.trim(),
@@ -71,10 +78,11 @@ export default function RegisterScreen() {
     });
     
     if (result) {
+      console.log('Registration successful:', result);
       // Show success message and navigate to verification
       Alert.alert(
         'Registration Successful!', 
-        result.message,
+        result.message + '\n\nFor testing purposes, the verification code will be displayed in the console.',
         [{
           text: 'Continue to Verification',
           onPress: () => {
@@ -84,6 +92,8 @@ export default function RegisterScreen() {
           }
         }]
       );
+    } else {
+      console.log('Registration failed - no result returned');
     }
   };
   
@@ -142,7 +152,7 @@ export default function RegisterScreen() {
       <Text style={styles.subtitle}>Join ZestBet and start making predictions!</Text>
       
       <View style={styles.noticeContainer}>
-        <Text style={styles.noticeText}>✅ Account registration is now available! You'll need to verify your email address to complete registration.</Text>
+        <Text style={styles.noticeText}>✅ Account registration is available! Create your account with a valid email from recognized providers (Gmail, Yahoo, Outlook, etc.). You'll need to verify your email to complete registration.</Text>
       </View>
       
       {error && (
@@ -255,7 +265,7 @@ export default function RegisterScreen() {
         </View>
         
         <Text style={styles.passwordRequirements}>
-          Password must be at least 8 characters long and include a mix of letters, numbers, and symbols.
+          Password must be at least 8 characters long.
         </Text>
         
         {/* Consent Checkboxes */}

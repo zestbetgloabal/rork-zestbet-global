@@ -34,12 +34,16 @@ export class Database {
     const user = {
       id: Date.now().toString(),
       ...userData,
-      zestCoins: 1000, // Starting bonus
-      status: userData.status || 'active', // active, pending, suspended
+      zestCoins: userData.zestCoins || 1000, // Starting bonus
+      status: userData.status || 'active', // active, pending_verification, suspended
+      provider: userData.provider || 'email',
+      emailVerified: userData.emailVerified || false,
+      phoneVerified: userData.phoneVerified !== undefined ? userData.phoneVerified : true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     mockDB.users.push(user);
+    console.log(`User created in database:`, { id: user.id, email: user.email, status: user.status });
     return user;
   }
 
