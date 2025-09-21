@@ -19,37 +19,38 @@ export default function ProfileScreen() {
       setIsLoggingOut(true);
       console.log('Profile: Starting logout process');
       
-      // Call logout function - it will clear auth state after cleanup
+      // Call logout function - it clears auth state immediately
       await logout();
       console.log('Profile: Logout function completed');
       
-      // Small delay to ensure state is properly cleared
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // Force navigation to auth
+      // Force navigation to auth immediately
       console.log('Profile: Navigating to auth');
       router.replace('/(auth)');
       
-      // For web, also reload the page to ensure complete state reset
+      // For web, force a complete page reload to ensure all state is cleared
       if (typeof window !== 'undefined') {
-        console.log('Profile: Reloading page for web');
+        console.log('Profile: Forcing page reload for web');
+        // Use location.reload() for immediate effect
         setTimeout(() => {
-          window.location.href = '/';
-        }, 200);
+          window.location.reload();
+        }, 100);
       }
       
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails, clear state and navigate
+      // Even if logout fails, force navigation
       console.log('Profile: Error occurred, forcing navigation');
       router.replace('/(auth)');
+      
       if (typeof window !== 'undefined') {
         setTimeout(() => {
-          window.location.href = '/';
-        }, 200);
+          window.location.reload();
+        }, 100);
       }
+    } finally {
+      // Reset loading state in case component doesn't unmount
+      setTimeout(() => setIsLoggingOut(false), 1000);
     }
-    // Don't set isLoggingOut to false here as component will unmount
   };
 
   const confirmLogout = () => {

@@ -84,10 +84,8 @@ function RootLayoutNav() {
     if (!isAuthenticated || !token) {
       if (!isInAuthGroup && !isInLegalGroup) {
         console.log('Redirecting to auth - user not authenticated');
-        // Use a small delay to ensure state is properly updated
-        setTimeout(() => {
-          router.replace('/(auth)');
-        }, 10);
+        // Immediate redirect for logout scenarios
+        router.replace('/(auth)');
       }
       return;
     }
@@ -95,9 +93,7 @@ function RootLayoutNav() {
     // If user is authenticated and in auth group, redirect to tabs
     if (isAuthenticated && token && isInAuthGroup) {
       console.log('Redirecting to tabs - user authenticated');
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 10);
+      router.replace('/(tabs)');
     }
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);
   
