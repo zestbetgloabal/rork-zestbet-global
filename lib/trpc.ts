@@ -28,7 +28,21 @@ const getWsUrl = (): string => {
   return httpUrl.replace(/^http/, 'ws');
 };
 
-// Create WebSocket client for subscriptions (only on supported platforms)
+const getAuthHeaders = () => {
+  try {
+    // Lazy require to avoid import cycles in some environments
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useAuthStore } = require('@/store/authStore');
+    const token: string | null = useAuthStore.getState()?.token ?? null;
+    if (token && token !== 'null' && token !== 'undefined') {
+      return { authorization: `Bearer ${token}` } as Record<string, string>;
+    }
+  } catch (e) {
+    console.warn('Auth store not available for TRPC headers');
+  }
+  return {} as Record<string, string>;
+};
+
 const createWebSocketClient = () => {
   if (Platform.OS === 'web') {
     try {
@@ -47,7 +61,6 @@ const wsClient = createWebSocketClient();
 
 export const trpcClient = trpc.createClient({
   links: [
-    // Use WebSocket for subscriptions when available, HTTP for everything else
     wsClient ? splitLink({
       condition(op) {
         return op.type === 'subscription';
@@ -58,11 +71,17 @@ export const trpcClient = trpc.createClient({
       }),
       false: httpBatchLink({ 
         url: getTrpcUrl(), 
-        transformer: superjson 
+        transformer: superjson,
+        headers() {
+          return getAuthHeaders();
+        },
       }),
     }) : httpBatchLink({ 
       url: getTrpcUrl(), 
-      transformer: superjson 
+      transformer: superjson,
+      headers() {
+        return getAuthHeaders();
+      },
     }),
   ],
 });
