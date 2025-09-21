@@ -6,23 +6,29 @@ import {
   TextInput, 
   Pressable, 
   Alert,
-  ActivityIndicator
+  SafeAreaView
 } from 'react-native';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import Button from '@/components/Button';
 import colors from '@/constants/colors';
 
-export default function PhoneVerificationScreen() {
+export default function EmailVerificationScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const { verifyPhone, isLoading, error, clearError, pendingVerification } = useAuthStore();
+  const { verifyEmail, isLoading, error, clearError, pendingVerification } = useAuthStore();
   
   const [code, setCode] = useState('');
   const [countdown, setCountdown] = useState(60);
   const [isResending, setIsResending] = useState(false);
   
-  const phone = pendingVerification?.phone || (params.phone as string);
+  const email = pendingVerification?.email;
+  
+  useEffect(() => {
+    if (!email) {
+      router.replace('/register');
+      return;
+    }
+  }, [email, router]);
   
   useEffect(() => {
     if (countdown > 0) {
@@ -37,20 +43,28 @@ export default function PhoneVerificationScreen() {
       return;
     }
     
-    if (!phone) {
-      Alert.alert('Error', 'Phone number not found. Please try again.');
+    if (!email) {
+      Alert.alert('Error', 'Email not found. Please try registering again.');
       return;
     }
     
-    const success = await verifyPhone(phone, code);
+    const success = await verifyEmail(email, code);
     
     if (success) {
       Alert.alert(
-        'Phone Verified!', 
-        'Your account has been successfully verified! You can now log in.',
+        'Email Verified!', 
+        pendingVerification?.requiresPhoneVerification 
+          ? 'Please verify your phone number to complete registration.'
+          : 'Your account has been successfully verified! You can now log in.',
         [{
-          text: 'Continue to Login',
-          onPress: () => router.replace('/login')
+          text: 'Continue',
+          onPress: () => {
+            if (pendingVerification?.requiresPhoneVerification) {
+              router.push('/phone-verification');
+            } else {
+              router.replace('/login');
+            }
+          }
         }]
       );
     }
@@ -66,7 +80,7 @@ export default function PhoneVerificationScreen() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setCountdown(60);
-      Alert.alert('Success', 'Verification code has been resent');
+      Alert.alert('Success', 'Verification code has been resent to your email');
     } catch (error) {
       Alert.alert('Error', 'Failed to resend verification code');
     } finally {
@@ -78,14 +92,18 @@ export default function PhoneVerificationScreen() {
     router.back();
   };
   
+  if (!email) {
+    return null;
+  }
+  
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Phone Verification' }} />
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen options={{ title: 'Email Verification' }} />
       
       <View style={styles.content}>
-        <Text style={styles.title}>Verify Your Phone</Text>
+        <Text style={styles.title}>Verify Your Email</Text>
         <Text style={styles.subtitle}>
-          We&apos;ve sent a verification code to {phone}. Please enter it below.
+          We've sent a verification code to {email}. Please enter it below.
         </Text>
         
         {error && (
@@ -110,14 +128,14 @@ export default function PhoneVerificationScreen() {
           />
           
           <Button
-            title="Verify"
+            title="Verify Email"
             onPress={handleVerify}
             loading={isLoading}
             style={styles.verifyButton}
           />
           
           <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn&apos;t receive the code?</Text>
+            <Text style={styles.resendText}>Didn't receive the code?</Text>
             <Pressable 
               onPress={handleResendCode}
               disabled={countdown > 0 || isResending}
@@ -141,7 +159,7 @@ export default function PhoneVerificationScreen() {
           style={styles.backButton}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -47,6 +47,10 @@ export class Database {
     return mockDB.users.find(user => user.email === email);
   }
 
+  static async getUserByPhone(phone: string) {
+    return mockDB.users.find(user => user.phone === phone);
+  }
+
   static async getUserById(id: string) {
     return mockDB.users.find(user => user.id === id);
   }

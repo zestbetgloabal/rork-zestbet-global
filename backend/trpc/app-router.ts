@@ -8,6 +8,8 @@ import loginRoute from "./routes/auth/login/route";
 import registerRoute from "./routes/auth/register/route";
 import logoutRoute from "./routes/auth/logout/route";
 import socialLoginRoute from "./routes/auth/social-login/route";
+import verifyEmailRoute from "./routes/auth/verify-email/route";
+import verifyPhoneRoute from "./routes/auth/verify-phone/route";
 
 // Bet routes
 import createBetRoute from "./routes/bets/create/route";
@@ -50,6 +52,8 @@ export const appRouter = createTRPCRouter({
     register: registerRoute,
     logout: logoutRoute,
     socialLogin: socialLoginRoute,
+    verifyEmail: verifyEmailRoute,
+    verifyPhone: verifyPhoneRoute,
   }),
   
   // Bets

@@ -30,7 +30,21 @@ export default publicProcedure
     }
 
     // Check if account is verified/approved
-    if (user.status === 'pending' || user.status === 'suspended') {
+    if (user.status === 'pending_verification') {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Account verification required. Please check your email and phone for verification codes.",
+      });
+    }
+    
+    if (user.status === 'suspended') {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Account is suspended. Please contact support.",
+      });
+    }
+    
+    if (user.status !== 'active') {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Account is not approved for login. Please contact support.",

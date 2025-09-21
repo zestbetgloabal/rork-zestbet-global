@@ -20,7 +20,7 @@ import colors from '@/constants/colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register, isLoading, error, clearError, loginWithGoogle, loginWithApple, loginWithFacebook } = useAuthStore();
+  const { register, isLoading, error, clearError, loginWithGoogle, loginWithApple, loginWithFacebook, pendingVerification } = useAuthStore();
   
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -37,8 +37,8 @@ export default function RegisterScreen() {
       return;
     }
     
-    if (!email.trim() && !phone.trim()) {
-      Alert.alert('Error', 'Please enter your email or phone number');
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email address');
       return;
     }
     
@@ -62,36 +62,28 @@ export default function RegisterScreen() {
       return;
     }
     
-    // If phone is provided, navigate to verification screen
-    if (phone.trim()) {
-      router.push({
-        pathname: '/phone-verification',
-        params: { 
-          phone, 
-          email, 
-          username, 
-          password,
-          agbConsent: agbConsent ? 'true' : 'false',
-          privacyConsent: privacyConsent ? 'true' : 'false'
-        }
-      });
-      return;
-    }
+    // Attempt registration
+    const result = await register({
+      email: email.trim(),
+      password,
+      username: username.trim(),
+      phone: phone.trim() || undefined,
+    });
     
-    // If email is provided, navigate to profile completion screen
-    if (email.trim()) {
-      router.push({
-        pathname: '/profile-edit',
-        params: {
-          email,
-          username,
-          password,
-          isNewUser: 'true',
-          agbConsent: agbConsent ? 'true' : 'false',
-          privacyConsent: privacyConsent ? 'true' : 'false'
-        }
-      });
-      return;
+    if (result) {
+      // Show success message and navigate to verification
+      Alert.alert(
+        'Registration Successful!', 
+        result.message,
+        [{
+          text: 'Continue to Verification',
+          onPress: () => {
+            if (result.requiresEmailVerification) {
+              router.push('/email-verification');
+            }
+          }
+        }]
+      );
     }
   };
   
@@ -147,10 +139,10 @@ export default function RegisterScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Registration is currently restricted</Text>
+      <Text style={styles.subtitle}>Join ZestBet and start making predictions!</Text>
       
       <View style={styles.noticeContainer}>
-        <Text style={styles.noticeText}>🚫 New account registration is currently disabled. Only existing approved accounts can log in. Please contact support if you need access.</Text>
+        <Text style={styles.noticeText}>✅ Account registration is now available! You'll need to verify your email address to complete registration.</Text>
       </View>
       
       {error && (
@@ -206,24 +198,23 @@ export default function RegisterScreen() {
           autoCorrect={false}
         />
         
-        <Text style={styles.label}>Email or Phone Number</Text>
+        <Text style={styles.label}>Email Address *</Text>
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
-          placeholder="Enter your email"
+          placeholder="Enter your email address"
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
         />
         
-        <Text style={styles.orText}>or</Text>
-        
+        <Text style={styles.label}>Phone Number (Optional)</Text>
         <TextInput
           style={styles.input}
           value={phone}
           onChangeText={setPhone}
-          placeholder="Enter your phone number"
+          placeholder="Enter your phone number (optional)"
           keyboardType="phone-pad"
         />
         
@@ -317,11 +308,11 @@ export default function RegisterScreen() {
         </View>
         
         <Button
-          title="Continue"
+          title="Create Account"
           onPress={handleRegister}
           loading={isLoading}
           style={styles.registerButton}
-          disabled={true}
+          disabled={isLoading}
         />
       </View>
       
@@ -515,15 +506,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   noticeContainer: {
-    backgroundColor: `${colors.error}20`,
+    backgroundColor: `${colors.primary}20`,
     borderRadius: 8,
     padding: 12,
     marginBottom: 24,
     borderLeftWidth: 4,
-    borderLeftColor: colors.error,
+    borderLeftColor: colors.primary,
   },
   noticeText: {
-    color: colors.error,
+    color: colors.primary,
     fontSize: 14,
     lineHeight: 20,
   },

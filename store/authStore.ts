@@ -35,17 +35,34 @@ interface AuthResponse {
   isNewUser?: boolean;
 }
 
+interface RegisterResponse {
+  success: boolean;
+  message: string;
+  userId: string;
+  requiresEmailVerification: boolean;
+  requiresPhoneVerification: boolean;
+}
+
 interface AuthState {
   token: string | null;
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  pendingVerification: {
+    userId?: string;
+    email?: string;
+    phone?: string;
+    requiresEmailVerification?: boolean;
+    requiresPhoneVerification?: boolean;
+  } | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (params: RegisterParams) => Promise<boolean>;
-  phoneLogin: (phone: string, code: string) => Promise<boolean>;
+  register: (params: RegisterParams) => Promise<RegisterResponse | null>;
+  verifyEmail: (email: string, code: string) => Promise<boolean>;
   verifyPhone: (phone: string, code: string) => Promise<boolean>;
+  phoneLogin: (phone: string, code: string) => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
+  clearPendingVerification: () => void;
   loginWithGoogle: () => Promise<boolean>;
   loginWithApple: () => Promise<boolean>;
   loginWithFacebook: () => Promise<boolean>;
@@ -59,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       isAuthenticated: false,
+      pendingVerification: null,
       
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
@@ -112,21 +130,31 @@ export const useAuthStore = create<AuthState>()(
       register: async (params: RegisterParams) => {
         set({ isLoading: true, error: null });
         try {
-          // Registration is currently restricted - backend will throw error
           const { trpcClient } = await import('@/lib/trpc');
-          await trpcClient.auth.register.mutate({
+          const result = await trpcClient.auth.register.mutate({
             email: params.email,
             password: params.password,
             name: params.username,
             phone: params.phone,
           });
           
-          // This line should never be reached due to backend restriction
-          return false;
+          // Store pending verification info
+          set({ 
+            pendingVerification: {
+              userId: result.userId,
+              email: params.email,
+              phone: params.phone,
+              requiresEmailVerification: result.requiresEmailVerification,
+              requiresPhoneVerification: result.requiresPhoneVerification,
+            },
+            isLoading: false 
+          });
+          
+          return result;
         } catch (error: any) {
-          const errorMessage = error?.message || 'Registration is currently restricted. Please contact support.';
+          const errorMessage = error?.message || 'Registration failed. Please try again.';
           set({ error: errorMessage, isLoading: false });
-          return false;
+          return null;
         }
       },
       
@@ -142,23 +170,44 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
+      verifyEmail: async (email: string, code: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const { trpcClient } = await import('@/lib/trpc');
+          const result = await trpcClient.auth.verifyEmail.mutate({ email, code });
+          
+          set({ isLoading: false });
+          
+          // If fully verified, clear pending verification
+          if (result.isFullyVerified) {
+            set({ pendingVerification: null });
+          }
+          
+          return true;
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Failed to verify email. Please try again.';
+          set({ error: errorMessage, isLoading: false });
+          return false;
+        }
+      },
+      
       verifyPhone: async (phone: string, code: string) => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would be an API call
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Mock validation
-          if (code !== '1234') {
-            set({ error: 'Invalid verification code', isLoading: false });
-            return false;
-          }
+          const { trpcClient } = await import('@/lib/trpc');
+          const result = await trpcClient.auth.verifyPhone.mutate({ phone, code });
           
           set({ isLoading: false });
+          
+          // If fully verified, clear pending verification
+          if (result.isFullyVerified) {
+            set({ pendingVerification: null });
+          }
+          
           return true;
-        } catch (error) {
-          set({ error: 'Failed to verify phone. Please try again.', isLoading: false });
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Failed to verify phone. Please try again.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },
@@ -431,6 +480,8 @@ export const useAuthStore = create<AuthState>()(
       },
       
       clearError: () => set({ error: null }),
+      
+      clearPendingVerification: () => set({ pendingVerification: null }),
     }),
     {
       name: 'auth-storage',
