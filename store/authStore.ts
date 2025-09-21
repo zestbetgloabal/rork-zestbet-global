@@ -133,50 +133,11 @@ export const useAuthStore = create<AuthState>()(
       phoneLogin: async (phone: string, code: string) => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would be an API call
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Mock validation
-          if (code !== '1234') {
-            set({ error: 'Invalid verification code', isLoading: false });
-            return false;
-          }
-          
-          // Set mock token
-          set({ token: 'mock-jwt-token', isLoading: false, isAuthenticated: true });
-          
-          // Set user data
-          const { useUserStore } = await import('./userStore');
-          const { setUser } = useUserStore.getState();
-          setUser({
-            id: '1',
-            username: `user${phone.slice(-4)}`,
-            zestBalance: 100,
-            points: 0,
-            inviteCode: 'ZEST123',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-            biography: 'New user on ZestBet. Ready to make predictions!',
-            socialMedia: {
-              instagram: '',
-              twitter: '',
-              facebook: '',
-              linkedin: '',
-              tiktok: '',
-              youtube: '',
-              snapchat: '',
-              website: ''
-            },
-            dailyBetAmount: 0,
-            lastBetDate: new Date().toISOString(),
-            agbConsent: true,
-            privacyConsent: true,
-            consentDate: new Date().toISOString()
-          });
-          
-          return true;
-        } catch (error) {
-          set({ error: 'Failed to login. Please try again.', isLoading: false });
+          // Phone login is restricted - only allow existing accounts
+          throw new Error('Phone login is only available for existing accounts. Please contact support to create an account.');
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Phone login is only available for existing accounts.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },
@@ -382,44 +343,11 @@ export const useAuthStore = create<AuthState>()(
       loginWithBiometrics: async () => {
         set({ isLoading: true, error: null });
         try {
-          // In a real app, this would integrate with device biometrics
-          // Simulating API delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Set mock token
-          set({ token: 'mock-biometric-jwt-token', isLoading: false, isAuthenticated: true });
-          
-          // Set user data
-          const { useUserStore } = await import('./userStore');
-          const { setUser } = useUserStore.getState();
-          setUser({
-            id: '1',
-            username: 'biometric_user',
-            zestBalance: 100,
-            points: 0,
-            inviteCode: 'ZEST123',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-            biography: 'Biometric user on ZestBet. Ready to make predictions!',
-            socialMedia: {
-              instagram: '',
-              twitter: '',
-              facebook: '',
-              linkedin: '',
-              tiktok: '',
-              youtube: '',
-              snapchat: '',
-              website: ''
-            },
-            dailyBetAmount: 0,
-            lastBetDate: new Date().toISOString(),
-            agbConsent: true,
-            privacyConsent: true,
-            consentDate: new Date().toISOString()
-          });
-          
-          return true;
-        } catch (error) {
-          set({ error: 'Failed to login with biometrics. Please try again.', isLoading: false });
+          // Biometric login is restricted - only allow existing accounts
+          throw new Error('Biometric login is only available for existing accounts. Please contact support to create an account.');
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Biometric login is only available for existing accounts.';
+          set({ error: errorMessage, isLoading: false });
           return false;
         }
       },
