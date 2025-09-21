@@ -29,13 +29,8 @@ export default publicProcedure
       });
     }
 
-    // Check if account is verified/approved
-    if (user.status === 'pending_verification') {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Account verification required. Please check your email and phone for verification codes.",
-      });
-    }
+    // Temporarily allow login without verification for development
+    // TODO: Re-enable verification checks after implementing proper email validation
     
     if (user.status === 'suspended') {
       throw new TRPCError({
@@ -44,12 +39,8 @@ export default publicProcedure
       });
     }
     
-    if (user.status !== 'active') {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Account is not approved for login. Please contact support.",
-      });
-    }
+    // Allow login for all non-suspended accounts temporarily
+    console.log(`User ${user.email} logging in with status: ${user.status}`);
 
     return {
       success: true,

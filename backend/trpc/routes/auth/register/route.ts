@@ -84,16 +84,17 @@ export default publicProcedure
     const emailVerificationCode = generateVerificationCode();
     const phoneVerificationCode = phone ? generateVerificationCode() : null;
     
-    // Create user with pending status
+    // Temporarily create user as active for development
+    // TODO: Change back to 'pending_verification' after implementing proper email validation
     const user = await Database.createUser({
       email,
       password, // In production, hash this password
       name,
       phone,
-      status: 'pending_verification',
+      status: 'active', // Temporarily active instead of pending_verification
       emailVerificationCode,
       phoneVerificationCode,
-      emailVerified: false,
+      emailVerified: false, // Keep track for future implementation
       phoneVerified: !phone, // If no phone provided, mark as verified
       verificationCodeExpiry: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
       provider: 'email',
@@ -120,11 +121,9 @@ export default publicProcedure
     
     return {
       success: true,
-      message: phone 
-        ? "Account created! Please check your email and phone for verification codes."
-        : "Account created! Please check your email for verification code.",
+      message: "Account created successfully! You can now log in.",
       userId: user.id,
-      requiresEmailVerification: true,
-      requiresPhoneVerification: !!phone,
+      requiresEmailVerification: false, // Temporarily disabled
+      requiresPhoneVerification: false, // Temporarily disabled
     };
   });
