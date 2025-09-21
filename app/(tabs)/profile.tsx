@@ -19,22 +19,16 @@ export default function ProfileScreen() {
       setIsLoggingOut(true);
       console.log('Profile: Starting logout process');
       
-      // Call logout function
+      // Call logout function - this now clears state immediately
       await logout();
       console.log('Profile: Logout function completed');
+      
+      // Small delay to ensure state propagation
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // For web, force a complete page reload to ensure all state is cleared
       if (typeof window !== 'undefined') {
         console.log('Profile: Forcing page reload for web');
-        // Clear any remaining web storage as extra precaution
-        try {
-          window.localStorage?.clear();
-          window.sessionStorage?.clear();
-        } catch (e) {
-          console.warn('Additional web storage clear failed', e);
-        }
-        
-        // Force immediate reload
         window.location.href = '/';
         return;
       }
@@ -49,12 +43,6 @@ export default function ProfileScreen() {
       // Even if logout fails, force navigation/reload
       if (typeof window !== 'undefined') {
         console.log('Profile: Error occurred, forcing page reload');
-        try {
-          window.localStorage?.clear();
-          window.sessionStorage?.clear();
-        } catch (e) {
-          console.warn('Emergency web storage clear failed', e);
-        }
         window.location.href = '/';
         return;
       }

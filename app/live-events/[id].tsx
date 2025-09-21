@@ -63,7 +63,7 @@ export default function LiveEventDetailScreen() {
   const [donationAmount, setDonationAmount] = useState('5');
   const [showDonationPanel, setShowDonationPanel] = useState(false);
   const [isGeneratingChallenge, setIsGeneratingChallenge] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'betting' | 'challenges' | 'participants' | 'invite'>('betting');
+  const [activeTab, setActiveTab] = useState<'chat' | 'betting' | 'participants' | 'invite'>('betting');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
   const [pendingInvites, setPendingInvites] = useState<{id: string, username: string, status: 'pending' | 'joined' | 'declined'}[]>([]);
@@ -194,30 +194,7 @@ export default function LiveEventDetailScreen() {
     }
   };
   
-  const handleGenerateChallenge = async () => {
-    if (!currentEvent) return;
-    
-    setIsGeneratingChallenge(true);
-    
-    try {
-      const challenge = await generateAIChallenge(currentEvent.id, {
-        difficulty: 'medium',
-        duration: 600, // 10 minutes
-        type: 'solo'
-      });
-      
-      if (challenge) {
-        Alert.alert(
-          'Challenge Generated!',
-          `The AI has created a new challenge: "${challenge.title}"`
-        );
-      }
-    } catch {
-      Alert.alert('Error', 'Failed to generate challenge. Please try again.');
-    } finally {
-      setIsGeneratingChallenge(false);
-    }
-  };
+
   
   const handleInviteUser = async (username: string) => {
     if (!currentEvent || !user) return;
@@ -523,12 +500,7 @@ export default function LiveEventDetailScreen() {
               <MessageCircle size={16} color={activeTab === 'chat' ? colors.primary : colors.textSecondary} />
               <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Chat</Text>
             </Pressable>
-            <Pressable 
-              style={[styles.tab, activeTab === 'challenges' && styles.activeTab]}
-              onPress={() => setActiveTab('challenges')}
-            >
-              <Text style={[styles.tabText, activeTab === 'challenges' && styles.activeTabText]}>Challenges</Text>
-            </Pressable>
+
             <Pressable 
               style={[styles.tab, activeTab === 'participants' && styles.activeTab]}
               onPress={() => setActiveTab('participants')}
@@ -664,14 +636,10 @@ export default function LiveEventDetailScreen() {
             
             <Pressable 
               style={styles.actionButton}
-              onPress={handleGenerateChallenge}
-              disabled={isGeneratingChallenge}
+              onPress={() => Alert.alert('Feature Removed', 'Challenge generation has been removed from the app.')}
+              disabled={true}
             >
-              {isGeneratingChallenge ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Brain size={20} color={colors.primary} />
-              )}
+              <Brain size={20} color={colors.textSecondary} />
             </Pressable>
           </View>
           
@@ -708,16 +676,7 @@ export default function LiveEventDetailScreen() {
             </KeyboardAvoidingView>
           )}
           
-          {/* Challenges Tab */}
-          {activeTab === 'challenges' && (
-            <View style={styles.challengesContainer}>
-              <Text style={styles.tabContentTitle}>Live Challenges</Text>
-              <Text style={styles.tabContentDescription}>
-                Participate in real-time challenges during the event
-              </Text>
-              {/* Add challenge content here */}
-            </View>
-          )}
+
           
           {/* Participants Tab */}
           {activeTab === 'participants' && (
@@ -1341,12 +1300,7 @@ const styles = StyleSheet.create({
   disabledSendButton: {
     backgroundColor: colors.border,
   },
-  challengesContainer: {
-    flex: 1,
-    padding: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   participantsContainer: {
     flex: 1,
     padding: 16,

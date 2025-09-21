@@ -404,16 +404,17 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
+        // Clear auth state FIRST to immediately update UI
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false,
+          pendingVerification: null
+        });
+        console.log('Auth state cleared immediately');
+        
         try {
-          // Try backend logout first (best-effort)
-          try {
-            const { trpcClient } = await import('@/lib/trpc');
-            await trpcClient.auth.logout.mutate();
-            console.log('Backend session revoked');
-          } catch (apiErr) {
-            console.warn('Backend logout failed or not necessary', apiErr);
-          }
-          
           // Clear all possible storage keys
           const storageKeys = [
             'auth-storage', 
@@ -478,22 +479,18 @@ export const useAuthStore = create<AuthState>()(
             console.warn('User state cleanup failed', userErr);
           }
           
+          // Try backend logout (best-effort, don't block on failure)
+          try {
+            const { trpcClient } = await import('@/lib/trpc');
+            await trpcClient.auth.logout.mutate();
+            console.log('Backend session revoked');
+          } catch (apiErr) {
+            console.warn('Backend logout failed or not necessary', apiErr);
+          }
+          
         } catch (error) {
           console.error('Error during logout cleanup:', error);
         }
-        
-        // Clear auth state AFTER cleanup to ensure everything is cleared
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false,
-          pendingVerification: null
-        });
-        console.log('Auth state cleared');
-        
-        // Force a small delay to ensure state propagation
-        await new Promise(resolve => setTimeout(resolve, 100));
         
         console.log('=== LOGOUT COMPLETE ===');
       },

@@ -197,19 +197,7 @@ function RootLayoutNav() {
           }} 
         />
 
-        <Stack.Screen 
-          name="create-challenge" 
-          options={{ 
-            title: "Create Challenge",
-            presentation: "modal",
-          }} 
-        />
-        <Stack.Screen 
-          name="challenge/[id]" 
-          options={{ 
-            title: "Challenge Details",
-          }} 
-        />
+
         <Stack.Screen 
           name="email-verification" 
           options={{ 
