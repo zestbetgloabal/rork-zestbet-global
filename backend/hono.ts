@@ -32,6 +32,30 @@ app.get("/", (c) => {
   return c.json({ status: "ok", message: "API is running" });
 });
 
+// Stateless logout endpoint to clear auth cookies (if any)
+app.post("/auth/logout", (c) => {
+  const cookieAttrs = [
+    "Path=/",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    "Max-Age=0",
+    "HttpOnly",
+    "Secure",
+    "SameSite=None",
+  ].join("; ");
+
+  const headers = new Headers();
+  ["auth", "token", "refreshToken", "access_token", "session"].forEach((name) => {
+    headers.append("Set-Cookie", `${name}=; ${cookieAttrs}`);
+  });
+
+  headers.set("Content-Type", "application/json");
+
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers,
+  });
+});
+
 // WebRTC/Socket.IO endpoint for live betting
 app.get("/live-betting-status", (c) => {
   // This would be used to check WebRTC service status
