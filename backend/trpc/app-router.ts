@@ -15,9 +15,7 @@ import verifyPhoneRoute from "./routes/auth/verify-phone/route";
 import createBetRoute from "./routes/bets/create/route";
 import listBetsRoute from "./routes/bets/list/route";
 
-// Challenge routes
-import createChallengeRoute from "./routes/challenges/create/route";
-import listChallengesRoute from "./routes/challenges/list/route";
+
 
 // User routes
 import userProfileRoutes from "./routes/user/profile/route";
@@ -62,11 +60,7 @@ export const appRouter = createTRPCRouter({
     list: listBetsRoute,
   }),
   
-  // Challenges
-  challenges: createTRPCRouter({
-    create: createChallengeRoute,
-    list: listChallengesRoute,
-  }),
+
   
   // User management
   user: createTRPCRouter({

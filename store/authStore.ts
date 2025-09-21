@@ -404,8 +404,18 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
+        // Clear auth state FIRST to immediately show logged out state
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false,
+          pendingVerification: null
+        });
+        console.log('Auth state cleared immediately');
+        
         try {
-          // Try backend logout first (best-effort)
+          // Try backend logout (best-effort)
           try {
             const { trpcClient } = await import('@/lib/trpc');
             await trpcClient.auth.logout.mutate();
@@ -419,7 +429,6 @@ export const useAuthStore = create<AuthState>()(
             'auth-storage', 
             'user-storage',
             'bet-storage',
-            'challenge-storage',
             'social-storage',
             'ai-storage',
             'badge-storage',
@@ -445,15 +454,21 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Clear localStorage for web
+          // Clear localStorage for web - more aggressive approach
           if (typeof window !== 'undefined') {
             try {
               // Clear all storage
               window.localStorage?.clear();
               window.sessionStorage?.clear();
-              console.log('localStorage and sessionStorage cleared');
+              
+              // Clear all cookies
+              document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+              });
+              
+              console.log('Web storage and cookies cleared');
             } catch (lsErr) {
-              console.warn('localStorage cleanup failed', lsErr);
+              console.warn('Web storage cleanup failed', lsErr);
             }
           }
           
@@ -470,16 +485,6 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Error during logout cleanup:', error);
         }
-        
-        // Clear auth state LAST to ensure all cleanup is done
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false,
-          pendingVerification: null
-        });
-        console.log('Auth state cleared');
         
         console.log('=== LOGOUT COMPLETE ===');
       },

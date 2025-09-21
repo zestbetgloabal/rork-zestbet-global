@@ -155,73 +155,7 @@ export interface ChatParticipant {
   isOnline: boolean;
 }
 
-// Add Challenge and ChallengePool interfaces for the betting pool system
-export interface Challenge {
-  id: string;
-  title: string;
-  description: string;
-  creator: string;
-  startDate: Date;
-  endDate: Date;
-  category: string;
-  image?: string;
-  status: 'upcoming' | 'active' | 'completed';
-  participants: ChallengeParticipant[];
-  type: 'individual' | 'team';
-  visibility: 'public' | 'private';
-  invitedFriends?: string[];
-  hasPool: boolean;
-  pool?: ChallengePool;
-  teams?: ChallengeTeam[];
-}
 
-export interface ChallengeParticipant {
-  id: string;
-  userId: string;
-  username: string;
-  avatar?: string;
-  joinedAt: Date;
-  score?: number;
-  rank?: number;
-  contribution?: number; // Amount contributed to the pool
-  teamId?: string;
-}
-
-export interface ChallengePool {
-  id: string;
-  challengeId: string;
-  totalAmount: number;
-  minContribution: number;
-  maxContribution: number;
-  distributionStrategy: 'standard' | 'custom';
-  customDistribution?: {
-    firstPlace?: number; // Percentage for first place (e.g., 50)
-    secondPlace?: number; // Percentage for second place (e.g., 20)
-    thirdPlace?: number; // Percentage for third place (e.g., 10)
-    participation?: number; // Percentage for participation (e.g., 10)
-    platform?: number; // Percentage for platform (e.g., 10)
-  };
-  contributions: PoolContribution[];
-  isDistributed: boolean;
-  distributedAt?: Date;
-}
-
-export interface PoolContribution {
-  id: string;
-  userId: string;
-  username: string;
-  amount: number;
-  timestamp: Date;
-}
-
-export interface ChallengeTeam {
-  id: string;
-  name: string;
-  challengeId: string;
-  members: ChallengeParticipant[];
-  score?: number;
-  rank?: number;
-}
 
 // Add Badge and UserRank interfaces for the rank-based badge system
 export interface Badge {

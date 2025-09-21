@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
-import { Home, User, MessageCircle, Award, UserPlus } from 'lucide-react-native';
+import { Home, User, MessageCircle, UserPlus } from 'lucide-react-native';
 import colors from '@/constants/colors';
 import { useRouter } from 'expo-router';
 
@@ -48,13 +48,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <UserPlus size={24} color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="challenges"
-        options={{
-          title: 'Challenges',
-          tabBarIcon: ({ color }) => <Award size={24} color={color} />,
-        }}
-      />
+
       <Tabs.Screen
         name="social"
         options={{

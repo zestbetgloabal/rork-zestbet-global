@@ -26,8 +26,10 @@ export default function ProfileScreen() {
       // For web, force a complete page reload to ensure all state is cleared
       if (typeof window !== 'undefined') {
         console.log('Profile: Forcing page reload for web');
-        // Immediate reload for web to clear all state
-        window.location.href = '/';
+        // Add a small delay to ensure state is cleared
+        setTimeout(() => {
+          window.location.replace('/');
+        }, 100);
         return;
       }
       
@@ -40,7 +42,9 @@ export default function ProfileScreen() {
       
       // Even if logout fails, force navigation/reload
       if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        setTimeout(() => {
+          window.location.replace('/');
+        }, 100);
         return;
       }
       
