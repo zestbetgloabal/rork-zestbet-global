@@ -26,30 +26,41 @@ export default function ProfileScreen() {
       // For web, force a complete page reload to ensure all state is cleared
       if (typeof window !== 'undefined') {
         console.log('Profile: Forcing page reload for web');
-        // Add a small delay to ensure state is cleared
-        setTimeout(() => {
-          window.location.replace('/');
-        }, 100);
+        // Clear any remaining web storage as extra precaution
+        try {
+          window.localStorage?.clear();
+          window.sessionStorage?.clear();
+        } catch (e) {
+          console.warn('Additional web storage clear failed', e);
+        }
+        
+        // Force immediate reload
+        window.location.href = '/';
         return;
       }
       
       // For mobile, navigate to auth
       console.log('Profile: Navigating to auth');
-      router.replace('/(auth)');
+      router.replace('/(auth)/register');
       
     } catch (error) {
       console.error('Logout error:', error);
       
       // Even if logout fails, force navigation/reload
       if (typeof window !== 'undefined') {
-        setTimeout(() => {
-          window.location.replace('/');
-        }, 100);
+        console.log('Profile: Error occurred, forcing page reload');
+        try {
+          window.localStorage?.clear();
+          window.sessionStorage?.clear();
+        } catch (e) {
+          console.warn('Emergency web storage clear failed', e);
+        }
+        window.location.href = '/';
         return;
       }
       
       console.log('Profile: Error occurred, forcing navigation');
-      router.replace('/(auth)');
+      router.replace('/(auth)/register');
     } finally {
       // Reset loading state in case component doesn't unmount
       setTimeout(() => setIsLoggingOut(false), 1000);
