@@ -404,34 +404,14 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
-        // Clear auth state FIRST to immediately update UI
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false,
-          pendingVerification: null
-        });
-        console.log('Auth state cleared immediately');
-        
         try {
-          // Try backend logout (best-effort, don't block on failure)
+          // Try backend logout first (best-effort)
           try {
             const { trpcClient } = await import('@/lib/trpc');
             await trpcClient.auth.logout.mutate();
             console.log('Backend session revoked');
           } catch (apiErr) {
             console.warn('Backend logout failed or not necessary', apiErr);
-          }
-          
-          // Clear user state
-          try {
-            const { useUserStore } = await import('./userStore');
-            const { logout: userLogout } = useUserStore.getState();
-            userLogout();
-            console.log('User state cleared');
-          } catch (userErr) {
-            console.warn('User state cleanup failed', userErr);
           }
           
           // Clear all possible storage keys
@@ -468,19 +448,38 @@ export const useAuthStore = create<AuthState>()(
           // Clear localStorage for web
           if (typeof window !== 'undefined') {
             try {
-              for (const key of storageKeys) {
-                window.localStorage?.removeItem(key);
-                window.sessionStorage?.removeItem(key);
-              }
+              // Clear all storage
+              window.localStorage?.clear();
+              window.sessionStorage?.clear();
               console.log('localStorage and sessionStorage cleared');
             } catch (lsErr) {
               console.warn('localStorage cleanup failed', lsErr);
             }
           }
           
+          // Clear user state
+          try {
+            const { useUserStore } = await import('./userStore');
+            const { logout: userLogout } = useUserStore.getState();
+            userLogout();
+            console.log('User state cleared');
+          } catch (userErr) {
+            console.warn('User state cleanup failed', userErr);
+          }
+          
         } catch (error) {
           console.error('Error during logout cleanup:', error);
         }
+        
+        // Clear auth state LAST to ensure all cleanup is done
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false,
+          pendingVerification: null
+        });
+        console.log('Auth state cleared');
         
         console.log('=== LOGOUT COMPLETE ===');
       },

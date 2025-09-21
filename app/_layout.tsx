@@ -84,7 +84,7 @@ function RootLayoutNav() {
     if (!isAuthenticated || !token) {
       if (!isInAuthGroup && !isInLegalGroup) {
         console.log('Redirecting to auth - user not authenticated');
-        // Immediate redirect for logout scenarios
+        // Use immediate navigation for logout scenarios
         router.replace('/(auth)');
       }
       return;
@@ -96,6 +96,15 @@ function RootLayoutNav() {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);
+  
+  // Additional effect to handle immediate logout state changes
+  useEffect(() => {
+    // Force immediate redirect when auth state changes to false
+    if (!isAuthenticated && !token && !isInAuthGroup && !isInLegalGroup) {
+      console.log('Force redirect to auth due to logout');
+      router.replace('/(auth)');
+    }
+  }, [isAuthenticated, token]);
   
   return (
     <>
