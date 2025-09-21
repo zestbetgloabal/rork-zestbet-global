@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore } from '@/store/userStore';
@@ -57,6 +57,23 @@ export default function ProfileScreen() {
 
   const confirmLogout = () => {
     console.log('Profile: Logout button pressed');
+
+    if (Platform.OS === 'web') {
+      try {
+        const ok = typeof window !== 'undefined' ? window.confirm('Möchtest du dich wirklich abmelden?') : true;
+        if (ok) {
+          console.log('Profile: Web confirm accepted');
+          handleLogout();
+        } else {
+          console.log('Profile: Web confirm cancelled');
+        }
+      } catch (e) {
+        console.warn('Profile: Web confirm failed, proceeding with logout', e);
+        handleLogout();
+      }
+      return;
+    }
+
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
