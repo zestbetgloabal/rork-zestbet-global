@@ -427,8 +427,66 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
+        // Immediately clear auth state to trigger navigation
+        set({ 
+          token: null, 
+          isAuthenticated: false, 
+          error: null, 
+          isLoading: false 
+        });
+        console.log('Auth state cleared immediately');
+        
         try {
-          // Try backend logout first (best-effort)
+          // Clear user state
+          const { useUserStore } = await import('./userStore');
+          const { logout: userLogout } = useUserStore.getState();
+          userLogout();
+          console.log('User state cleared');
+          
+          // Clear all possible storage keys
+          const storageKeys = [
+            'auth-storage', 
+            'user-storage',
+            'bet-storage',
+            'challenge-storage',
+            'social-storage',
+            'ai-storage',
+            'badge-storage',
+            'impact-storage',
+            'leaderboard-storage',
+            'live-event-storage',
+            'mission-storage',
+            'chat-storage'
+          ];
+          
+          // Clear AsyncStorage
+          try {
+            await AsyncStorage.multiRemove(storageKeys);
+            console.log('AsyncStorage cleared');
+          } catch (e) {
+            console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
+            for (const key of storageKeys) {
+              try {
+                await AsyncStorage.removeItem(key);
+              } catch (e2) {
+                console.warn(`Failed to remove ${key}`, e2);
+              }
+            }
+          }
+          
+          // Clear localStorage for web
+          if (typeof window !== 'undefined') {
+            try {
+              for (const key of storageKeys) {
+                window.localStorage?.removeItem(key);
+              }
+              console.log('localStorage cleared');
+            } catch (lsErr) {
+              console.warn('localStorage cleanup failed', lsErr);
+            }
+          }
+          
+          // Try backend logout (best-effort, after state is cleared)
           try {
             const { trpcClient } = await import('@/lib/trpc');
             await trpcClient.auth.logout.mutate();
@@ -436,52 +494,12 @@ export const useAuthStore = create<AuthState>()(
           } catch (apiErr) {
             console.warn('Backend logout failed or not necessary', apiErr);
           }
-
-          // Clear user state
-          const { useUserStore } = await import('./userStore');
-          const { logout: userLogout } = useUserStore.getState();
-          userLogout();
-          console.log('User state cleared');
-          
-          // Clear persisted storage completely
-          try {
-            // Clear AsyncStorage
-            await AsyncStorage.multiRemove(['auth-storage', 'user-storage']);
-            console.log('AsyncStorage cleared');
-          } catch (e) {
-            console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
-            try {
-              await AsyncStorage.removeItem('auth-storage');
-              await AsyncStorage.removeItem('user-storage');
-              console.log('AsyncStorage individual removal done');
-            } catch (e2) {
-              console.warn('AsyncStorage individual removal failed', e2);
-            }
-          }
-          
-          // Clear localStorage for web
-          if (typeof window !== 'undefined') {
-            try {
-              window.localStorage?.removeItem('auth-storage');
-              window.localStorage?.removeItem('user-storage');
-              console.log('localStorage cleared');
-            } catch (lsErr) {
-              console.warn('localStorage cleanup failed', lsErr);
-            }
-          }
           
         } catch (error) {
           console.error('Error during logout cleanup:', error);
-        } finally {
-          // Always clear auth state at the end to ensure navigation happens
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
-            isLoading: false 
-          });
-          console.log('Auth state cleared - logout complete');
         }
+        
+        console.log('=== LOGOUT COMPLETE ===');
       },
       
       clearError: () => set({ error: null }),
