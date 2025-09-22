@@ -61,9 +61,10 @@ jobs:
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
+        set -euo pipefail
         echo "🔄 Starting database migration..."
 
-        if [ -z "$DATABASE_URL" ]; then
+        if [ -z "${DATABASE_URL:-}" ]; then
           echo "❌ DATABASE_URL is not set!" && exit 1
         fi
 
@@ -75,24 +76,16 @@ jobs:
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
 
-        HOST=$(python3 - "$DB_URL" <<'PY'
-from urllib.parse import urlparse
-import sys
-u = urlparse(sys.argv[1])
-print(u.hostname or '')
-PY
-)
-        if [ -z "$HOST" ]; then
+        HOST=$(printf '%s' "$DB_URL" | sed -E 's|^[a-z]+://[^@]*@([^/:?]+).*|\1|')
+        if [ -z "$HOST" ] || [[ "$HOST" == "$DB_URL" ]]; then
           echo "❌ Could not parse host from DATABASE_URL" && exit 1
         fi
-        IPV4=$(python3 - "$HOST" <<'PY'
-import socket, sys
-print(socket.gethostbyname(sys.argv[1]))
-PY
-)
-        if [ -z "$IPV4" ]; then
+
+        IPV4=$(getent ahostsv4 "$HOST" | awk '{print $1; exit}')
+        if [ -z "${IPV4:-}" ]; then
           echo "❌ Could not resolve IPv4 for $HOST" && exit 1
         fi
+
         DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
 
         echo "✅ Using IPv4 with SSL required"
@@ -103,6 +96,7 @@ PY
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
+        set -euo pipefail
         echo "🔄 Testing database connection..."
         if [[ "$DATABASE_URL" == *"?"* ]]; then
           DB_URL="${DATABASE_URL}&sslmode=require"
@@ -111,22 +105,14 @@ PY
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-        HOST=$(python3 - "$DB_URL" <<'PY'
-from urllib.parse import urlparse
-import sys
-u = urlparse(sys.argv[1])
-print(u.hostname or '')
-PY
-)
-        if [ -z "$HOST" ]; then
+
+        HOST=$(printf '%s' "$DB_URL" | sed -E 's|^[a-z]+://[^@]*@([^/:?]+).*|\1|')
+        if [ -z "$HOST" ] || [[ "$HOST" == "$DB_URL" ]]; then
           echo "❌ Could not parse host from DATABASE_URL" && exit 1
         fi
-        IPV4=$(python3 - "$HOST" <<'PY'
-import socket, sys
-print(socket.gethostbyname(sys.argv[1]))
-PY
-)
-        if [ -z "$IPV4" ]; then
+
+        IPV4=$(getent ahostsv4 "$HOST" | awk '{print $1; exit}')
+        if [ -z "${IPV4:-}" ]; then
           echo "❌ Could not resolve IPv4 for $HOST" && exit 1
         fi
         DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
