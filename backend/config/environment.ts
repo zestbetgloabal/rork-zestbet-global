@@ -82,8 +82,9 @@ export const config = {
   // Email configuration
   email: {
     from: process.env.EMAIL_FROM || 'noreply@zestbet.com',
+    fromName: process.env.EMAIL_FROM_NAME || 'ZestBet',
     smtp: {
-      host: process.env.SMTP_HOST,
+      host: process.env.SMTP_HOST || 'smtp.strato.de',
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: process.env.SMTP_SECURE === 'true',
       auth: {

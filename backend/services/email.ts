@@ -1,4 +1,4 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import nodemailer from 'nodemailer';
 import config from '../config/environment';
 
 interface EmailOptions {
@@ -9,51 +9,39 @@ interface EmailOptions {
 }
 
 class EmailService {
-  private sesClient: SESClient;
+  private transporter: nodemailer.Transporter;
 
   constructor() {
-    this.sesClient = new SESClient({
-      region: config.aws.ses.region,
-      credentials: {
-        accessKeyId: config.aws.accessKeyId!,
-        secretAccessKey: config.aws.secretAccessKey!,
+    this.transporter = nodemailer.createTransporter({
+      host: config.email.smtp.host,
+      port: config.email.smtp.port,
+      secure: config.email.smtp.secure,
+      auth: {
+        user: config.email.smtp.auth.user,
+        pass: config.email.smtp.auth.pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
       },
     });
   }
 
   async sendEmail({ to, subject, html, text }: EmailOptions) {
     try {
-      const command = new SendEmailCommand({
-        Source: `${config.aws.ses.fromName} <${config.aws.ses.fromEmail}>`,
-        Destination: {
-          ToAddresses: [to],
-        },
-        Message: {
-          Subject: {
-            Data: subject,
-            Charset: 'UTF-8',
-          },
-          Body: {
-            Html: {
-              Data: html,
-              Charset: 'UTF-8',
-            },
-            ...(text && {
-              Text: {
-                Data: text,
-                Charset: 'UTF-8',
-              },
-            }),
-          },
-        },
-      });
+      const mailOptions = {
+        from: `${config.email.fromName || 'ZestBet'} <${config.email.from}>`,
+        to,
+        subject,
+        html,
+        text,
+      };
 
-      const result = await this.sesClient.send(command);
-      console.log('Email sent successfully:', result.MessageId);
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log('Email sent successfully:', result.messageId);
       
       return {
         success: true,
-        messageId: result.MessageId,
+        messageId: result.messageId,
       };
     } catch (error) {
       console.error('Failed to send email:', error);
