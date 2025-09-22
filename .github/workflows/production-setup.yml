@@ -58,22 +58,43 @@ jobs:
         SMTP_PASS: ${{ secrets.SMTP_PASS }}
     
     - name: Run database migration
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         echo "🔄 Starting database migration..."
-        psql "$DATABASE_URL" -f backend/database/migrate.sql
+
+        if [ -z "$DATABASE_URL" ]; then
+          echo "❌ DATABASE_URL is not set!" && exit 1
+        fi
+
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+
+        echo "✅ Forcing IPv4 with SSL required"
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -f backend/database/migrate.sql
         echo "✅ Database migration completed successfully!"
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
     
     - name: Test database connection
-      run: |
-        echo "🔄 Testing database connection..."
-        psql "$DATABASE_URL" -c "SELECT COUNT(*) as user_count FROM users;"
-        psql "$DATABASE_URL" -c "SELECT COUNT(*) as bet_count FROM bets;"
-        psql "$DATABASE_URL" -c "SELECT COUNT(*) as challenge_count FROM challenges;"
-        echo "✅ Database connection test successful!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        echo "🔄 Testing database connection..."
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as user_count FROM users;"
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as bet_count FROM bets;"
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as challenge_count FROM challenges;"
+        echo "✅ Database connection test successful!"
     
     - name: Test API endpoints
       run: |

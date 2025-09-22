@@ -28,6 +28,8 @@ jobs:
         sudo apt-get install -y postgresql-client
     
     - name: Run database migration via SQL
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         echo "🔄 Starting database migration..."
         
@@ -196,20 +198,34 @@ jobs:
         ON CONFLICT (email) DO NOTHING;
         EOF
         
-        # Run the migration
-        psql "$DATABASE_URL" -f migration.sql
+        # Build connection string enforcing SSL and use IPv4
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+
+        # Run the migration forcing IPv4
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -f migration.sql
         
         echo "✅ Database migration completed successfully!"
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
     
     - name: Test database connection
-      run: |
-        echo "🔄 Testing database connection..."
-        psql "$DATABASE_URL" -c "SELECT COUNT(*) as user_count FROM users;"
-        echo "✅ Database connection test successful!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        echo "🔄 Testing database connection..."
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as user_count FROM users;"
+        echo "✅ Database connection test successful!"
     
     - name: Setup complete
       run: |
