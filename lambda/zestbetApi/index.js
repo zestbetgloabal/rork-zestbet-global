@@ -1,11 +1,16 @@
 const { Hono } = require('hono');
 const { handle } = require('@hono/aws-lambda');
-const { trpcServer } = require('@hono/trpc-server');
 const { cors } = require('hono/cors');
 
-// Import backend modules
-const { appRouter } = require('./backend/app-router');
-const { createContext } = require('./backend/create-context');
+// Try to import tRPC modules, fallback if not available
+let trpcServer, appRouter, createContext;
+try {
+  trpcServer = require('@hono/trpc-server').trpcServer;
+  appRouter = require('./backend/app-router').appRouter;
+  createContext = require('./backend/create-context').createContext;
+} catch (error) {
+  console.warn('tRPC modules not available, running in basic mode:', error.message);
+}
 
 const app = new Hono();
 
@@ -53,17 +58,28 @@ app.get('/status', (c) => {
 });
 
 // tRPC endpoint - this handles all your backend routes
-app.use(
-  '/trpc/*',
-  trpcServer({
-    router: appRouter,
-    createContext,
-    endpoint: '/trpc',
-    onError: ({ error, path }) => {
-      console.error(`tRPC Error on ${path}:`, error);
-    },
-  })
-);
+if (trpcServer && appRouter && createContext) {
+  app.use(
+    '/trpc/*',
+    trpcServer({
+      router: appRouter,
+      createContext,
+      endpoint: '/trpc',
+      onError: ({ error, path }) => {
+        console.error(`tRPC Error on ${path}:`, error);
+      },
+    })
+  );
+} else {
+  // Fallback tRPC endpoint when modules are not available
+  app.all('/trpc/*', (c) => {
+    return c.json({
+      error: 'tRPC not available',
+      message: 'tRPC dependencies are missing. Please install required packages.',
+      timestamp: new Date().toISOString()
+    }, 503);
+  });
+}
 
 // Simple auth logout endpoint for compatibility
 app.post('/auth/logout', (c) => {
