@@ -3,10 +3,8 @@
 // Database migration script
 // Run this to create tables in your Supabase PostgreSQL database
 
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool } from 'pg';
-import * as dotenv from 'dotenv';
+const { Pool } = require('pg');
+const dotenv = require('dotenv');
 
 // Load environment variables
 dotenv.config();
@@ -24,8 +22,6 @@ const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
-
-const db = drizzle(pool);
 
 async function main() {
   try {
