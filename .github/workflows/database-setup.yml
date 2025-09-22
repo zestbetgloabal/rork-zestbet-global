@@ -45,7 +45,26 @@ jobs:
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT version();"
+        HOST=$(python3 - "$DB_URL" <<'PY'
+from urllib.parse import urlparse
+import sys
+u = urlparse(sys.argv[1])
+print(u.hostname or '')
+PY
+)
+        if [ -z "$HOST" ]; then
+          echo "❌ Could not parse host from DATABASE_URL" && exit 1
+        fi
+        IPV4=$(python3 - "$HOST" <<'PY'
+import socket, sys
+print(socket.gethostbyname(sys.argv[1]))
+PY
+)
+        if [ -z "$IPV4" ]; then
+          echo "❌ Could not resolve IPv4 for $HOST" && exit 1
+        fi
+        DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT version();"
         echo "✅ Database connection successful!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -205,7 +224,26 @@ EOF
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -f migration.sql
+        HOST=$(python3 - "$DB_URL" <<'PY'
+from urllib.parse import urlparse
+import sys
+u = urlparse(sys.argv[1])
+print(u.hostname or '')
+PY
+)
+        if [ -z "$HOST" ]; then
+          echo "❌ Could not parse host from DATABASE_URL" && exit 1
+        fi
+        IPV4=$(python3 - "$HOST" <<'PY'
+import socket, sys
+print(socket.gethostbyname(sys.argv[1]))
+PY
+)
+        if [ -z "$IPV4" ]; then
+          echo "❌ Could not resolve IPv4 for $HOST" && exit 1
+        fi
+        DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -f migration.sql
         echo "✅ Database tables created successfully!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -228,7 +266,26 @@ EOF
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -f testdata.sql
+        HOST=$(python3 - "$DB_URL" <<'PY'
+from urllib.parse import urlparse
+import sys
+u = urlparse(sys.argv[1])
+print(u.hostname or '')
+PY
+)
+        if [ -z "$HOST" ]; then
+          echo "❌ Could not parse host from DATABASE_URL" && exit 1
+        fi
+        IPV4=$(python3 - "$HOST" <<'PY'
+import socket, sys
+print(socket.gethostbyname(sys.argv[1]))
+PY
+)
+        if [ -z "$IPV4" ]; then
+          echo "❌ Could not resolve IPv4 for $HOST" && exit 1
+        fi
+        DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -f testdata.sql
         echo "✅ Test data inserted successfully!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -243,7 +300,26 @@ EOF
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT 
+        HOST=$(python3 - "$DB_URL" <<'PY'
+from urllib.parse import urlparse
+import sys
+u = urlparse(sys.argv[1])
+print(u.hostname or '')
+PY
+)
+        if [ -z "$HOST" ]; then
+          echo "❌ Could not parse host from DATABASE_URL" && exit 1
+        fi
+        IPV4=$(python3 - "$HOST" <<'PY'
+import socket, sys
+print(socket.gethostbyname(sys.argv[1]))
+PY
+)
+        if [ -z "$IPV4" ]; then
+          echo "❌ Could not resolve IPv4 for $HOST" && exit 1
+        fi
+        DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT 
           'users' as table_name, COUNT(*) as record_count FROM users
         UNION ALL
         SELECT 'bets', COUNT(*) FROM bets
