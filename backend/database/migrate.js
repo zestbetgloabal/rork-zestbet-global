@@ -5,9 +5,34 @@
 
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
+const path = require('path');
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root directory
+// Try multiple paths to find .env file
+const envPaths = [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), '../../.env'),
+  '.env'
+];
+
+let envLoaded = false;
+for (const envPath of envPaths) {
+  try {
+    dotenv.config({ path: envPath });
+    if (process.env.DATABASE_URL) {
+      console.log(`✅ Environment loaded from: ${envPath}`);
+      envLoaded = true;
+      break;
+    }
+  } catch (e) {
+    // Continue to next path
+  }
+}
+
+if (!envLoaded) {
+  console.log('⚠️ Using system environment variables');
+  dotenv.config();
+}
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
