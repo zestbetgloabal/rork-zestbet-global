@@ -38,7 +38,14 @@ jobs:
     - name: Test database connection
       run: |
         echo "🔄 Testing database connection..."
-        psql "$DATABASE_URL" -c "SELECT version();"
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT version();"
         echo "✅ Database connection successful!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -191,7 +198,14 @@ CREATE INDEX IF NOT EXISTS idx_live_bet_markets_event_id ON live_bet_markets(eve
 CREATE INDEX IF NOT EXISTS idx_live_bet_wagers_user_id ON live_bet_wagers(user_id);
 CREATE INDEX IF NOT EXISTS idx_social_posts_user_id ON social_posts(user_id);
 EOF
-        psql "$DATABASE_URL" -f migration.sql
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -f migration.sql
         echo "✅ Database tables created successfully!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -207,7 +221,14 @@ VALUES
   ('admin@zestbet.com', 'ZestBet Admin', 'admin2025!', 'active', 10000.00)
 ON CONFLICT (email) DO NOTHING;
 EOF
-        psql "$DATABASE_URL" -f testdata.sql
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -f testdata.sql
         echo "✅ Test data inserted successfully!"
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -215,7 +236,14 @@ EOF
     - name: Verify setup
       run: |
         echo "🔄 Verifying database setup..."
-        psql "$DATABASE_URL" -c "SELECT 
+        if [[ "$DATABASE_URL" == *"?"* ]]; then
+          DB_URL="${DATABASE_URL}&sslmode=require"
+        elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+          DB_URL="$DATABASE_URL"
+        else
+          DB_URL="${DATABASE_URL}?sslmode=require"
+        fi
+        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT 
           'users' as table_name, COUNT(*) as record_count FROM users
         UNION ALL
         SELECT 'bets', COUNT(*) FROM bets
