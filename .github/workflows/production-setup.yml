@@ -27,6 +27,23 @@ jobs:
     
     - name: Run database migration
       run: |
+        echo "🔄 Starting database migration..."
+        echo "Node version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        
+        # Check if migrate.js exists
+        if [ ! -f "backend/database/migrate.js" ]; then
+          echo "❌ migrate.js not found!"
+          exit 1
+        fi
+        
+        # Check if DATABASE_URL is set
+        if [ -z "$DATABASE_URL" ]; then
+          echo "❌ DATABASE_URL is not set!"
+          exit 1
+        fi
+        
+        echo "✅ Running migration..."
         cd backend/database
         node migrate.js
       env:

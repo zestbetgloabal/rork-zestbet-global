@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+set -o pipefail
 
 # 🔍 ZestBet Production Verification
 # Schnelle Überprüfung aller Produktionskomponenten

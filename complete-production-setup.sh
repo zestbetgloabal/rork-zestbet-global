@@ -4,6 +4,7 @@
 # Führt ALLE notwendigen Schritte für die Produktionsbereitschaft aus
 
 set -e  # Exit on any error
+set -o pipefail  # Exit on pipe failures
 
 echo "🎯 ZestBet Complete Production Setup"
 echo "===================================="

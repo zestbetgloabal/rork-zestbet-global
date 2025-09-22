@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+set -o pipefail
 
 # 🧪 ZestBet API Test Script
 # Testet alle wichtigen Endpunkte der Produktions-API
