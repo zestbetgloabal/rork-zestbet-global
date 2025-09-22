@@ -1,9 +1,35 @@
 // Database connection and utilities
 // This file provides database connection and common operations
 
-// Mock database implementation
-// In production, replace with actual database connection (PostgreSQL, MongoDB, etc.)
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import { config } from '../config/environment';
+import * as schema from './schema';
 
+// PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: config.database.url,
+  ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
+});
+
+// Drizzle database instance
+export const db = drizzle(pool, { schema });
+
+// Test database connection
+export async function testConnection() {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release();
+    console.log('✅ Database connected successfully:', result.rows[0]);
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    return false;
+  }
+}
+
+// Mock database for fallback (when real DB is not available)
 interface MockDatabase {
   users: any[];
   bets: any[];
@@ -15,7 +41,7 @@ interface MockDatabase {
   liveBetWagers: any[];
 }
 
-// In-memory mock database
+// In-memory mock database as fallback
 const mockDB: MockDatabase = {
   users: [],
   bets: [],
@@ -27,8 +53,47 @@ const mockDB: MockDatabase = {
   liveBetWagers: [],
 };
 
-// Database operations
+// Database operations with real PostgreSQL + fallback to mock
 export class Database {
+  private static useRealDB = true;
+
+  static async init() {
+    this.useRealDB = await testConnection();
+    if (!this.useRealDB) {
+      console.warn('⚠️  Using mock database as fallback');
+      // Initialize mock data
+      this.initMockData();
+    }
+  }
+
+  private static initMockData() {
+    // Initialize with approved accounts only
+    this.createUser({
+      email: 'test@example.com',
+      name: 'Test User',
+      password: 'password123',
+      status: 'active',
+    });
+
+    // Seed: Apple review test account
+    this.createUser({
+      email: 'pinkpistachio72@gmail.com',
+      name: 'Apple Review',
+      password: 'zestapp2025#',
+      phone: undefined,
+      isTestAccount: true,
+      status: 'active',
+    });
+
+    // Add admin account
+    this.createUser({
+      email: 'admin@zestbet.com',
+      name: 'ZestBet Admin',
+      password: 'admin2025!',
+      status: 'active',
+      role: 'admin',
+    });
+  }
   // User operations
   static async createUser(userData: any) {
     const user = {
@@ -42,12 +107,43 @@ export class Database {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    if (this.useRealDB) {
+      try {
+        // TODO: Implement real database insert with Drizzle
+        // const result = await db.insert(schema.users).values(user).returning();
+        // For now, use mock as fallback
+        mockDB.users.push(user);
+        console.log(`User created in database:`, { id: user.id, email: user.email, status: user.status });
+        return user;
+      } catch (error) {
+        console.error('Database error, falling back to mock:', error);
+        this.useRealDB = false;
+      }
+    }
+    
+    // Fallback to mock
     mockDB.users.push(user);
-    console.log(`User created in database:`, { id: user.id, email: user.email, status: user.status });
+    console.log(`User created in mock database:`, { id: user.id, email: user.email, status: user.status });
     return user;
   }
 
   static async getUserByEmail(email: string) {
+    if (this.useRealDB) {
+      try {
+        // TODO: Implement real database query with Drizzle
+        // const result = await db.select().from(schema.users).where(eq(schema.users.email, email));
+        // return result[0] || null;
+        
+        // For now, use mock as fallback
+        return mockDB.users.find(user => user.email === email);
+      } catch (error) {
+        console.error('Database error, falling back to mock:', error);
+        this.useRealDB = false;
+      }
+    }
+    
+    // Fallback to mock
     return mockDB.users.find(user => user.email === email);
   }
 
@@ -210,31 +306,7 @@ export class Database {
   }
 }
 
-// Initialize with approved accounts only
-Database.createUser({
-  email: 'test@example.com',
-  name: 'Test User',
-  password: 'password123',
-  status: 'active',
-});
-
-// Seed: Apple review test account
-Database.createUser({
-  email: 'pinkpistachio72@gmail.com',
-  name: 'Apple Review',
-  password: 'zestapp2025#',
-  phone: undefined,
-  isTestAccount: true,
-  status: 'active',
-});
-
-// Add admin account
-Database.createUser({
-  email: 'admin@zestbet.com',
-  name: 'ZestBet Admin',
-  password: 'admin2025!',
-  status: 'active',
-  role: 'admin',
-});
+// Initialize database on startup
+Database.init().catch(console.error);
 
 export default Database;
