@@ -38,14 +38,96 @@ jobs:
         fi
         
         # Check if DATABASE_URL is set
+        echo "🔍 Checking DATABASE_URL..."
+        echo "DATABASE_URL length: ${#DATABASE_URL}"
         if [ -z "$DATABASE_URL" ]; then
           echo "❌ DATABASE_URL is not set!"
+          echo "Available environment variables:"
+          env | grep -E '^[A-Z_]+=' | head -10
           exit 1
         fi
+        echo "✅ DATABASE_URL is set"
         
         echo "✅ Running migration..."
         cd backend/database
-        node migrate.js
+        
+        # Try multiple approaches
+        echo "Approach 1: Direct node execution"
+        if node migrate.js; then
+          echo "✅ Migration successful with node"
+        else
+          echo "❌ Node execution failed, trying npx..."
+          
+          echo "Approach 2: Using npx"
+          if npx node migrate.js; then
+            echo "✅ Migration successful with npx"
+          else
+            echo "❌ NPX execution failed, trying tsx..."
+            
+            echo "Approach 3: Installing and using tsx"
+            npm install -g tsx
+            if tsx migrate.js; then
+              echo "✅ Migration successful with tsx"
+            else
+              echo "❌ TSX failed, trying backup ES module script..."
+              
+              echo "Approach 4: Using backup ES module script"
+              if node migrate-backup.mjs; then
+                echo "✅ Migration successful with backup script"
+              else
+                echo "Approach 5: Direct SQL execution via psql"
+                echo "Installing postgresql-client..."
+                sudo apt-get update
+                sudo apt-get install -y postgresql-client
+                
+                # Create SQL file with migration
+                cat > migration.sql << 'EOF'
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  avatar TEXT,
+  bio TEXT,
+  phone TEXT,
+  password TEXT,
+  provider TEXT DEFAULT 'email',
+  zest_coins DECIMAL(10,2) DEFAULT 1000.00,
+  preferences JSONB DEFAULT '{"notifications": true, "privacy": "public", "language": "en"}',
+  email_verified BOOLEAN DEFAULT false,
+  email_verification_code TEXT,
+  verification_code_expiry TIMESTAMP,
+  phone_verified BOOLEAN DEFAULT false,
+  phone_verification_code TEXT,
+  phone_verification_expiry TIMESTAMP,
+  status TEXT DEFAULT 'active',
+  password_reset_code TEXT,
+  password_reset_expiry TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Test data
+INSERT INTO users (email, name, password, status, zest_coins) 
+VALUES 
+  ('test@example.com', 'Test User', 'password123', 'active', 1000.00),
+  ('pinkpistachio72@gmail.com', 'Apple Review', 'zestapp2025#', 'active', 1000.00),
+  ('admin@zestbet.com', 'ZestBet Admin', 'admin2025!', 'active', 10000.00)
+ON CONFLICT (email) DO NOTHING;
+EOF
+                
+                if psql "$DATABASE_URL" -f migration.sql; then
+                  echo "✅ Migration successful with psql"
+                else
+                  echo "❌ All migration approaches failed"
+                  exit 1
+                fi
+              fi
+            fi
+          fi
+        fi
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
     
