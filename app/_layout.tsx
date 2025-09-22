@@ -8,6 +8,23 @@ import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
+import * as Sentry from '@sentry/react-native';
+
+// Initialize Sentry for error monitoring in production
+if (process.env.NODE_ENV === 'production') {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || undefined,
+    debug: false,
+    environment: 'production',
+    beforeSend(event) {
+      // Filter out sensitive data
+      if (event.request?.headers) {
+        delete event.request.headers.authorization;
+      }
+      return event;
+    },
+  });
+}
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -19,7 +36,7 @@ const queryClient = new QueryClient();
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayoutComponent() {
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
   });
@@ -209,3 +226,8 @@ function RootLayoutNav() {
     </>
   );
 }
+
+// Wrap with Sentry for error tracking in production
+export default process.env.NODE_ENV === 'production' 
+  ? Sentry.wrap(RootLayoutComponent)
+  : RootLayoutComponent;

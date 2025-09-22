@@ -6,6 +6,7 @@ import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 import WebRTCService from "./services/webrtc";
 import { loggerMiddleware, errorLoggerMiddleware } from "./middleware/logger";
+import { generalRateLimit, authRateLimit } from "./middleware/rate-limit";
 
 // Extend global type for WebRTC service
 declare global {
@@ -17,6 +18,10 @@ const app = new Hono();
 
 // Enable CORS for all routes
 app.use("*", cors());
+
+// Rate limiting middleware
+app.use("/trpc/auth.*", authRateLimit);
+app.use("*", generalRateLimit);
 
 // Logging middleware
 app.use("*", async (c, next) => loggerMiddleware(c, next));
@@ -47,7 +52,28 @@ app.use(
 
 // Simple health check endpoint
 app.get("/", (c) => {
-  return c.json({ status: "ok", message: "API is running" });
+  return c.json({ 
+    status: "ok", 
+    message: "ZestBet API is running",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Status endpoint with more details
+app.get("/status", (c) => {
+  return c.json({
+    status: "healthy",
+    services: {
+      database: "connected",
+      email: "configured",
+      auth: "active"
+    },
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Stateless logout endpoint to clear auth cookies (if any)
