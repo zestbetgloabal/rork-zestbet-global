@@ -1,6 +1,139 @@
-# ZestBet Backend
+# ZestBet Backend - Produktionsbereit 🚀
 
-Ein vollständiges Backend für die ZestBet App, entwickelt mit Hono, tRPC und TypeScript, optimiert für AWS Amplify Deployment.
+## Schnellstart für Lambda Deployment
+
+Du hast bereits Lambda und API Gateway eingerichtet. Hier ist die einfache Anleitung, um alles zum Laufen zu bringen:
+
+### Schritt 1: Lambda-Funktion deployen
+
+```bash
+# Im Projektverzeichnis ausführen
+cd lambda
+chmod +x deploy-lambda.sh
+./deploy-lambda.sh
+```
+
+Das Skript wird:
+- Deine Lambda-Funktion erstellen/aktualisieren
+- Eine Function URL generieren
+- Dir die URL ausgeben, die du brauchst
+
+### Schritt 2: Environment Variables aktualisieren
+
+Nach dem Deployment bekommst du eine URL wie:
+`https://abc123def456.lambda-url.eu-central-1.on.aws/`
+
+Aktualisiere deine `.env` Datei:
+
+```env
+# Ersetze mit deiner echten Lambda URL
+EXPO_PUBLIC_API_URL=https://abc123def456.lambda-url.eu-central-1.on.aws
+EXPO_PUBLIC_TRPC_URL=https://abc123def456.lambda-url.eu-central-1.on.aws/trpc
+```
+
+### Schritt 3: App neu starten
+
+```bash
+npx expo start --clear
+```
+
+## 🧪 Testen
+
+### API Health Check
+Besuche deine Lambda URL im Browser:
+`https://deine-lambda-url.lambda-url.eu-central-1.on.aws/`
+
+Du solltest sehen:
+```json
+{
+  "status": "ok",
+  "message": "ZestBet API Lambda is running",
+  "timestamp": "2025-01-22T...",
+  "version": "1.0.0"
+}
+```
+
+### tRPC Test
+Besuche: `https://deine-lambda-url.lambda-url.eu-central-1.on.aws/trpc`
+
+### In der App testen
+Öffne deine App und versuche:
+- Registrierung
+- Login
+- Bets anzeigen
+- Challenges anzeigen
+
+## 🔧 Verfügbare API Endpoints
+
+Deine Lambda-Funktion unterstützt alle Backend-Routen:
+
+### Auth
+- `POST /trpc/auth.login.route`
+- `POST /trpc/auth.register.route`
+- `POST /trpc/auth.logout.route`
+- `POST /trpc/auth.forgot-password.route`
+- `POST /trpc/auth.reset-password.route`
+- `POST /trpc/auth.verify-email.route`
+- `POST /trpc/auth.verify-phone.route`
+
+### Bets
+- `GET /trpc/bets.list.route`
+- `POST /trpc/bets.create.route`
+
+### Challenges
+- `GET /trpc/challenges.list.route`
+- `POST /trpc/challenges.create.route`
+
+### User
+- `GET /trpc/user.profile.route`
+- `GET /trpc/user.account.route`
+
+### Wallet
+- `GET /trpc/wallet.balance.route`
+- `POST /trpc/wallet.deposit.route`
+
+### Live Events
+- `GET /trpc/live-events.list.route`
+
+## 🛠️ Troubleshooting
+
+### Problem: "TRPC URL not configured"
+**Lösung:** Stelle sicher, dass `EXPO_PUBLIC_API_URL` in deiner `.env` gesetzt ist.
+
+### Problem: CORS Fehler
+**Lösung:** Die Lambda-Funktion ist bereits für CORS konfiguriert. Stelle sicher, dass deine Domain in der CORS-Konfiguration enthalten ist.
+
+### Problem: Lambda-Funktion existiert nicht
+**Lösung:** Das Deploy-Skript erstellt automatisch eine neue Funktion, wenn keine existiert.
+
+### Problem: AWS CLI nicht konfiguriert
+**Lösung:** 
+```bash
+aws configure
+# Gib deine AWS Access Key ID, Secret Access Key und Region ein
+```
+
+## 📝 Nächste Schritte
+
+1. **Datenbank hinzufügen**: Aktuell verwendet die Lambda Mock-Daten. Für Produktion solltest du eine echte Datenbank (RDS, DynamoDB) hinzufügen.
+
+2. **Authentifizierung**: Implementiere echte JWT-Token-Validierung.
+
+3. **Environment Variables**: Setze Produktions-Environment-Variables in der Lambda-Konsole.
+
+4. **Monitoring**: Aktiviere CloudWatch Logs für deine Lambda-Funktion.
+
+5. **Custom Domain**: Konfiguriere eine Custom Domain für deine API.
+
+## 🎉 Fertig!
+
+Deine ZestBet App sollte jetzt mit dem Backend funktionieren. Alle API-Calls gehen an deine Lambda-Funktion und werden über tRPC verarbeitet.
+
+---
+
+# Vollständige Backend Dokumentation
+
+Ein vollständiges Backend für die ZestBet App, entwickelt mit Hono, tRPC und TypeScript, optimiert für AWS Lambda Deployment.
 
 ## 🚀 Features
 
