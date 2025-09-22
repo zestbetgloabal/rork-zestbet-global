@@ -1,0 +1,55 @@
+name: Production Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "CONFIRM" to run production setup'
+        required: true
+        default: ''
+
+jobs:
+  production-setup:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'CONFIRM'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Run database migration
+      run: |
+        cd backend/database
+        node migrate.js
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    
+    - name: Test production API
+      run: |
+        chmod +x ./test-production-api.sh
+        ./test-production-api.sh
+      env:
+        NODE_ENV: production
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_EXPIRES_IN: 7d
+        EMAIL_FROM: info@zestapp.online
+        EMAIL_FROM_NAME: ZestBet
+        SMTP_HOST: smtp.strato.de
+        SMTP_PORT: 587
+        SMTP_SECURE: false
+        SMTP_USER: info@zestapp.online
+        SMTP_PASS: ${{ secrets.SMTP_PASS }}
+    
+    - name: Verify production setup
+      run: |
+        chmod +x ./verify-production.sh
+        ./verify-production.sh
