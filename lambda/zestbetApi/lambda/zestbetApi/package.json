@@ -1,0 +1,9 @@
+{
+  "name": "zestbet-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "hono": "^3.11.5",
+    "@hono/aws-lambda": "^1.1.0"
+  },
+  "type": "commonjs"
+}
