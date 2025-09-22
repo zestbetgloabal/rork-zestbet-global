@@ -7,6 +7,13 @@ const { Pool } = require('pg');
 const dotenv = require('dotenv');
 const path = require('path');
 
+// Debug environment
+console.log('🔍 Environment Debug:');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('DATABASE_URL length:', process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0);
+console.log('Working directory:', process.cwd());
+
 // Load environment variables from root directory
 // Try multiple paths to find .env file
 const envPaths = [
@@ -24,7 +31,7 @@ for (const envPath of envPaths) {
       envLoaded = true;
       break;
     }
-  } catch (e) {
+  } catch (_e) {
     // Continue to next path
   }
 }
