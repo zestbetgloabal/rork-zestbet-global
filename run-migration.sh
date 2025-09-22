@@ -34,10 +34,9 @@ if [ $? -ne 0 ]; then
     npm install pg drizzle-orm dotenv
 fi
 
-# Run the migration
+# Run the migration from root directory so .env can be found
 echo "🔄 Running database migration..."
-cd backend/database
-node migrate.js
+node backend/database/migrate.js
 
 if [ $? -eq 0 ]; then
     echo ""
