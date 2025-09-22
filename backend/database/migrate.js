@@ -1,11 +1,36 @@
 #!/usr/bin/env node
 
-// Database migration script
-// Run this to create tables in your Supabase PostgreSQL database
+// Database migration script - CommonJS version
+// This script works in both local and GitHub Actions environments
 
 const { Pool } = require('pg');
-const dotenv = require('dotenv');
 const path = require('path');
+
+// Simple environment loading without dotenv dependency
+function loadEnv() {
+  try {
+    const dotenv = require('dotenv');
+    const envPaths = [
+      path.resolve(process.cwd(), '.env'),
+      path.resolve(process.cwd(), '../../.env'),
+      '.env'
+    ];
+    
+    for (const envPath of envPaths) {
+      try {
+        dotenv.config({ path: envPath });
+        if (process.env.DATABASE_URL) {
+          console.log(`✅ Environment loaded from: ${envPath}`);
+          return;
+        }
+      } catch (_e) {
+        // Continue to next path
+      }
+    }
+  } catch (_e) {
+    console.log('⚠️ dotenv not available, using system environment variables');
+  }
+}
 
 // Debug environment
 console.log('🔍 Environment Debug:');
@@ -14,37 +39,14 @@ console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
 console.log('DATABASE_URL length:', process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0);
 console.log('Working directory:', process.cwd());
 
-// Load environment variables from root directory
-// Try multiple paths to find .env file
-const envPaths = [
-  path.resolve(process.cwd(), '.env'),
-  path.resolve(process.cwd(), '../../.env'),
-  '.env'
-];
-
-let envLoaded = false;
-for (const envPath of envPaths) {
-  try {
-    dotenv.config({ path: envPath });
-    if (process.env.DATABASE_URL) {
-      console.log(`✅ Environment loaded from: ${envPath}`);
-      envLoaded = true;
-      break;
-    }
-  } catch (_e) {
-    // Continue to next path
-  }
-}
-
-if (!envLoaded) {
-  console.log('⚠️ Using system environment variables');
-  dotenv.config();
-}
+// Load environment variables
+loadEnv();
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
-  console.error('❌ DATABASE_URL is not set in .env file');
+  console.error('❌ DATABASE_URL is not set');
+  console.error('Please set DATABASE_URL environment variable or in .env file');
   process.exit(1);
 }
 
@@ -52,7 +54,7 @@ console.log('🔄 Connecting to database...');
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }
 });
 
 async function main() {
