@@ -75,8 +75,28 @@ jobs:
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
 
-        echo "✅ Forcing IPv4 with SSL required"
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -f backend/database/migrate.sql
+        HOST=$(python3 - "$DB_URL" <<'PY'
+from urllib.parse import urlparse
+import sys
+u = urlparse(sys.argv[1])
+print(u.hostname or '')
+PY
+)
+        if [ -z "$HOST" ]; then
+          echo "❌ Could not parse host from DATABASE_URL" && exit 1
+        fi
+        IPV4=$(python3 - "$HOST" <<'PY'
+import socket, sys
+print(socket.gethostbyname(sys.argv[1]))
+PY
+)
+        if [ -z "$IPV4" ]; then
+          echo "❌ Could not resolve IPv4 for $HOST" && exit 1
+        fi
+        DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
+
+        echo "✅ Using IPv4 with SSL required"
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -f backend/database/migrate.sql
         echo "✅ Database migration completed successfully!"
     
     - name: Test database connection
@@ -91,9 +111,29 @@ jobs:
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as user_count FROM users;"
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as bet_count FROM bets;"
-        psql --ipv4 --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as challenge_count FROM challenges;"
+        HOST=$(python3 - "$DB_URL" <<'PY'
+from urllib.parse import urlparse
+import sys
+u = urlparse(sys.argv[1])
+print(u.hostname or '')
+PY
+)
+        if [ -z "$HOST" ]; then
+          echo "❌ Could not parse host from DATABASE_URL" && exit 1
+        fi
+        IPV4=$(python3 - "$HOST" <<'PY'
+import socket, sys
+print(socket.gethostbyname(sys.argv[1]))
+PY
+)
+        if [ -z "$IPV4" ]; then
+          echo "❌ Could not resolve IPv4 for $HOST" && exit 1
+        fi
+        DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
+
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT COUNT(*) as user_count FROM users;"
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT COUNT(*) as bet_count FROM bets;"
+        psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT COUNT(*) as challenge_count FROM challenges;"
         echo "✅ Database connection test successful!"
     
     - name: Test API endpoints
