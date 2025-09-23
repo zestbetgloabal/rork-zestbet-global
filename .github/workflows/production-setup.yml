@@ -62,13 +62,17 @@ jobs:
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
+        set -euo pipefail
         echo "🔄 Starting database migration..."
-        echo "psql version: $(psql --version || echo 'psql not found')"
-
+        
         if [ -z "${DATABASE_URL:-}" ]; then
           echo "❌ DATABASE_URL is not set!" && exit 1
         fi
-
+        
+        echo "✅ DATABASE_URL is set"
+        echo "🔄 Running SQL migration..."
+        
+        # Add SSL mode if not present
         if [[ "$DATABASE_URL" == *"?"* ]]; then
           DB_URL="${DATABASE_URL}&sslmode=require"
         elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
@@ -76,26 +80,13 @@ jobs:
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-
-        echo "▶️ Trying migration with DB_URL (no hostaddr)"
-        if psql --set=ON_ERROR_STOP=1 "$DB_URL" -f backend/database/migrate.sql; then
-          echo "✅ Database migration completed successfully!";
+        
+        # Try direct connection first
+        if psql "$DB_URL" -f backend/database/migrate.sql; then
+          echo "✅ Database migration completed successfully!"
         else
-          echo "ℹ️ Primary attempt failed, trying IPv4 fallback...";
-          HOST=$(printf '%s' "$DB_URL" | sed -E 's|^[a-z]+://[^@]*@([^/:?]+).*|\1|')
-          if [ -z "$HOST" ] || [[ "$HOST" == "$DB_URL" ]]; then
-            echo "❌ Could not parse host from DATABASE_URL" && exit 1
-          fi
-
-          IPV4=$(getent ahostsv4 "$HOST" | awk '{print $1; exit}')
-          if [ -z "${IPV4:-}" ]; then
-            echo "❌ Could not resolve IPv4 for $HOST" && exit 1
-          fi
-
-          DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
-          echo "✅ Using IPv4 with SSL required (hostaddr=${IPV4})"
-          psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -f backend/database/migrate.sql
-          echo "✅ Database migration completed successfully (IPv4 fallback)!";
+          echo "❌ Database migration failed!"
+          exit 1
         fi
     
     - name: Test database connection
@@ -104,6 +95,8 @@ jobs:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         echo "🔄 Testing database connection..."
+        
+        # Add SSL mode if not present
         if [[ "$DATABASE_URL" == *"?"* ]]; then
           DB_URL="${DATABASE_URL}&sslmode=require"
         elif [[ "$DATABASE_URL" == *"sslmode="* ]]; then
@@ -111,30 +104,11 @@ jobs:
         else
           DB_URL="${DATABASE_URL}?sslmode=require"
         fi
-
-        echo "▶️ Query counts without hostaddr first"
-        if psql --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as user_count FROM users;" && \
-           psql --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as bet_count FROM bets;" && \
-           psql --set=ON_ERROR_STOP=1 "$DB_URL" -c "SELECT COUNT(*) as challenge_count FROM challenges;"; then
-          echo "✅ Database connection test successful!";
-        else
-          echo "ℹ️ Primary queries failed, trying IPv4 fallback...";
-          HOST=$(printf '%s' "$DB_URL" | sed -E 's|^[a-z]+://[^@]*@([^/:?]+).*|\1|')
-          if [ -z "$HOST" ] || [[ "$HOST" == "$DB_URL" ]]; then
-            echo "❌ Could not parse host from DATABASE_URL" && exit 1
-          fi
-
-          IPV4=$(getent ahostsv4 "$HOST" | awk '{print $1; exit}')
-          if [ -z "${IPV4:-}" ]; then
-            echo "❌ Could not resolve IPv4 for $HOST" && exit 1
-          fi
-          DB_URL_IPV4="${DB_URL}&hostaddr=${IPV4}"
-
-          psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT COUNT(*) as user_count FROM users;"
-          psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT COUNT(*) as bet_count FROM bets;"
-          psql --set=ON_ERROR_STOP=1 "$DB_URL_IPV4" -c "SELECT COUNT(*) as challenge_count FROM challenges;"
-          echo "✅ Database connection test successful (IPv4 fallback)!";
-        fi
+        
+        psql "$DB_URL" -c "SELECT COUNT(*) as user_count FROM users;"
+        psql "$DB_URL" -c "SELECT COUNT(*) as bet_count FROM bets;"
+        psql "$DB_URL" -c "SELECT COUNT(*) as challenge_count FROM challenges;"
+        echo "✅ Database connection test successful!"
     
     - name: Test API endpoints
       run: |
