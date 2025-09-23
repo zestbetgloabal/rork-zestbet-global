@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * Formats a number with commas as thousands separators
  */
 export const formatNumber = (num: number): string => {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // Use Intl.NumberFormat instead of regex to avoid crashes
+  return new Intl.NumberFormat('en-US').format(num);
 };
 
 /**
@@ -165,16 +166,57 @@ export const safeRemoveStorageItems = async (keys: string[]): Promise<void> => {
  * Validates an email address
  */
 export const isValidEmail = (email: string): boolean => {
-  const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return re.test(email.toLowerCase());
+  // Simple email validation to avoid regex crashes in Hermes
+  const emailParts = email.toLowerCase().split('@');
+  if (emailParts.length !== 2) return false;
+  
+  const [localPart, domain] = emailParts;
+  if (!localPart || !domain) return false;
+  
+  // Check for basic email structure
+  if (localPart.length < 1 || domain.length < 3) return false;
+  if (!domain.includes('.')) return false;
+  
+  // Check for invalid characters without complex regex
+  const invalidChars = ['<', '>', '(', ')', '[', ']', '\\', ',', ';', ':', ' ', '"'];
+  for (const char of invalidChars) {
+    if (localPart.includes(char) || domain.includes(char)) return false;
+  }
+  
+  return true;
 };
 
 /**
  * Validates a phone number (simple validation)
  */
 export const isValidPhone = (phone: string): boolean => {
-  const re = /^\+?[0-9]{10,15}$/;
-  return re.test(phone);
+  // Simple phone validation to avoid regex crashes in Hermes
+  let cleanPhone = '';
+  
+  // Manually clean phone number to avoid regex
+  for (const char of phone) {
+    if (char === '+' || (char >= '0' && char <= '9')) {
+      cleanPhone += char;
+    }
+  }
+  
+  // Check if it starts with + (optional) followed by 10-15 digits
+  if (cleanPhone.startsWith('+')) {
+    const digits = cleanPhone.slice(1);
+    if (digits.length < 10 || digits.length > 15) return false;
+    // Check if all characters are digits
+    for (const char of digits) {
+      if (char < '0' || char > '9') return false;
+    }
+    return true;
+  } else {
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) return false;
+    // Check if all characters are digits
+    for (const char of cleanPhone) {
+      if (char < '0' || char > '9') return false;
+    }
+    return true;
+  }
 };
 
 /**
