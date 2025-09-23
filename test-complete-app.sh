@@ -2,6 +2,9 @@
 set -e
 set -o pipefail
 
+# Make script executable
+chmod +x "$0"
+
 # Make sure we have required tools
 if ! command -v curl &> /dev/null; then
     echo "❌ curl is required but not installed"
