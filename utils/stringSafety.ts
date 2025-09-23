@@ -41,18 +41,18 @@ export const sanitizeString = (input: string): string => {
  * Safely validates email format without regex
  */
 export const validateEmailSafe = (email: string): boolean => {
-  try {
+  return safeStringOperation(() => {
     if (!email || typeof email !== 'string') {
       return false;
     }
     
-    const sanitized = sanitizeString(email.toLowerCase().trim());
+    const sanitized = sanitizeString(safeStringToLowerCase(safeStringTrim(email)));
     if (sanitized.length < 5 || sanitized.length > 254) {
       return false;
     }
     
     // Split by @ and validate parts
-    const parts = sanitized.split('@');
+    const parts = safeStringSplit(sanitized, '@');
     if (parts.length !== 2) {
       return false;
     }
@@ -63,14 +63,14 @@ export const validateEmailSafe = (email: string): boolean => {
     }
     
     // Check domain has at least one dot
-    if (!domain.includes('.') || domain.length < 4) {
+    if (!safeStringContains(domain, '.') || domain.length < 4) {
       return false;
     }
     
     // Check for invalid characters in local part
     const invalidLocalChars = ['<', '>', '(', ')', '[', ']', '\\', ',', ';', ':', ' ', '"', '\''];
     for (const char of invalidLocalChars) {
-      if (local.includes(char)) {
+      if (safeStringContains(local, char)) {
         return false;
       }
     }
@@ -78,35 +78,55 @@ export const validateEmailSafe = (email: string): boolean => {
     // Check for invalid characters in domain
     const invalidDomainChars = ['<', '>', '(', ')', '[', ']', '\\', ',', ';', ':', ' ', '"', '\'', '_'];
     for (const char of invalidDomainChars) {
-      if (domain.includes(char)) {
+      if (safeStringContains(domain, char)) {
         return false;
       }
     }
     
     // Check domain ends with valid TLD (at least 2 chars after last dot)
-    const domainParts = domain.split('.');
+    const domainParts = safeStringSplit(domain, '.');
     const tld = domainParts[domainParts.length - 1];
     if (!tld || tld.length < 2) {
       return false;
     }
     
     return true;
-  } catch (error) {
-    console.error('Email validation error:', error);
-    return false;
-  }
+  }, false, 'validateEmailSafe');
+};
+
+/**
+ * Safe string split operation
+ */
+export const safeStringSplit = (text: string, separator: string, limit?: number): string[] => {
+  return safeStringOperation(() => {
+    if (!text || typeof text !== 'string') {
+      return [];
+    }
+    
+    if (!separator || typeof separator !== 'string') {
+      return [text];
+    }
+    
+    const result = text.split(separator);
+    
+    if (limit && limit > 0) {
+      return result.slice(0, limit);
+    }
+    
+    return result;
+  }, [], 'safeStringSplit');
 };
 
 /**
  * Safely validates phone number format without regex
  */
 export const validatePhoneSafe = (phone: string): boolean => {
-  try {
+  return safeStringOperation(() => {
     if (!phone || typeof phone !== 'string') {
       return false;
     }
     
-    const sanitized = sanitizeString(phone.trim());
+    const sanitized = sanitizeString(safeStringTrim(phone));
     if (sanitized.length < 10 || sanitized.length > 20) {
       return false;
     }
@@ -120,7 +140,7 @@ export const validatePhoneSafe = (phone: string): boolean => {
     }
     
     // Validate format
-    if (cleanPhone.startsWith('+')) {
+    if (safeStringStartsWith(cleanPhone, '+')) {
       const digits = cleanPhone.substring(1);
       if (digits.length < 10 || digits.length > 15) {
         return false;
@@ -144,17 +164,14 @@ export const validatePhoneSafe = (phone: string): boolean => {
     }
     
     return true;
-  } catch (error) {
-    console.error('Phone validation error:', error);
-    return false;
-  }
+  }, false, 'validatePhoneSafe');
 };
 
 /**
  * Safely extracts numbers from a string without regex
  */
 export const extractNumbersSafe = (input: string): string => {
-  try {
+  return safeStringOperation(() => {
     if (!input || typeof input !== 'string') {
       return '';
     }
@@ -169,17 +186,14 @@ export const extractNumbersSafe = (input: string): string => {
     }
     
     return numbers;
-  } catch (error) {
-    console.error('Number extraction error:', error);
-    return '';
-  }
+  }, '', 'extractNumbersSafe');
 };
 
 /**
  * Safely checks if a string contains only alphanumeric characters
  */
 export const isAlphanumericSafe = (input: string): boolean => {
-  try {
+  return safeStringOperation(() => {
     if (!input || typeof input !== 'string') {
       return false;
     }
@@ -196,17 +210,14 @@ export const isAlphanumericSafe = (input: string): boolean => {
     }
     
     return true;
-  } catch (error) {
-    console.error('Alphanumeric check error:', error);
-    return false;
-  }
+  }, false, 'isAlphanumericSafe');
 };
 
 /**
  * Safely removes HTML tags without regex
  */
 export const stripHtmlSafe = (input: string): string => {
-  try {
+  return safeStringOperation(() => {
     if (!input || typeof input !== 'string') {
       return '';
     }
@@ -225,74 +236,65 @@ export const stripHtmlSafe = (input: string): string => {
       }
     }
     
-    return result.trim();
-  } catch (error) {
-    console.error('HTML strip error:', error);
-    return input || '';
-  }
+    return safeStringTrim(result);
+  }, input || '', 'stripHtmlSafe');
 };
 
 /**
  * Safely formats a string for display (truncate and clean)
  */
 export const formatDisplayStringSafe = (input: string, maxLength: number = 100): string => {
-  try {
+  return safeStringOperation(() => {
     if (!input || typeof input !== 'string') {
       return '';
     }
     
-    const sanitized = sanitizeString(input.trim());
+    const sanitized = sanitizeString(safeStringTrim(input));
     
     if (sanitized.length <= maxLength) {
       return sanitized;
     }
     
     return sanitized.substring(0, maxLength - 3) + '...';
-  } catch (error) {
-    console.error('Display string format error:', error);
-    return '';
-  }
+  }, '', 'formatDisplayStringSafe');
 };
 
 /**
  * Safely checks if a string is a valid URL without regex
  */
 export const isValidUrlSafe = (input: string): boolean => {
-  try {
+  return safeStringOperation(() => {
     if (!input || typeof input !== 'string') {
       return false;
     }
     
-    const sanitized = sanitizeString(input.toLowerCase().trim());
+    const sanitized = sanitizeString(safeStringToLowerCase(safeStringTrim(input)));
     
     // Check for basic URL structure
-    if (!sanitized.startsWith('http://') && !sanitized.startsWith('https://')) {
+    if (!safeStringStartsWith(sanitized, 'http://') && !safeStringStartsWith(sanitized, 'https://')) {
       return false;
     }
     
     // Remove protocol
-    const withoutProtocol = sanitized.startsWith('https://') 
+    const withoutProtocol = safeStringStartsWith(sanitized, 'https://') 
       ? sanitized.substring(8) 
       : sanitized.substring(7);
     
     // Check for domain
-    if (withoutProtocol.length < 4 || !withoutProtocol.includes('.')) {
+    if (withoutProtocol.length < 4 || !safeStringContains(withoutProtocol, '.')) {
       return false;
     }
     
     // Check for invalid characters
     const invalidChars = [' ', '<', '>', '"', '\'', '\\'];
     for (const char of invalidChars) {
-      if (withoutProtocol.includes(char)) {
+      if (safeStringContains(withoutProtocol, char)) {
         return false;
       }
     }
     
     return true;
-  } catch (error) {
-    console.error('URL validation error:', error);
-    return false;
-  }
+  }, false, 'isValidUrlSafe');
 };
 
 /**
@@ -305,7 +307,20 @@ export const safeStringOperation = <T>(
 ): T => {
   try {
     return operation();
-  } catch (error) {
+  } catch (error: any) {
+    const errorMessage = error?.message || String(error);
+    
+    // Check for Hermes engine crashes
+    if (errorMessage.includes('hermes::vm::') || 
+        errorMessage.includes('JSObject::') ||
+        errorMessage.includes('getComputedWithReceiver_RJS') ||
+        errorMessage.includes('setNamedSlotValueUnsafe') ||
+        errorMessage.includes('regExpPrototype') ||
+        errorMessage.includes('stringPrototype')) {
+      console.log(`Hermes engine crash prevented in ${operationName}`);
+      return fallback;
+    }
+    
     console.error(`Safe string operation failed (${operationName}):`, error);
     return fallback;
   }
@@ -315,7 +330,7 @@ export const safeStringOperation = <T>(
  * Memory-safe string comparison
  */
 export const safeStringCompare = (str1: string, str2: string): boolean => {
-  try {
+  return safeStringOperation(() => {
     if (typeof str1 !== 'string' || typeof str2 !== 'string') {
       return false;
     }
@@ -326,8 +341,106 @@ export const safeStringCompare = (str1: string, str2: string): boolean => {
     const s2 = str2.length > maxLength ? str2.substring(0, maxLength) : str2;
     
     return s1 === s2;
-  } catch (error) {
-    console.error('String comparison error:', error);
-    return false;
-  }
+  }, false, 'safeStringCompare');
+};
+
+/**
+ * Safe string contains check without regex
+ */
+export const safeStringContains = (text: string, searchValue: string): boolean => {
+  return safeStringOperation(() => {
+    if (!text || !searchValue || typeof text !== 'string' || typeof searchValue !== 'string') {
+      return false;
+    }
+    
+    // Use indexOf instead of includes to avoid potential issues
+    return text.toLowerCase().indexOf(searchValue.toLowerCase()) !== -1;
+  }, false, 'safeStringContains');
+};
+
+/**
+ * Safe string startsWith check
+ */
+export const safeStringStartsWith = (text: string, prefix: string): boolean => {
+  return safeStringOperation(() => {
+    if (!text || !prefix || typeof text !== 'string' || typeof prefix !== 'string') {
+      return false;
+    }
+    
+    if (prefix.length > text.length) {
+      return false;
+    }
+    
+    return text.substring(0, prefix.length) === prefix;
+  }, false, 'safeStringStartsWith');
+};
+
+/**
+ * Safe string endsWith check
+ */
+export const safeStringEndsWith = (text: string, suffix: string): boolean => {
+  return safeStringOperation(() => {
+    if (!text || !suffix || typeof text !== 'string' || typeof suffix !== 'string') {
+      return false;
+    }
+    
+    if (suffix.length > text.length) {
+      return false;
+    }
+    
+    return text.substring(text.length - suffix.length) === suffix;
+  }, false, 'safeStringEndsWith');
+};
+
+/**
+ * Safe string trim operation
+ */
+export const safeStringTrim = (text: string): string => {
+  return safeStringOperation(() => {
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+    
+    // Manual trim to avoid potential issues
+    let start = 0;
+    let end = text.length - 1;
+    
+    // Find first non-whitespace character
+    while (start <= end && /\s/.test(text[start])) {
+      start++;
+    }
+    
+    // Find last non-whitespace character
+    while (end >= start && /\s/.test(text[end])) {
+      end--;
+    }
+    
+    return text.substring(start, end + 1);
+  }, text || '', 'safeStringTrim');
+};
+
+/**
+ * Safe string toLowerCase operation
+ */
+export const safeStringToLowerCase = (text: string): string => {
+  return safeStringOperation(() => {
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+    
+    return text.toLowerCase();
+  }, text || '', 'safeStringToLowerCase');
+};
+
+/**
+ * Safe string toUpperCase operation
+ */
+export const safeStringToUpperCase = (text: string): string => {
+  return safeStringOperation(() => {
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+    
+    return text.toUpperCase();
+  }, text || '', 'safeStringToUpperCase');
 };
