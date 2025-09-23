@@ -310,9 +310,155 @@ export const safeInterval = (callback: () => void, delay: number): ReturnType<ty
 };
 
 /**
+ * Safe string operations that avoid regex patterns causing Hermes crashes
+ */
+export const safeStringOperations = {
+  // Safe alternative to String.prototype.match()
+  match: (str: string, pattern: string): string[] | null => {
+    return hermesGuard(() => {
+      if (!str || !pattern || typeof str !== 'string' || typeof pattern !== 'string') {
+        return null;
+      }
+      
+      // Use indexOf instead of regex match
+      const index = str.toLowerCase().indexOf(pattern.toLowerCase());
+      if (index === -1) {
+        return null;
+      }
+      
+      // Return array similar to match() result
+      const matched = str.substring(index, index + pattern.length);
+      return [matched];
+    }, null, 'safeStringMatch');
+  },
+  
+  // Safe alternative to String.prototype.replace() with regex
+  replace: (str: string, searchValue: string, replaceValue: string): string => {
+    return hermesGuard(() => {
+      if (!str || typeof str !== 'string') {
+        return '';
+      }
+      
+      if (!searchValue || typeof searchValue !== 'string') {
+        return str;
+      }
+      
+      if (typeof replaceValue !== 'string') {
+        replaceValue = '';
+      }
+      
+      // Use split/join instead of replace to avoid regex
+      return str.split(searchValue).join(replaceValue);
+    }, str || '', 'safeStringReplace');
+  },
+  
+  // Safe alternative to String.prototype.search()
+  search: (str: string, pattern: string): number => {
+    return hermesGuard(() => {
+      if (!str || !pattern || typeof str !== 'string' || typeof pattern !== 'string') {
+        return -1;
+      }
+      
+      return str.toLowerCase().indexOf(pattern.toLowerCase());
+    }, -1, 'safeStringSearch');
+  },
+  
+  // Safe string validation without regex
+  test: (str: string, pattern: string): boolean => {
+    return hermesGuard(() => {
+      if (!str || !pattern || typeof str !== 'string' || typeof pattern !== 'string') {
+        return false;
+      }
+      
+      return str.toLowerCase().includes(pattern.toLowerCase());
+    }, false, 'safeStringTest');
+  }
+};
+
+/**
+ * Safe wrapper functions for string operations that might cause crashes
+ */
+const createSafeStringWrappers = () => {
+  // Create safe wrapper functions instead of overriding prototypes
+  return {
+    safeMatch: (str: string, pattern: string | RegExp): RegExpMatchArray | null => {
+      return hermesGuard(() => {
+        if (!str || typeof str !== 'string') {
+          return null;
+        }
+        
+        // If it's a simple string pattern, use safe method
+        if (typeof pattern === 'string') {
+          const result = safeStringOperations.match(str, pattern);
+          return result as RegExpMatchArray | null;
+        }
+        
+        // For regex objects, try with error handling
+        try {
+          return str.match(pattern);
+        } catch {
+          console.log('String.match crashed, using fallback');
+          return null;
+        }
+      }, null, 'safeMatch');
+    },
+    
+    safeReplace: (str: string, searchValue: string | RegExp, replaceValue: string): string => {
+      return hermesGuard(() => {
+        if (!str || typeof str !== 'string') {
+          return '';
+        }
+        
+        // If both are strings, use safe method
+        if (typeof searchValue === 'string' && typeof replaceValue === 'string') {
+          return safeStringOperations.replace(str, searchValue, replaceValue);
+        }
+        
+        // For regex objects, try with error handling
+        try {
+          return str.replace(searchValue, replaceValue);
+        } catch {
+          console.log('String.replace crashed, using fallback');
+          return str;
+        }
+      }, str || '', 'safeReplace');
+    },
+    
+    safeSearch: (str: string, pattern: string | RegExp): number => {
+      return hermesGuard(() => {
+        if (!str || typeof str !== 'string') {
+          return -1;
+        }
+        
+        // If it's a simple string, use safe method
+        if (typeof pattern === 'string') {
+          return safeStringOperations.search(str, pattern);
+        }
+        
+        // For regex objects, try with error handling
+        try {
+          return str.search(pattern);
+        } catch {
+          console.log('String.search crashed, using fallback');
+          return -1;
+        }
+      }, -1, 'safeSearch');
+    }
+  };
+};
+
+/**
  * Initialize crash prevention measures
  */
 export const initializeCrashPrevention = (): void => {
+  // Create safe string wrappers
+  const safeStringWrappers = createSafeStringWrappers();
+  
+  // Export safe wrappers globally for use throughout the app
+  if (typeof global !== 'undefined') {
+    (global as any).safeStringWrappers = safeStringWrappers;
+  }
+  
   // Override console methods to prevent crashes from logging
   const originalConsoleError = console.error;
   console.error = (...args: any[]) => {
@@ -323,7 +469,9 @@ export const initializeCrashPrevention = (): void => {
       if (message.includes('hermes::vm::') || 
           message.includes('JSObject::') ||
           message.includes('regExpPrototype') ||
-          message.includes('stringPrototype')) {
+          message.includes('stringPrototype') ||
+          message.includes('getComputedWithReceiver_RJS') ||
+          message.includes('setNamedSlotValueUnsafe')) {
         console.log('Filtered Hermes crash from console.error');
         return;
       }
@@ -343,7 +491,11 @@ export const initializeCrashPrevention = (): void => {
         
         // Don't report Hermes engine crashes as fatal
         if (errorMessage.includes('hermes::vm::') || 
-            errorMessage.includes('JSObject::')) {
+            errorMessage.includes('JSObject::') ||
+            errorMessage.includes('getComputedWithReceiver_RJS') ||
+            errorMessage.includes('setNamedSlotValueUnsafe') ||
+            errorMessage.includes('regExpPrototype') ||
+            errorMessage.includes('stringPrototype')) {
           console.log('Prevented Hermes crash from being reported as fatal');
           return;
         }
@@ -354,7 +506,45 @@ export const initializeCrashPrevention = (): void => {
         }
       }, undefined, 'globalErrorHandler');
     });
+    
+    // Add unhandled promise rejection handler
+    const originalUnhandledRejection = globalAny.onunhandledrejection;
+    globalAny.onunhandledrejection = (event: any) => {
+      hermesGuard(() => {
+        const reason = event?.reason || event;
+        const reasonMessage = reason?.message || String(reason);
+        
+        // Filter out Hermes crashes
+        if (reasonMessage.includes('hermes::vm::') || 
+            reasonMessage.includes('JSObject::')) {
+          console.log('Filtered Hermes crash from unhandled rejection');
+          if (event?.preventDefault) {
+            event.preventDefault();
+          }
+          return;
+        }
+        
+        // Call original handler
+        if (originalUnhandledRejection) {
+          originalUnhandledRejection(event);
+        }
+      }, undefined, 'unhandledRejectionHandler');
+    };
   }
   
-  console.log('Crash prevention measures initialized');
+  // Memory management
+  if (typeof global !== 'undefined' && global.gc && !__DEV__) {
+    // Periodic garbage collection in production
+    setInterval(() => {
+      try {
+        if (global.gc) {
+          global.gc();
+        }
+      } catch {
+        // Ignore GC errors
+      }
+    }, 30000); // Every 30 seconds
+  }
+  
+  console.log('Comprehensive crash prevention measures initialized');
 };
