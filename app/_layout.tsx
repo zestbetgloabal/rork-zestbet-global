@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/authStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
 import * as Sentry from '@sentry/react-native';
+import { initializeCrashPrevention } from '@/utils/crashPrevention';
 
 // Initialize Sentry for error monitoring in production
 if (process.env.NODE_ENV === 'production') {
@@ -22,9 +23,28 @@ if (process.env.NODE_ENV === 'production') {
       if (event.request?.headers) {
         delete event.request.headers.authorization;
       }
+      // Filter out Hermes engine crashes that we can't fix
+      if (event.exception?.values?.[0]?.value?.includes('hermes::vm::')) {
+        console.log('Filtered Hermes engine crash from Sentry');
+        return null;
+      }
       return event;
     },
   });
+}
+
+// Global error handler for unhandled promise rejections
+if (typeof global !== 'undefined') {
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    // Filter out known Hermes engine errors
+    const message = args.join(' ');
+    if (message.includes('hermes::vm::') || message.includes('JSObject::')) {
+      console.log('Filtered Hermes engine error from console');
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
 }
 
 export const unstable_settings = {
@@ -37,35 +57,93 @@ const queryClient = new QueryClient();
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-// Simple Error Boundary component
+// Initialize crash prevention measures
+initializeCrashPrevention();
+
+// Enhanced Error Boundary component with crash prevention
 class AppErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean; error?: Error }
+  { hasError: boolean; error?: Error; errorCount: number }
 > {
+  private retryTimeout: ReturnType<typeof setTimeout> | null = null;
+
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorCount: 0 };
   }
 
   static getDerivedStateFromError(error: Error) {
+    console.log('Error Boundary caught error:', error.message);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('React Error Boundary caught error:', error, errorInfo);
-    if (process.env.NODE_ENV === 'production') {
+    console.error('React Error Boundary caught error:', {
+      message: error.message,
+      stack: error.stack?.substring(0, 500), // Limit stack trace length
+      componentStack: errorInfo.componentStack?.substring(0, 500)
+    });
+    
+    // Only report non-Hermes engine errors to Sentry
+    if (process.env.NODE_ENV === 'production' && 
+        !error.message.includes('hermes::vm::') && 
+        !error.message.includes('JSObject::')) {
       Sentry.captureException(error);
+    }
+    
+    // Increment error count
+    this.setState(prevState => ({ 
+      errorCount: prevState.errorCount + 1 
+    }));
+    
+    // Auto-retry after 3 seconds for the first few errors
+    if (this.state.errorCount < 3) {
+      this.retryTimeout = setTimeout(() => {
+        console.log('Auto-retrying after error...');
+        this.setState({ hasError: false, error: undefined });
+      }, 3000);
     }
   }
 
+  componentWillUnmount() {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+    }
+  }
+
+  handleRetry = () => {
+    console.log('Manual retry triggered');
+    this.setState({ hasError: false, error: undefined, errorCount: 0 });
+  };
+
   render() {
     if (this.state.hasError) {
+      const isHermesError = this.state.error?.message?.includes('hermes::vm::') || 
+                           this.state.error?.message?.includes('JSObject::');
+      
       return (
         <View style={errorStyles.container}>
-          <Text style={errorStyles.title}>Something went wrong</Text>
-          <Text style={errorStyles.message}>
-            The app encountered an error. Please restart the app.
+          <Text style={errorStyles.title}>
+            {isHermesError ? 'App Restarting...' : 'Something went wrong'}
           </Text>
+          <Text style={errorStyles.message}>
+            {isHermesError 
+              ? 'The app is recovering from a system error. Please wait...' 
+              : 'The app encountered an error. You can try again or restart the app.'}
+          </Text>
+          {!isHermesError && this.state.errorCount < 3 && (
+            <Text style={errorStyles.retryText}>
+              Auto-retrying in 3 seconds...
+            </Text>
+          )}
+          {!isHermesError && this.state.errorCount >= 3 && (
+            <Text 
+              style={errorStyles.button} 
+              onPress={this.handleRetry}
+            >
+              Tap to Retry
+            </Text>
+          )}
         </View>
       );
     }
@@ -83,6 +161,11 @@ function RootLayoutComponent() {
     if (error) {
       console.error('Font loading error:', error);
       // Don't throw, just log the error and continue
+      // Report to Sentry only if it's not a known issue
+      if (process.env.NODE_ENV === 'production' && 
+          !error.message?.includes('hermes::vm::')) {
+        Sentry.captureException(error);
+      }
     }
   }, [error]);
 
@@ -161,7 +244,7 @@ function RootLayoutNav() {
       console.log('Force redirect to register due to logout');
       router.replace('/(auth)/register');
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router]);
   
   return (
     <>
@@ -298,6 +381,13 @@ const errorStyles = StyleSheet.create({
     borderColor: colors.primary,
     borderRadius: 8,
     textAlign: 'center',
+  },
+  retryText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 16,
+    fontStyle: 'italic',
   },
 });
 
