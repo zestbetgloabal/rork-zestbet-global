@@ -2,6 +2,16 @@
 set -e
 set -o pipefail
 
+# Make sure we have required tools
+if ! command -v curl &> /dev/null; then
+    echo "❌ curl is required but not installed"
+    exit 1
+fi
+
+if ! command -v jq &> /dev/null; then
+    echo "⚠️  jq not found - JSON formatting will be limited"
+fi
+
 # 🧪 ZestBet Complete App Test Suite
 # Testet alle wichtigen Funktionen der App systematisch
 
