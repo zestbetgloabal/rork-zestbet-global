@@ -345,6 +345,13 @@ function RootLayoutNav() {
             presentation: "card",
           }} 
         />
+        <Stack.Screen 
+          name="test-crash-prevention" 
+          options={{ 
+            title: "Crash Prevention Tests",
+            presentation: "modal",
+          }} 
+        />
       </Stack>
     </>
   );

@@ -186,6 +186,15 @@ export default function ProfileScreen() {
           
           <TouchableOpacity 
             style={styles.menuItem}
+            onPress={() => router.push('/test-crash-prevention')}
+          >
+            <MaterialCommunityIcons name="bug-check" size={20} color={colors.primary} />
+            <Text style={styles.menuItemText}>Test Crash Prevention</Text>
+            <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.menuItem}
             onPress={() => router.push('/legal')}
           >
             <FontAwesome5 name="file-contract" size={18} color={colors.primary} />
