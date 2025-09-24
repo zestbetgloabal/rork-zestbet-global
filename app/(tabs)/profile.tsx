@@ -93,9 +93,9 @@ export default function ProfileScreen() {
         return;
       }
       
-      // For mobile, navigate to auth
-      console.log('Profile: Navigating to auth');
-      router.replace('/(auth)/register');
+      // For mobile, navigate to auth welcome page
+      console.log('Profile: Navigating to auth welcome');
+      router.replace('/(auth)/welcome');
       
     } catch (error) {
       console.error('Logout error:', error);
@@ -108,7 +108,7 @@ export default function ProfileScreen() {
       }
       
       console.log('Profile: Error occurred, forcing navigation');
-      router.replace('/(auth)/register');
+      router.replace('/(auth)/welcome');
     } finally {
       // Reset loading state in case component doesn't unmount
       setTimeout(() => setIsLoggingOut(false), 1000);

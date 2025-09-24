@@ -23,7 +23,7 @@ export default function AccountSettingsScreen() {
       const res = await deactivateMutation.mutateAsync({ reason });
       Alert.alert('Account deactivated', res.message);
       await logout();
-      router.replace('/(auth)');
+      router.replace('/(auth)/welcome');
     } catch (e) {
       Alert.alert('Error', 'Could not deactivate your account. Please try again.');
     }
@@ -43,7 +43,7 @@ export default function AccountSettingsScreen() {
               const res = await deleteMutation.mutateAsync({ confirm: true });
               Alert.alert('Deletion scheduled', res.message);
               await logout();
-              router.replace('/(auth)');
+              router.replace('/(auth)/welcome');
             } catch (e) {
               Alert.alert('Error', 'Could not delete your account. Please try again.');
             }
@@ -57,8 +57,8 @@ export default function AccountSettingsScreen() {
     try {
       console.log('AccountSettings: onLogout pressed');
       await logout();
-      console.log('AccountSettings: logout finished, navigating to /(auth)');
-      router.replace('/(auth)');
+      console.log('AccountSettings: logout finished, navigating to /(auth)/welcome');
+      router.replace('/(auth)/welcome');
     } catch (e) {
       Alert.alert('Error', 'Could not log out. Please try again.');
     }

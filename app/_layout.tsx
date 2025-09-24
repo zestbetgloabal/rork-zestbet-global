@@ -146,10 +146,10 @@ function RootLayoutNav() {
       try {
         setIsNavigating(true);
         
-        // If user is not authenticated and not in auth or legal group, redirect to register
+        // If user is not authenticated and not in auth or legal group, redirect to welcome/login
         if (!isAuthenticated || !token) {
           if (!isInAuthGroup && !isInLegalGroup) {
-            await router.replace('/(auth)/register');
+            await router.replace('/(auth)/welcome');
           }
           return;
         }
