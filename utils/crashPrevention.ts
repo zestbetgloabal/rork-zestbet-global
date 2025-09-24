@@ -230,6 +230,46 @@ export const safeJsonStringify = (obj: any, fallback: string = '{}'): string => 
   }, fallback, 'safeJsonStringify');
 };
 
+export const debugApiCall = async (url: string, options?: RequestInit) => {
+  console.log('🔍 API Call Debug:', {
+    url,
+    method: options?.method || 'GET',
+    headers: options?.headers,
+    body: options?.body ? safeJsonStringify(options.body) : undefined
+  });
+  
+  try {
+    const response = await fetch(url, options);
+    const text = await response.text();
+    
+    console.log('📡 API Response Debug:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      bodyPreview: text.substring(0, 200)
+    });
+    
+    // Try to parse as JSON
+    try {
+      const json = JSON.parse(text);
+      return { success: true, data: json, response };
+    } catch (parseError) {
+      return { 
+        success: false, 
+        error: `JSON Parse Error: ${text.substring(0, 100)}...`,
+        rawText: text,
+        response 
+      };
+    }
+  } catch (error) {
+    console.error('❌ API Call Failed:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : String(error) 
+    };
+  }
+};
+
 /**
  * Safe array operations that might cause memory issues
  */
