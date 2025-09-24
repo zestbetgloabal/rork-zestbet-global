@@ -20,7 +20,7 @@ import colors from '@/constants/colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register, isLoading, error, clearError, loginWithGoogle, loginWithApple, loginWithFacebook, pendingVerification } = useAuthStore();
+  const { register, isLoading, error, clearError, loginWithGoogle, loginWithApple, loginWithFacebook, pendingVerification, _hasHydrated } = useAuthStore();
   
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -30,6 +30,15 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [agbConsent, setAgbConsent] = useState(false);
   const [privacyConsent, setPrivacyConsent] = useState(false);
+  
+  // Show loading until hydrated
+  if (!_hasHydrated) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Loading...</Text>
+      </View>
+    );
+  }
   
   const handleRegister = async () => {
     if (!username.trim()) {

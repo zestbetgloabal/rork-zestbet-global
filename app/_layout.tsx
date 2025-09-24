@@ -2,49 +2,23 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
-import * as Sentry from '@sentry/react-native';
-import { initializeCrashPrevention } from '@/utils/crashPrevention';
 
-// Initialize Sentry for error monitoring in production
-if (process.env.NODE_ENV === 'production') {
-  Sentry.init({
-    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || undefined,
-    debug: false,
-    environment: 'production',
-    beforeSend(event) {
-      // Filter out sensitive data
-      if (event.request?.headers) {
-        delete event.request.headers.authorization;
-      }
-      // Filter out Hermes engine crashes that we can't fix
-      if (event.exception?.values?.[0]?.value?.includes('hermes::vm::')) {
-        console.log('Filtered Hermes engine crash from Sentry');
-        return null;
-      }
-      return event;
-    },
-  });
-}
-
-// Global error handler for unhandled promise rejections
-if (typeof global !== 'undefined') {
-  const originalConsoleError = console.error;
-  console.error = (...args: any[]) => {
-    // Filter out known Hermes engine errors
-    const message = args.join(' ');
-    if (message.includes('hermes::vm::') || message.includes('JSObject::')) {
-      console.log('Filtered Hermes engine error from console');
-      return;
-    }
-    originalConsoleError.apply(console, args);
-  };
+// Simple error handler for development
+if (Platform.OS === 'web') {
+  // Prevent hydration mismatches on web
+  if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', (event) => {
+      console.warn('Unhandled promise rejection:', event.reason);
+      event.preventDefault();
+    });
+  }
 }
 
 export const unstable_settings = {
@@ -55,21 +29,18 @@ export const unstable_settings = {
 const queryClient = new QueryClient();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+if (Platform.OS !== 'web') {
+  SplashScreen.preventAutoHideAsync();
+}
 
-// Initialize crash prevention measures
-initializeCrashPrevention();
-
-// Enhanced Error Boundary component with crash prevention
+// Simple Error Boundary
 class AppErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean; error?: Error; errorCount: number }
+  { hasError: boolean; error?: Error }
 > {
-  private retryTimeout: ReturnType<typeof setTimeout> | null = null;
-
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, errorCount: 0 };
+    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(error: Error) {
@@ -78,72 +49,24 @@ class AppErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('React Error Boundary caught error:', {
-      message: error.message,
-      stack: error.stack?.substring(0, 500), // Limit stack trace length
-      componentStack: errorInfo.componentStack?.substring(0, 500)
-    });
-    
-    // Only report non-Hermes engine errors to Sentry
-    if (process.env.NODE_ENV === 'production' && 
-        !error.message.includes('hermes::vm::') && 
-        !error.message.includes('JSObject::')) {
-      Sentry.captureException(error);
-    }
-    
-    // Increment error count
-    this.setState(prevState => ({ 
-      errorCount: prevState.errorCount + 1 
-    }));
-    
-    // Auto-retry after 3 seconds for the first few errors
-    if (this.state.errorCount < 3) {
-      this.retryTimeout = setTimeout(() => {
-        console.log('Auto-retrying after error...');
-        this.setState({ hasError: false, error: undefined });
-      }, 3000);
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.retryTimeout) {
-      clearTimeout(this.retryTimeout);
-    }
+    console.error('React Error Boundary caught error:', error.message);
   }
 
   handleRetry = () => {
-    console.log('Manual retry triggered');
-    this.setState({ hasError: false, error: undefined, errorCount: 0 });
+    this.setState({ hasError: false, error: undefined });
   };
 
   render() {
     if (this.state.hasError) {
-      const isHermesError = this.state.error?.message?.includes('hermes::vm::') || 
-                           this.state.error?.message?.includes('JSObject::');
-      
       return (
         <View style={errorStyles.container}>
-          <Text style={errorStyles.title}>
-            {isHermesError ? 'App Restarting...' : 'Something went wrong'}
-          </Text>
+          <Text style={errorStyles.title}>Something went wrong</Text>
           <Text style={errorStyles.message}>
-            {isHermesError 
-              ? 'The app is recovering from a system error. Please wait...' 
-              : 'The app encountered an error. You can try again or restart the app.'}
+            The app encountered an error. Please try again.
           </Text>
-          {!isHermesError && this.state.errorCount < 3 && (
-            <Text style={errorStyles.retryText}>
-              Auto-retrying in 3 seconds...
-            </Text>
-          )}
-          {!isHermesError && this.state.errorCount >= 3 && (
-            <Text 
-              style={errorStyles.button} 
-              onPress={this.handleRetry}
-            >
-              Tap to Retry
-            </Text>
-          )}
+          <Text style={errorStyles.button} onPress={this.handleRetry}>
+            Tap to Retry
+          </Text>
         </View>
       );
     }
@@ -153,6 +76,7 @@ class AppErrorBoundary extends React.Component<
 }
 
 function RootLayoutComponent() {
+  const [isReady, setIsReady] = useState(false);
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
   });
@@ -160,91 +84,100 @@ function RootLayoutComponent() {
   useEffect(() => {
     if (error) {
       console.error('Font loading error:', error);
-      // Don't throw, just log the error and continue
-      // Report to Sentry only if it's not a known issue
-      if (process.env.NODE_ENV === 'production' && 
-          !error.message?.includes('hermes::vm::')) {
-        Sentry.captureException(error);
-      }
     }
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync().catch(console.error);
-    }
-  }, [loaded]);
+    const prepare = async () => {
+      try {
+        if (loaded || error) {
+          if (Platform.OS !== 'web') {
+            await SplashScreen.hideAsync();
+          }
+          // Add small delay to prevent hydration issues
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setIsReady(true);
+        }
+      } catch (e) {
+        console.warn('Error preparing app:', e);
+        setIsReady(true); // Continue anyway
+      }
+    };
 
-  if (!loaded && !error) {
-    return null;
+    prepare();
+  }, [loaded, error]);
+
+  // Show loading screen until ready
+  if (!isReady) {
+    return (
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.title}>Loading...</Text>
+      </View>
+    );
   }
 
   return (
     <AppErrorBoundary>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
           <RootLayoutNav />
-        </QueryClientProvider>
-      </trpc.Provider>
+        </trpc.Provider>
+      </QueryClientProvider>
     </AppErrorBoundary>
   );
 }
 
 function RootLayoutNav() {
-  const { isAuthenticated, token } = useAuthStore();
+  const { isAuthenticated, token, _hasHydrated } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Check if the current route is in the auth group
   const isInAuthGroup = segments[0] === '(auth)';
   // Check if the current route is in the legal group
   const isInLegalGroup = segments[0] === 'legal';
   
-  // Debug: Log auth state changes
-  React.useEffect(() => {
-    console.log('=== AUTH STATE CHANGED ===', { 
-      isAuthenticated, 
-      hasToken: !!token, 
-      token: token ? 'exists' : 'null',
-      currentSegments: segments.join('/') 
-    });
-  }, [isAuthenticated, token, segments]);
-  
   useEffect(() => {
-    console.log('Navigation check:', { 
-      isAuthenticated, 
-      hasToken: !!token, 
-      isInAuthGroup, 
-      isInLegalGroup, 
-      segments,
-      currentPath: segments.join('/') 
-    });
+    if (!_hasHydrated) return; // Don't navigate until hydrated
+    if (isNavigating) return; // Prevent multiple navigations
     
-    // If user is not authenticated and not in auth or legal group, redirect to register
-    if (!isAuthenticated || !token) {
-      if (!isInAuthGroup && !isInLegalGroup) {
-        console.log('Redirecting to register - user not authenticated');
-        // Use immediate navigation for logout scenarios
-        router.replace('/(auth)/register');
+    const handleNavigation = async () => {
+      try {
+        setIsNavigating(true);
+        
+        // If user is not authenticated and not in auth or legal group, redirect to register
+        if (!isAuthenticated || !token) {
+          if (!isInAuthGroup && !isInLegalGroup) {
+            await router.replace('/(auth)/register');
+          }
+          return;
+        }
+        
+        // If user is authenticated and in auth group, redirect to tabs
+        if (isAuthenticated && token && isInAuthGroup) {
+          await router.replace('/(tabs)');
+        }
+      } catch (error) {
+        console.warn('Navigation error:', error);
+      } finally {
+        setIsNavigating(false);
       }
-      return;
-    }
-    
-    // If user is authenticated and in auth group, redirect to tabs
-    if (isAuthenticated && token && isInAuthGroup) {
-      console.log('Redirecting to tabs - user authenticated');
-      router.replace('/(tabs)');
-    }
-  }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, segments]);
+    };
+
+    // Add small delay to prevent hydration issues
+    const timer = setTimeout(handleNavigation, 50);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, isNavigating, _hasHydrated]);
   
-  // Additional effect to handle immediate logout state changes
-  useEffect(() => {
-    // Force immediate redirect when auth state changes to false
-    if (!isAuthenticated && !token && !isInAuthGroup && !isInLegalGroup) {
-      console.log('Force redirect to register due to logout');
-      router.replace('/(auth)/register');
-    }
-  }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router]);
+  // Show loading screen until hydration is complete
+  if (!_hasHydrated) {
+    return (
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.title}>Loading...</Text>
+      </View>
+    );
+  }
   
   return (
     <>
@@ -398,7 +331,4 @@ const errorStyles = StyleSheet.create({
   },
 });
 
-// Wrap with Sentry for error tracking in production
-export default process.env.NODE_ENV === 'production' 
-  ? Sentry.wrap(RootLayoutComponent)
-  : RootLayoutComponent;
+export default RootLayoutComponent;

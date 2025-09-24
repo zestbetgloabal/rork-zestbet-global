@@ -72,69 +72,26 @@ const createWebSocketClient = () => {
 
 const wsClient = createWebSocketClient();
 
-// Debug function to log TRPC URL configuration
-const debugTrpcConfig = () => {
-  const url = getTrpcUrl();
-  console.log('🔧 TRPC Configuration:', {
-    url,
-    explicit: process.env.EXPO_PUBLIC_TRPC_URL,
-    apiUrl: process.env.EXPO_PUBLIC_API_URL,
-    amplifyUrl: process.env.EXPO_PUBLIC_AMPLIFY_FUNCTION_URL,
-    platform: Platform.OS,
-    windowOrigin: typeof window !== 'undefined' ? window.location?.origin : 'N/A'
-  });
-  return url;
+// Simple function to get TRPC URL without excessive logging
+const getTrpcUrlSafe = () => {
+  try {
+    return getTrpcUrl();
+  } catch (error) {
+    console.warn('TRPC URL configuration error:', error);
+    // Fallback URL for development
+    return 'http://localhost:3000/api/trpc';
+  }
 };
 
-// Enhanced HTTP link with better error handling
+// Simple HTTP link without excessive logging
 const createHttpLink = () => {
-  const url = debugTrpcConfig();
+  const url = getTrpcUrlSafe();
   
   return httpBatchLink({
     url,
     transformer: superjson,
     headers() {
-      const headers = getAuthHeaders();
-      console.log('📤 TRPC Request Headers:', headers);
-      return headers;
-    },
-    fetch: async (input, init) => {
-      console.log('🌐 TRPC Fetch:', {
-        url: input,
-        method: init?.method,
-        headers: init?.headers,
-        bodyPreview: init?.body ? String(init.body).substring(0, 200) : undefined
-      });
-      
-      try {
-        const response = await fetch(input, init);
-        
-        console.log('📥 TRPC Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          url: response.url
-        });
-        
-        // Clone response to read body for debugging
-        const clonedResponse = response.clone();
-        const text = await clonedResponse.text();
-        
-        if (!response.ok) {
-          console.error('❌ TRPC HTTP Error:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: text.substring(0, 500)
-          });
-        } else {
-          console.log('✅ TRPC Response Body Preview:', text.substring(0, 200));
-        }
-        
-        return response;
-      } catch (error) {
-        console.error('❌ TRPC Fetch Failed:', error);
-        throw error;
-      }
+      return getAuthHeaders();
     },
   });
 };
@@ -154,23 +111,13 @@ export const trpcClient = trpc.createClient({
   ],
 });
 
-// Test function to verify TRPC connection
+// Simple connection test
 export const testTrpcConnection = async () => {
-  console.log('🧪 Testing TRPC Connection...');
-  
   try {
-    const result = await debugApiCall(getTrpcUrl().replace('/trpc', '/status'));
-    console.log('🔍 API Status Check:', result);
-    
-    if (result.success) {
-      console.log('✅ API is reachable');
-    } else {
-      console.error('❌ API is not reachable:', result.error);
-    }
-    
-    return result;
+    const url = getTrpcUrlSafe();
+    const response = await fetch(url.replace('/trpc', '/status'));
+    return { success: response.ok, status: response.status };
   } catch (error) {
-    console.error('❌ TRPC Connection Test Failed:', error);
     return { success: false, error: String(error) };
   }
 };

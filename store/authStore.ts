@@ -48,6 +48,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
   pendingVerification: {
     userId?: string;
     email?: string;
@@ -67,6 +68,7 @@ interface AuthState {
   loginWithApple: () => Promise<boolean>;
   loginWithFacebook: () => Promise<boolean>;
   loginWithBiometrics: () => Promise<boolean>;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -76,6 +78,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       isAuthenticated: false,
+      _hasHydrated: false,
       pendingVerification: null,
       
       login: async (email: string, password: string) => {
@@ -498,10 +501,15 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => set({ error: null }),
       
       clearPendingVerification: () => set({ pendingVerification: null }),
+      
+      setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
