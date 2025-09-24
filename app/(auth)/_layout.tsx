@@ -4,6 +4,7 @@ import colors from '@/constants/colors';
 export default function AuthLayout() {
   return (
     <Stack
+      initialRouteName="welcome"
       screenOptions={{
         headerStyle: {
           backgroundColor: colors.background,

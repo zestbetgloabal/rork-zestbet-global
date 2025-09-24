@@ -22,7 +22,7 @@ if (Platform.OS === 'web') {
 }
 
 export const unstable_settings = {
-  initialRouteName: "(tabs)",
+  initialRouteName: "(auth)",
 };
 
 // Create a client
@@ -149,6 +149,7 @@ function RootLayoutNav() {
         // If user is not authenticated and not in auth or legal group, redirect to welcome/login
         if (!isAuthenticated || !token) {
           if (!isInAuthGroup && !isInLegalGroup) {
+            console.log('RootLayout: Redirecting unauthenticated user to welcome');
             await router.replace('/(auth)/welcome');
           }
           return;

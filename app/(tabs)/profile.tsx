@@ -86,16 +86,17 @@ export default function ProfileScreen() {
       // Small delay to ensure state propagation
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // For web, force a complete page reload to ensure all state is cleared
-      if (typeof window !== 'undefined') {
-        console.log('Profile: Forcing page reload for web');
-        window.location.href = '/';
-        return;
-      }
-      
-      // For mobile, navigate to auth welcome page
+      // Force navigation to welcome page for both web and mobile
       console.log('Profile: Navigating to auth welcome');
-      router.replace('/(auth)/welcome');
+      await router.replace('/(auth)/welcome');
+      
+      // For web, also force a page reload as backup to ensure all state is cleared
+      if (typeof window !== 'undefined') {
+        console.log('Profile: Also forcing page reload for web as backup');
+        setTimeout(() => {
+          window.location.href = '/(auth)/welcome';
+        }, 500);
+      }
       
     } catch (error) {
       console.error('Logout error:', error);
