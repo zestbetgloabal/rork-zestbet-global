@@ -94,12 +94,12 @@ export const useAuthStore = create<AuthState>()(
             // Set user data
             const { useUserStore } = await import('./userStore');
             const { setUser } = useUserStore.getState();
-            setUser({
+            const userData = {
               id: result.user.id,
-              username: result.user.name,
+              username: result.user.name || 'ZestBet User',
               zestBalance: 100,
               points: 0,
-              inviteCode: 'ZEST123',
+              inviteCode: 'ZEST' + Math.random().toString(36).substr(2, 6).toUpperCase(),
               avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
               biography: 'Verified user on ZestBet. Ready to make predictions!',
               socialMedia: {
@@ -109,15 +109,19 @@ export const useAuthStore = create<AuthState>()(
                 linkedin: '',
                 tiktok: '',
                 youtube: '',
+                pinterest: '',
                 snapchat: '',
                 website: ''
               },
               dailyBetAmount: 0,
-              lastBetDate: new Date().toISOString(),
+              lastBetDate: new Date().toISOString().split('T')[0],
               agbConsent: true,
               privacyConsent: true,
               consentDate: new Date().toISOString()
-            });
+            };
+            
+            console.log('AuthStore: Setting user data after login', userData);
+            setUser(userData);
             
             return true;
           }
@@ -407,7 +411,17 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log('=== LOGOUT STARTED ===');
         
-        // Clear auth state FIRST to immediately update UI
+        // Clear user state FIRST
+        try {
+          const { useUserStore } = await import('./userStore');
+          const { logout: userLogout } = useUserStore.getState();
+          userLogout();
+          console.log('User state cleared first');
+        } catch (userErr) {
+          console.warn('User state cleanup failed', userErr);
+        }
+        
+        // Clear auth state SECOND to immediately update UI
         set({ 
           token: null, 
           isAuthenticated: false, 

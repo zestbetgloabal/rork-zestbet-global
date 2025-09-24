@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
@@ -10,9 +10,69 @@ import ZestCurrency from '@/components/ZestCurrency';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { logout } = useAuthStore();
-  const { user } = useUserStore();
+  const { logout, isAuthenticated, token } = useAuthStore();
+  const { user, setUser } = useUserStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Initialize user data if authenticated but no user data exists
+  useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        console.log('Profile: Initializing user data', { 
+          isAuthenticated, 
+          hasToken: !!token, 
+          hasUser: !!user,
+          userUsername: user?.username 
+        });
+        
+        if (isAuthenticated && token && !user) {
+          console.log('Profile: Creating default user data');
+          // Create default user data
+          const defaultUser = {
+            id: 'user-' + Date.now(),
+            username: 'ZestBet User',
+            zestBalance: 100,
+            points: 0,
+            inviteCode: 'ZEST' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+            biography: 'Welcome to ZestBet! Ready to make some predictions.',
+            socialMedia: {
+              instagram: '',
+              twitter: '',
+              facebook: '',
+              linkedin: '',
+              tiktok: '',
+              youtube: '',
+              pinterest: '',
+              snapchat: '',
+              website: ''
+            },
+            dailyBetAmount: 0,
+            lastBetDate: new Date().toISOString().split('T')[0],
+            agbConsent: true,
+            privacyConsent: true,
+            consentDate: new Date().toISOString()
+          };
+          
+          setUser(defaultUser);
+          console.log('Profile: Default user data created', defaultUser.username);
+        } else if (user) {
+          console.log('Profile: User data already exists', user.username);
+        } else if (!isAuthenticated || !token) {
+          console.log('Profile: User not authenticated');
+        }
+      } catch (error) {
+        console.error('Profile: Error initializing user:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Add a small delay to ensure stores are hydrated
+    const timer = setTimeout(initializeUser, 200);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, token, user, setUser]);
 
   const handleLogout = async () => {
     try {
@@ -91,10 +151,46 @@ export default function ProfileScreen() {
     );
   };
 
-  if (!user) {
+  // Show loading while initializing
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </SafeAreaView>
+    );
+  }
+  
+  // If not authenticated, show error state
+  if (!isAuthenticated || !token) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Please log in to view your profile</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => router.replace('/(auth)/login')}
+        >
+          <Text style={styles.retryButtonText}>Go to Login</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  
+  // If no user data, show error state
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Unable to load profile data</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => {
+            setIsLoading(true);
+            // Trigger re-initialization
+            setTimeout(() => setIsLoading(false), 1000);
+          }}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -102,10 +198,22 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Debug Info - Remove in production */}
+        {__DEV__ && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>Debug Info:</Text>
+            <Text style={styles.debugText}>Auth: {isAuthenticated ? 'Yes' : 'No'}</Text>
+            <Text style={styles.debugText}>Token: {token ? 'Yes' : 'No'}</Text>
+            <Text style={styles.debugText}>User: {user ? user.username : 'None'}</Text>
+          </View>
+        )}
         <View style={styles.header}>
           <Image 
             source={{ uri: user.avatar }} 
-            style={styles.avatar} 
+            style={styles.avatar}
+            onError={(error) => {
+              console.log('Profile: Avatar failed to load', error.nativeEvent?.error);
+            }}
           />
           <Text style={styles.username}>{user.username}</Text>
           
@@ -241,6 +349,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.background,
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 18,
+    color: colors.error,
+    marginBottom: 20,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     alignItems: 'center',
@@ -333,5 +466,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  debugContainer: {
+    backgroundColor: colors.card,
+    margin: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  debugText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
   },
 });

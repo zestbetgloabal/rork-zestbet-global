@@ -8,6 +8,7 @@ interface UserState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  _hasHydrated: boolean;
   setUser: (user: User) => void;
   updateZestBalance: (amount: number) => void;
   updatePoints: (points: number) => void;
@@ -18,6 +19,8 @@ interface UserState {
   updateDailyBetAmount: (amount: number) => number; // Returns remaining daily limit
   getRemainingDailyLimit: () => number;
   resetDailyBetAmountIfNewDay: () => void;
+  setHasHydrated: (state: boolean) => void;
+  initializeDefaultUser: () => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -26,6 +29,7 @@ export const useUserStore = create<UserState>()(
       user: null,
       isLoading: false,
       error: null,
+      _hasHydrated: false,
       setUser: (user) => set({ user }),
       updateZestBalance: (amount) => 
         set((state) => ({ 
@@ -159,11 +163,50 @@ export const useUserStore = create<UserState>()(
             }
           });
         }
+      },
+      setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
+      initializeDefaultUser: () => {
+        const { user } = get();
+        if (user) return; // Don't overwrite existing user
+        
+        console.log('UserStore: Initializing default user');
+        const defaultUser: User = {
+          id: 'user-' + Date.now(),
+          username: 'ZestBet User',
+          zestBalance: 100,
+          points: 0,
+          inviteCode: 'ZEST' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+          biography: 'Welcome to ZestBet! Ready to make some predictions.',
+          socialMedia: {
+            instagram: '',
+            twitter: '',
+            facebook: '',
+            linkedin: '',
+            tiktok: '',
+            youtube: '',
+            pinterest: '',
+            snapchat: '',
+            website: ''
+          },
+          dailyBetAmount: 0,
+          lastBetDate: new Date().toISOString().split('T')[0],
+          agbConsent: true,
+          privacyConsent: true,
+          consentDate: new Date().toISOString()
+        };
+        
+        set({ user: defaultUser });
+        console.log('UserStore: Default user created');
       }
     }),
     {
       name: 'user-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        console.log('UserStore: Hydration complete');
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
