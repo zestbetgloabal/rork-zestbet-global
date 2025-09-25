@@ -1,10 +1,50 @@
 {
-  "build": {
-    "production": {
-      "ios": {
-        "resourceClass": "m1-medium",
-        "node": "18.18.0"
-      }
+"build": {
+  "production": {
+    "ios": {
+      "resourceClass": "m1-medium",
+      "node": "18.18.0",
+      "autoIncrement": "buildNumber"
+    },
+    "android": {
+      "resourceClass": "medium",
+      "node": "18.18.0",
+      "autoIncrement": "versionCode"
+    }
+  },
+  "preview": {
+    "ios": {
+      "resourceClass": "m1-medium",
+      "node": "18.18.0"
+    },
+    "android": {
+      "resourceClass": "medium",
+      "node": "18.18.0"
+    }
+  },
+  "development": {
+    "ios": {
+      "resourceClass": "m1-medium",
+      "node": "18.18.0",
+      "simulator": true
+    },
+    "android": {
+      "resourceClass": "medium",
+      "node": "18.18.0"
     }
   }
+},
+"submit": {
+  "production": {
+    "ios": {
+      "appleId": "your-apple-id@example.com",
+      "ascAppId": "your-app-store-connect-app-id",
+      "appleTeamId": "your-apple-team-id"
+    },
+    "android": {
+      "serviceAccountKeyPath": "path/to/api-key.json",
+      "track": "production"
+    }
+  }
+}
 }
