@@ -30,9 +30,9 @@
 "submit": {
   "production": {
     "ios": {
-      "appleId": "DEINE-APPLE-ID@EMAIL.COM",
-      "ascAppId": "DEINE-APP-STORE-CONNECT-APP-ID",
-      "appleTeamId": "DEINE-APPLE-TEAM-ID"
+      "appleId": "erhan.berse@googlemail.com",
+      "ascAppId": "a278b429-4f06-4850-8028-5ada8356e67e",
+      "appleTeamId": "RLFRGC9727"
     }
   }
 }
