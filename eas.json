@@ -1,0 +1,10 @@
+{
+  "build": {
+    "production": {
+      "ios": {
+        "resourceClass": "m1-medium",
+        "node": "18.18.0"
+      }
+    }
+  }
+}
