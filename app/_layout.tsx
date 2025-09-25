@@ -9,6 +9,15 @@ import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { initializeCrashPrevention, hermesGuard } from "@/utils/crashPrevention";
+
+// Initialize comprehensive crash prevention
+try {
+  initializeCrashPrevention();
+  console.log('Crash prevention initialized successfully');
+} catch (error) {
+  console.warn('Failed to initialize crash prevention:', error);
+}
 
 // Simple error handler for development
 if (Platform.OS === 'web') {
@@ -25,8 +34,30 @@ export const unstable_settings = {
   initialRouteName: "(auth)",
 };
 
-// Create a client
-const queryClient = new QueryClient();
+// Create a client with error handling
+const queryClient = hermesGuard(
+  () => new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: (failureCount, error) => {
+          // Don't retry on Hermes crashes
+          const errorMessage = error?.message || String(error);
+          if (errorMessage.includes('hermes::vm::') || errorMessage.includes('JSObject::')) {
+            return false;
+          }
+          return failureCount < 3;
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+      },
+      mutations: {
+        retry: false, // Don't retry mutations to prevent crashes
+      },
+    },
+  }),
+  new QueryClient(),
+  'QueryClient creation'
+);
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 if (Platform.OS !== 'web') {
@@ -90,21 +121,27 @@ function RootLayoutComponent() {
   useEffect(() => {
     const prepare = async () => {
       try {
+        // Add longer delay for iPad compatibility
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         if (loaded || error) {
           if (Platform.OS !== 'web') {
             await SplashScreen.hideAsync();
           }
-          // Add small delay to prevent hydration issues
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Add additional delay to prevent hydration issues on iPad
+          await new Promise(resolve => setTimeout(resolve, 200));
           setIsReady(true);
         }
       } catch (e) {
         console.warn('Error preparing app:', e);
-        setIsReady(true); // Continue anyway
+        // Force ready state after delay even on error
+        setTimeout(() => setIsReady(true), 500);
       }
     };
 
-    prepare();
+    hermesGuard(() => {
+      prepare();
+    }, undefined, 'app preparation');
   }, [loaded, error]);
 
   // Show loading screen until ready
@@ -133,10 +170,9 @@ function RootLayoutNav() {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
   
-  // Check if the current route is in the auth group
-  const isInAuthGroup = segments[0] === '(auth)';
-  // Check if the current route is in the legal group
-  const isInLegalGroup = segments[0] === 'legal';
+  // Safe segment access to prevent crashes
+  const isInAuthGroup = hermesGuard(() => segments?.[0] === '(auth)', false, 'auth group check');
+  const isInLegalGroup = hermesGuard(() => segments?.[0] === 'legal', false, 'legal group check');
   
   useEffect(() => {
     if (!_hasHydrated) return; // Don't navigate until hydrated
@@ -145,6 +181,9 @@ function RootLayoutNav() {
     const handleNavigation = async () => {
       try {
         setIsNavigating(true);
+        
+        // Add delay for iPad stability
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // If user is not authenticated and not in auth or legal group, redirect to welcome/login
         if (!isAuthenticated || !token) {
@@ -166,8 +205,12 @@ function RootLayoutNav() {
       }
     };
 
-    // Add small delay to prevent hydration issues
-    const timer = setTimeout(handleNavigation, 50);
+    // Add longer delay for iPad compatibility
+    const timer = setTimeout(() => {
+      hermesGuard(() => {
+        handleNavigation();
+      }, undefined, 'navigation handling');
+    }, 150);
     return () => clearTimeout(timer);
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, isNavigating, _hasHydrated]);
   

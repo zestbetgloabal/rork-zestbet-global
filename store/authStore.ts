@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { hermesGuard } from '@/utils/crashPrevention';
 
 interface RegisterParams {
   email: string;
@@ -82,56 +83,58 @@ export const useAuthStore = create<AuthState>()(
       pendingVerification: null,
       
       login: async (email: string, password: string) => {
-        set({ isLoading: true, error: null });
-        try {
-          // Use tRPC to authenticate with backend
-          const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.login.mutate({ email, password });
-          
-          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
-            set({ token: result.token, isLoading: false, isAuthenticated: true });
+        return hermesGuard(async () => {
+          set({ isLoading: true, error: null });
+          try {
+            // Use tRPC to authenticate with backend
+            const { trpcClient } = await import('@/lib/trpc');
+            const result = await trpcClient.auth.login.mutate({ email, password });
             
-            // Set user data
-            const { useUserStore } = await import('./userStore');
-            const { setUser } = useUserStore.getState();
-            const userData = {
-              id: result.user.id,
-              username: result.user.name || 'ZestBet User',
-              zestBalance: 100,
-              points: 0,
-              inviteCode: 'ZEST' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-              biography: 'Verified user on ZestBet. Ready to make predictions!',
-              socialMedia: {
-                instagram: '',
-                twitter: '',
-                facebook: '',
-                linkedin: '',
-                tiktok: '',
-                youtube: '',
-                pinterest: '',
-                snapchat: '',
-                website: ''
-              },
-              dailyBetAmount: 0,
-              lastBetDate: new Date().toISOString().split('T')[0],
-              agbConsent: true,
-              privacyConsent: true,
-              consentDate: new Date().toISOString()
-            };
+            if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
+              set({ token: result.token, isLoading: false, isAuthenticated: true });
+              
+              // Set user data
+              const { useUserStore } = await import('./userStore');
+              const { setUser } = useUserStore.getState();
+              const userData = {
+                id: result.user.id,
+                username: result.user.name || 'ZestBet User',
+                zestBalance: 100,
+                points: 0,
+                inviteCode: 'ZEST' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
+                biography: 'Verified user on ZestBet. Ready to make predictions!',
+                socialMedia: {
+                  instagram: '',
+                  twitter: '',
+                  facebook: '',
+                  linkedin: '',
+                  tiktok: '',
+                  youtube: '',
+                  pinterest: '',
+                  snapchat: '',
+                  website: ''
+                },
+                dailyBetAmount: 0,
+                lastBetDate: new Date().toISOString().split('T')[0],
+                agbConsent: true,
+                privacyConsent: true,
+                consentDate: new Date().toISOString()
+              };
+              
+              console.log('AuthStore: Setting user data after login', userData);
+              setUser(userData);
+              
+              return true;
+            }
             
-            console.log('AuthStore: Setting user data after login', userData);
-            setUser(userData);
-            
-            return true;
+            return false;
+          } catch (error: any) {
+            const errorMessage = error?.message || 'Failed to login. Please check your credentials.';
+            set({ error: errorMessage, isLoading: false });
+            return false;
           }
-          
-          return false;
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Failed to login. Please check your credentials.';
-          set({ error: errorMessage, isLoading: false });
-          return false;
-        }
+        }, Promise.resolve(false), 'auth login');
       },
       
       register: async (params: RegisterParams) => {
@@ -409,107 +412,109 @@ export const useAuthStore = create<AuthState>()(
       },
       
       logout: async () => {
-        console.log('=== LOGOUT STARTED ===');
-        
-        // Clear user state FIRST
-        try {
-          const { useUserStore } = await import('./userStore');
-          const { logout: userLogout } = useUserStore.getState();
-          userLogout();
-          console.log('User state cleared first');
-        } catch (userErr) {
-          console.warn('User state cleanup failed', userErr);
-        }
-        
-        // Clear auth state SECOND to immediately update UI
-        set({ 
-          token: null, 
-          isAuthenticated: false, 
-          error: null, 
-          isLoading: false,
-          pendingVerification: null
-        });
-        console.log('Auth state cleared immediately');
-        
-        try {
-          // Clear all possible storage keys
-          const storageKeys = [
-            'auth-storage', 
-            'user-storage',
-            'bet-storage',
-            'social-storage',
-            'ai-storage',
-            'badge-storage',
-            'impact-storage',
-            'leaderboard-storage',
-            'live-event-storage',
-            'mission-storage',
-            'chat-storage'
-          ];
+        return hermesGuard(async () => {
+          console.log('=== LOGOUT STARTED ===');
           
-          // Clear AsyncStorage
-          try {
-            await AsyncStorage.multiRemove(storageKeys);
-            console.log('AsyncStorage cleared');
-          } catch (e) {
-            console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
-            for (const key of storageKeys) {
-              try {
-                await AsyncStorage.removeItem(key);
-              } catch (e2) {
-                console.warn(`Failed to remove ${key}`, e2);
-              }
-            }
-          }
-          
-          // Clear localStorage for web - more aggressive approach
-          if (typeof window !== 'undefined') {
-            try {
-              // Clear specific keys first
-              storageKeys.forEach(key => {
-                window.localStorage?.removeItem(key);
-                window.sessionStorage?.removeItem(key);
-              });
-              
-              // Clear all storage as backup
-              window.localStorage?.clear();
-              window.sessionStorage?.clear();
-              
-              // Clear all cookies
-              document.cookie.split(";").forEach(function(c) { 
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-              });
-              
-              console.log('Web storage and cookies cleared');
-            } catch (lsErr) {
-              console.warn('Web storage cleanup failed', lsErr);
-            }
-          }
-          
-          // Clear user state
+          // Clear user state FIRST
           try {
             const { useUserStore } = await import('./userStore');
             const { logout: userLogout } = useUserStore.getState();
             userLogout();
-            console.log('User state cleared');
+            console.log('User state cleared first');
           } catch (userErr) {
             console.warn('User state cleanup failed', userErr);
           }
           
-          // Try backend logout (best-effort, don't block on failure)
+          // Clear auth state SECOND to immediately update UI
+          set({ 
+            token: null, 
+            isAuthenticated: false, 
+            error: null, 
+            isLoading: false,
+            pendingVerification: null
+          });
+          console.log('Auth state cleared immediately');
+          
           try {
-            const { trpcClient } = await import('@/lib/trpc');
-            await trpcClient.auth.logout.mutate();
-            console.log('Backend session revoked');
-          } catch (apiErr) {
-            console.warn('Backend logout failed or not necessary', apiErr);
+            // Clear all possible storage keys
+            const storageKeys = [
+              'auth-storage', 
+              'user-storage',
+              'bet-storage',
+              'social-storage',
+              'ai-storage',
+              'badge-storage',
+              'impact-storage',
+              'leaderboard-storage',
+              'live-event-storage',
+              'mission-storage',
+              'chat-storage'
+            ];
+            
+            // Clear AsyncStorage
+            try {
+              await AsyncStorage.multiRemove(storageKeys);
+              console.log('AsyncStorage cleared');
+            } catch (e) {
+              console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
+              for (const key of storageKeys) {
+                try {
+                  await AsyncStorage.removeItem(key);
+                } catch (e2) {
+                  console.warn(`Failed to remove ${key}`, e2);
+                }
+              }
+            }
+            
+            // Clear localStorage for web - more aggressive approach
+            if (typeof window !== 'undefined') {
+              try {
+                // Clear specific keys first
+                storageKeys.forEach(key => {
+                  window.localStorage?.removeItem(key);
+                  window.sessionStorage?.removeItem(key);
+                });
+                
+                // Clear all storage as backup
+                window.localStorage?.clear();
+                window.sessionStorage?.clear();
+                
+                // Clear all cookies
+                document.cookie.split(";").forEach(function(c) { 
+                  document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                
+                console.log('Web storage and cookies cleared');
+              } catch (lsErr) {
+                console.warn('Web storage cleanup failed', lsErr);
+              }
+            }
+            
+            // Clear user state
+            try {
+              const { useUserStore } = await import('./userStore');
+              const { logout: userLogout } = useUserStore.getState();
+              userLogout();
+              console.log('User state cleared');
+            } catch (userErr) {
+              console.warn('User state cleanup failed', userErr);
+            }
+            
+            // Try backend logout (best-effort, don't block on failure)
+            try {
+              const { trpcClient } = await import('@/lib/trpc');
+              await trpcClient.auth.logout.mutate();
+              console.log('Backend session revoked');
+            } catch (apiErr) {
+              console.warn('Backend logout failed or not necessary', apiErr);
+            }
+            
+          } catch (error) {
+            console.error('Error during logout cleanup:', error);
           }
           
-        } catch (error) {
-          console.error('Error during logout cleanup:', error);
-        }
-        
-        console.log('=== LOGOUT COMPLETE ===');
+          console.log('=== LOGOUT COMPLETE ===');
+        }, undefined, 'auth logout');
       },
       
       clearError: () => set({ error: null }),

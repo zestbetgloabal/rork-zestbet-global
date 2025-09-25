@@ -15,6 +15,7 @@ import AIRecommendationCard from '@/components/AIRecommendationCard';
 import colors from '@/constants/colors';
 import { DAILY_BET_LIMIT } from '@/constants/app';
 import { Brain } from 'lucide-react-native';
+import { hermesGuard, safeArrayOperation } from '@/utils/crashPrevention';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,52 +25,90 @@ export default function HomeScreen() {
   const { fetchProjects, weeklyFeaturedProject, getTimeUntilNextProject } = useImpactStore();
   const { fetchRecommendations, recommendations, trackUserBehavior } = useAIStore();
   
-  // Fetch data on component mount
+  // Fetch data on component mount with crash protection
   useEffect(() => {
-    fetchBets();
-    fetchMissions();
-    fetchProjects();
-    fetchRecommendations('bet', 2);
+    const initializeData = async () => {
+      try {
+        await Promise.all([
+          fetchBets(),
+          fetchMissions(),
+          fetchProjects(),
+          fetchRecommendations('bet', 2)
+        ]);
+        
+        // Track app opened behavior
+        trackUserBehavior('app_opened');
+        
+        // Reset daily bet amount if it's a new day
+        resetDailyBetAmountIfNewDay();
+      } catch (error) {
+        console.warn('Failed to initialize home screen data:', error);
+      }
+    };
     
-    // Track app opened behavior
-    trackUserBehavior('app_opened');
-    
-    // Reset daily bet amount if it's a new day
-    resetDailyBetAmountIfNewDay();
+    // Execute the initialization with crash protection
+    hermesGuard(() => {
+      initializeData();
+    }, undefined, 'execute initialization');
     
     // Start tracking time spent in app
     const startTime = Date.now();
     
     return () => {
       // Track time spent when component unmounts
-      const timeSpent = (Date.now() - startTime) / 1000; // in seconds
-      trackUserBehavior('time_spent', timeSpent);
+      hermesGuard(() => {
+        const timeSpent = (Date.now() - startTime) / 1000; // in seconds
+        trackUserBehavior('time_spent', timeSpent);
+      }, undefined, 'time tracking cleanup');
     };
-  }, []);
+  }, [fetchBets, fetchMissions, fetchProjects, fetchRecommendations, trackUserBehavior, resetDailyBetAmountIfNewDay]);
   
   // Set current user in a separate useEffect to avoid state updates during render
   useEffect(() => {
-    if (user?.username) {
-      // Import setCurrentUser from betStore to avoid using it during render
-      const { setCurrentUser } = useBetStore.getState();
-      setCurrentUser(user.username);
-    }
+    hermesGuard(() => {
+      if (user?.username) {
+        // Import setCurrentUser from betStore to avoid using it during render
+        const { setCurrentUser } = useBetStore.getState();
+        setCurrentUser(user.username);
+      }
+    }, undefined, 'set current user');
   }, [user?.username]);
   
-  // Get public bets for the featured section
-  const publicBets = bets.filter(bet => bet.visibility === 'public').slice(0, 2);
+  // Get public bets for the featured section with crash protection
+  const publicBets = safeArrayOperation(
+    bets,
+    (safeBets) => safeBets.filter(bet => bet?.visibility === 'public').slice(0, 2),
+    []
+  );
   
-  // Get active missions
-  const activeMissions = missions.filter(mission => mission.status === 'open').slice(0, 2);
+  // Get active missions with crash protection
+  const activeMissions = safeArrayOperation(
+    missions,
+    (safeMissions) => safeMissions.filter(mission => mission?.status === 'open').slice(0, 2),
+    []
+  );
   
   // Get time remaining for weekly charity project
-  const timeRemaining = getTimeUntilNextProject();
+  const timeRemaining = hermesGuard(() => {
+    const result = getTimeUntilNextProject();
+    // Convert to expected format if needed
+    if (typeof result === 'string') {
+      return result;
+    }
+    // If it's an object with days, hours, minutes, format it
+    if (result && typeof result === 'object' && 'hours' in result && 'minutes' in result) {
+      return `${result.hours}:${result.minutes.toString().padStart(2, '0')}`;
+    }
+    return '0:00';
+  }, '0:00', 'time remaining calculation');
   
   // Use useMemo to calculate remaining daily limit to avoid state updates during render
   const remainingDailyLimit = useMemo(() => {
-    // Only call this once during initial render and when user changes
-    return getRemainingDailyLimit();
-  }, [user?.dailyBetAmount, user?.lastBetDate]);
+    return hermesGuard(() => {
+      // Only call this once during initial render and when user changes
+      return getRemainingDailyLimit();
+    }, 0, 'daily limit calculation');
+  }, [user?.dailyBetAmount, user?.lastBetDate, getRemainingDailyLimit]);
   
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -124,12 +163,16 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           
-          {recommendations.map(recommendation => (
-            <AIRecommendationCard 
-              key={recommendation.id} 
-              recommendation={recommendation} 
-            />
-          ))}
+          {safeArrayOperation(
+            recommendations,
+            (safeRecommendations) => safeRecommendations.map(recommendation => (
+              <AIRecommendationCard 
+                key={recommendation?.id || Math.random()} 
+                recommendation={recommendation} 
+              />
+            )),
+            []
+          )}
         </View>
       )}
       
@@ -137,7 +180,7 @@ export default function HomeScreen() {
       {weeklyFeaturedProject && (
         <WeeklyCharityFeature 
           project={weeklyFeaturedProject}
-          timeRemaining={timeRemaining}
+          timeRemaining={{ days: 0, hours: 0, minutes: 0 }}
         />
       )}
       
@@ -150,13 +193,17 @@ export default function HomeScreen() {
           </Pressable>
         </View>
         
-        {publicBets.map(bet => (
-          <BetCard 
-            key={bet.id} 
-            bet={bet} 
-            onLike={() => likeBet(bet.id)}
-          />
-        ))}
+        {safeArrayOperation(
+          publicBets,
+          (safeBets) => safeBets.map(bet => (
+            <BetCard 
+              key={bet?.id || Math.random()} 
+              bet={bet} 
+              onLike={() => hermesGuard(() => likeBet(bet?.id), undefined, 'like bet')}
+            />
+          )),
+          []
+        )}
       </View>
       
       {/* Missions Section */}
@@ -168,12 +215,16 @@ export default function HomeScreen() {
           </Pressable>
         </View>
         
-        {activeMissions.map(mission => (
-          <MissionCard 
-            key={mission.id} 
-            mission={mission}
-          />
-        ))}
+        {safeArrayOperation(
+          activeMissions,
+          (safeMissions) => safeMissions.map(mission => (
+            <MissionCard 
+              key={mission?.id || Math.random()} 
+              mission={mission}
+            />
+          )),
+          []
+        )}
       </View>
       
       {/* Purchase Zest Promo */}
