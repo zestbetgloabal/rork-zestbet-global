@@ -11,20 +11,28 @@
     "distribution": "internal",
     "ios": {
       "resourceClass": "m-medium"
+    },
+    "android": {
+      "resourceClass": "medium"
     }
   },
   "production": {
     "ios": {
-      "resourceClass": "m-medium"
+      "resourceClass": "m-medium",
+      "buildConfiguration": "Release"
+    },
+    "android": {
+      "resourceClass": "medium",
+      "buildType": "apk"
     }
   }
 },
 "submit": {
   "production": {
     "ios": {
-      "appleId": "your-apple-id@example.com",
-      "ascAppId": "your-app-store-connect-app-id",
-      "appleTeamId": "your-apple-team-id"
+      "appleId": "DEINE-APPLE-ID@EMAIL.COM",
+      "ascAppId": "DEINE-APP-STORE-CONNECT-APP-ID",
+      "appleTeamId": "DEINE-APPLE-TEAM-ID"
     }
   }
 }
