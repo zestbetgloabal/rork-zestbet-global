@@ -586,5 +586,99 @@ export const initializeCrashPrevention = (): void => {
     }, 30000); // Every 30 seconds
   }
   
-  console.log('Comprehensive crash prevention measures initialized');
+  console.log('Comprehensive crash prevention measures initialized (iPad optimized)');
+};
+
+/**
+ * iPad-specific crash prevention measures
+ */
+export const initializeIpadCrashPrevention = (): void => {
+  // iPad-specific memory management
+  if (typeof global !== 'undefined') {
+    const globalAny = global as any;
+    
+    // Prevent iPad-specific Hermes crashes
+    const originalSetTimeout = globalAny.setTimeout;
+    globalAny.setTimeout = (callback: Function, delay: number, ...args: any[]) => {
+      return originalSetTimeout(() => {
+        hermesGuard(() => {
+          callback(...args);
+        }, undefined, 'iPad setTimeout callback');
+      }, Math.max(delay, 16)); // Minimum 16ms delay for iPad stability
+    };
+    
+    // Enhanced memory pressure relief for iPad
+    const memoryPressureInterval = setInterval(() => {
+      hermesGuard(() => {
+        if (globalAny.gc && !__DEV__) {
+          globalAny.gc();
+        }
+        // Clear any large objects that might cause crashes
+        if (globalAny.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+          delete globalAny.__REACT_DEVTOOLS_GLOBAL_HOOK__.rendererInterfaces;
+        }
+      }, undefined, 'iPad memory pressure relief');
+    }, 15000); // Every 15 seconds on iPad
+    
+    // Store interval reference for cleanup
+    globalAny._ipadMemoryInterval = memoryPressureInterval;
+  }
+};
+
+/**
+ * Safe navigation wrapper for preventing router crashes
+ */
+export const safeNavigate = (router: any, path: string, options?: any): void => {
+  hermesGuard(() => {
+    if (!router || typeof router.push !== 'function') {
+      console.warn('Invalid router object provided to safeNavigate');
+      return;
+    }
+    
+    if (!path || typeof path !== 'string') {
+      console.warn('Invalid path provided to safeNavigate');
+      return;
+    }
+    
+    // Add delay for iPad stability
+    setTimeout(() => {
+      hermesGuard(() => {
+        if (options) {
+          router.push(path, options);
+        } else {
+          router.push(path);
+        }
+      }, undefined, 'router navigation');
+    }, 50);
+  }, undefined, 'safeNavigate');
+};
+
+/**
+ * Safe async operation wrapper
+ */
+export const safeAsync = async <T>(
+  operation: () => Promise<T>,
+  fallback: T,
+  operationName: string = 'async operation'
+): Promise<T> => {
+  try {
+    // Add small delay for iPad stability
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    const result = await operation();
+    return result;
+  } catch (error: any) {
+    const errorMessage = error?.message || String(error);
+    
+    // Check for Hermes-specific errors
+    if (errorMessage.includes('hermes::vm::') || 
+        errorMessage.includes('JSObject::') ||
+        errorMessage.includes('getComputedWithReceiver_RJS')) {
+      console.log(`Hermes async error prevented in ${operationName}:`, errorMessage);
+      return fallback;
+    }
+    
+    console.error(`Async operation failed in ${operationName}:`, error);
+    return fallback;
+  }
 };

@@ -9,12 +9,13 @@ import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
-import { initializeCrashPrevention, hermesGuard } from "@/utils/crashPrevention";
+import { initializeCrashPrevention, hermesGuard, initializeIpadCrashPrevention, safeNavigate, safeAsync } from "@/utils/crashPrevention";
 
-// Initialize comprehensive crash prevention
+// Initialize comprehensive crash prevention with iPad optimizations
 try {
   initializeCrashPrevention();
-  console.log('Crash prevention initialized successfully');
+  initializeIpadCrashPrevention();
+  console.log('Crash prevention initialized successfully (iPad optimized)');
 } catch (error) {
   console.warn('Failed to initialize crash prevention:', error);
 }
@@ -189,14 +190,26 @@ function RootLayoutNav() {
         if (!isAuthenticated || !token) {
           if (!isInAuthGroup && !isInLegalGroup) {
             console.log('RootLayout: Redirecting unauthenticated user to welcome');
-            await router.replace('/(auth)/welcome');
+            await safeAsync(
+              async () => {
+                await router.replace('/(auth)/welcome');
+              },
+              undefined,
+              'redirect to welcome'
+            );
           }
           return;
         }
         
         // If user is authenticated and in auth group, redirect to tabs
         if (isAuthenticated && token && isInAuthGroup) {
-          await router.replace('/(tabs)');
+          await safeAsync(
+            async () => {
+              await router.replace('/(tabs)');
+            },
+            undefined,
+            'redirect to tabs'
+          );
         }
       } catch (error) {
         console.warn('Navigation error:', error);
@@ -205,12 +218,18 @@ function RootLayoutNav() {
       }
     };
 
-    // Add longer delay for iPad compatibility
+    // Add longer delay for iPad compatibility with safe async handling
     const timer = setTimeout(() => {
       hermesGuard(() => {
-        handleNavigation();
-      }, undefined, 'navigation handling');
-    }, 150);
+        safeAsync(
+          async () => {
+            await handleNavigation();
+          },
+          undefined,
+          'navigation handling'
+        );
+      }, undefined, 'navigation timer');
+    }, 200); // Increased delay for iPad stability
     return () => clearTimeout(timer);
   }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, isNavigating, _hasHydrated]);
   
