@@ -27,7 +27,7 @@ jobs:
         run: npm install
 
       - name: Initialize EAS
-        run: npx eas-cli init --id 4aa81beb-ebf2-4e52-85bd-a04abd142c5e --non-interactive
+        run: npx eas-cli init --id 4aa81beb-ebf2-4e52-85bd-a04abd142c5e --non-interactive --force
 
       - name: Commit and push changes
         run: |
