@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}  # Nutze GH_TOKEN für Checkout
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -36,7 +38,9 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/zestbetgloabal/rork-zestbet-global.git
           git add app.json
           git commit -m "EAS init from Actions" || echo "No changes"
-          git push
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Build iOS
         run: npx eas-cli build --platform ios --profile production --auto-submit --non-interactive
