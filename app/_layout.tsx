@@ -192,7 +192,7 @@ function RootLayoutNav() {
             console.log('RootLayout: Redirecting unauthenticated user to welcome');
             await safeAsync(
               async () => {
-                await router.replace('/(auth)/welcome');
+                await router.replace('/(auth)/start');
               },
               undefined,
               'redirect to welcome'
