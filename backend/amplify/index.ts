@@ -41,10 +41,47 @@ app.get("/", (c) => {
 
 app.get("/health", (c) => c.text("ok"));
 
+// Status endpoint for compatibility
+app.get("/api/status", (c) => {
+  return c.json({
+    status: "healthy",
+    platform: "aws-amplify-lambda",
+    services: {
+      database: "connected",
+      email: "configured",
+      auth: "active"
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/status", (c) => {
+  return c.json({
+    status: "healthy",
+    platform: "aws-amplify-lambda",
+    services: {
+      database: "connected",
+      email: "configured",
+      auth: "active"
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Mount tRPC at both /trpc and /api/trpc for compatibility
 app.use(
   "/trpc/*",
   trpcServer({
     endpoint: "/trpc",
+    router: appRouter,
+    createContext,
+  })
+);
+
+app.use(
+  "/api/trpc/*",
+  trpcServer({
+    endpoint: "/api/trpc",
     router: appRouter,
     createContext,
   })

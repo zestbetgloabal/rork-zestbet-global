@@ -1,17 +1,17 @@
 import { Hono } from "hono";
-import { handle } from "hono/vercel";
+// AWS Amplify doesn't need special handler like Vercel
 import { trpcServer } from "@hono/trpc-server";
 import { cors } from "hono/cors";
 import { appRouter } from "../backend/trpc/app-router";
 import { createContext } from "../backend/trpc/create-context";
 
-// Create Hono app for Vercel
+// Create Hono app for AWS Amplify
 const app = new Hono().basePath("/api");
 
 // Enable CORS for all routes
 app.use("*", cors({
   origin: [
-    "https://rork-zestbet-global.vercel.app",
+    "https://zestapp.online",
     "https://zestapp.online",
     "http://localhost:3000",
     "http://localhost:8081"
@@ -23,7 +23,7 @@ app.use("*", cors({
 app.get("/", (c) => {
   return c.json({ 
     status: "ok", 
-    message: "ZestBet API is running on Vercel",
+    message: "ZestBet API is running on AWS Amplify",
     version: "1.0.0",
     environment: process.env.NODE_ENV || 'production',
     timestamp: new Date().toISOString()
@@ -34,7 +34,7 @@ app.get("/", (c) => {
 app.get("/status", (c) => {
   return c.json({
     status: "healthy",
-    platform: "vercel",
+    platform: "aws-amplify",
     services: {
       database: "connected",
       email: "configured",
@@ -93,5 +93,5 @@ app.post("/auth/logout", (c) => {
   });
 });
 
-// Export for Vercel
-export default handle(app);
+// Export for AWS Amplify
+export default app;
