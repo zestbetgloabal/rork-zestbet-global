@@ -339,6 +339,13 @@ function RootLayoutNav() {
             presentation: "modal",
           }} 
         />
+        <Stack.Screen 
+          name="test-env" 
+          options={{ 
+            title: "Environment Test",
+            presentation: "modal",
+          }} 
+        />
       </Stack>
     </>
   );

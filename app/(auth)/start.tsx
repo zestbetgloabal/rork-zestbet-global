@@ -86,6 +86,10 @@ export default function WelcomeScreen() {
           <Link href="/legal/datenschutz" asChild>
             <Text style={styles.legalLink}>Privacy</Text>
           </Link>
+          <Text style={styles.legalSeparator}>•</Text>
+          <Link href="/test-env" asChild>
+            <Text style={styles.legalLink}>Test API</Text>
+          </Link>
         </View>
         
         <Text style={styles.termsText}>
