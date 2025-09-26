@@ -30,12 +30,13 @@ jobs:
         run: npx eas-cli init --id 4aa81beb-ebf2-4e52-85bd-a04abd142c5e --non-interactive --force
 
       - name: Commit and push changes
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add app.json
-          git commit -m "EAS init from Actions" || echo "No changes"
-          git push
+  run: |
+    git config --global user.name "GitHub Actions"
+    git config --global user.email "actions@github.com"
+    git remote set-url origin https://${{ secrets.GH_TOKEN }}@github.com/zestbetgloabal/rork-zestbet-global.git
+    git add app.json
+    git commit -m "EAS init from Actions" || echo "No changes"
+    git push
 
       - name: Build iOS
         run: npx eas-cli build --platform ios --profile production --auto-submit --non-interactive
