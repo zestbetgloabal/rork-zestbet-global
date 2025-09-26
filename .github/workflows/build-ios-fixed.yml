@@ -1,4 +1,4 @@
-name: Build iOS App
+name: Build iOS App (Fixed)
 
 on:
   workflow_dispatch:
@@ -34,12 +34,18 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Make scripts executable
-        run: chmod +x ./fix-ios-credentials.sh
-
-      - name: Fix iOS credentials and build
-        run: ./fix-ios-credentials.sh
+      - name: Build iOS without auto-submit
+        run: |
+          echo "Starting iOS build without auto-submit..."
+          npx eas-cli build --platform ios --profile production --non-interactive --clear-cache
         env:
           EAS_NO_VCS: 1
           EXPO_NO_CAPABILITY_SYNC: 1
           EAS_BUILD_AUTOCOMMIT: 1
+
+      - name: Submit to App Store (if build succeeds)
+        run: |
+          echo "Submitting to App Store..."
+          npx eas-cli submit --platform ios --profile production --non-interactive --latest
+        env:
+          EAS_NO_VCS: 1
