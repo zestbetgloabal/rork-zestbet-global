@@ -76,8 +76,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "your-actual-project-id-here"
-      }
+        "projectId": "4aa81beb-ebf2-4e52-85bd-a04abd142c5e"
     }
-  }
+},
+"cli": {
+"appVersionSource": "local"
 }
