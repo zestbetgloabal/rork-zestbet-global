@@ -162,6 +162,12 @@ export default function RegisterScreen() {
       
       <View style={styles.noticeContainer}>
         <Text style={styles.noticeText}>✅ Account registration is available! Create your account with a valid email from recognized providers (Gmail, Yahoo, Outlook, etc.). You'll need to verify your email to complete registration.</Text>
+        <Pressable 
+          style={styles.debugButton} 
+          onPress={() => router.push('/debug-api')}
+        >
+          <Text style={styles.debugButtonText}>🔧 Debug API Connection</Text>
+        </Pressable>
       </View>
       
       {error && (
@@ -536,5 +542,17 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  debugButton: {
+    backgroundColor: colors.textSecondary,
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  debugButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
