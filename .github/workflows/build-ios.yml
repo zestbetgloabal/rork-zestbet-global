@@ -34,10 +34,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Configure EAS credentials
+      - name: Check EAS credentials
         run: |
-          echo "Setting up EAS credentials for non-interactive build..."
-          npx eas-cli credentials:configure --platform ios --profile production --non-interactive || true
+          echo "Checking EAS credentials status..."
+          npx eas-cli credentials:list --platform ios --profile production || echo "No credentials found"
 
       - name: Build iOS
         run: |
@@ -45,3 +45,5 @@ jobs:
           npx eas-cli build --platform ios --profile production --non-interactive --clear-cache
         env:
           EAS_NO_VCS: 1
+          EXPO_NO_CAPABILITY_SYNC: 1
+          EAS_BUILD_AUTOCOMMIT: 1
