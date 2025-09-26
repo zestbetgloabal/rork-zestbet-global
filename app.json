@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ZestBet Global",
-    "slug": "zestbet-global",
+    "slug": "zestapp",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -75,7 +75,16 @@
       "ios",
       "android",
       "web"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": "https://rork.com/"
+      },
+      "eas": {
+        "projectId": "4aa81beb-ebf2-4e52-85bd-a04abd142c5e"
+      }
+    },
+    "owner": "zestbet"
   },
   "extra": {
     "eas": {
