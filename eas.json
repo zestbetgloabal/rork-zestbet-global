@@ -1,40 +1,40 @@
 {
-  "cli": {
-    "version": ">= 12.0.0",
-    "appVersionSource": "local"
+"cli": {
+  "version": ">= 12.0.0",
+  "appVersionSource": "local"
+},
+"build": {
+  "development": {
+    "developmentClient": true,
+    "distribution": "internal"
   },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
+  "preview": {
+    "distribution": "internal",
+    "ios": {
+      "resourceClass": "m-medium"
     },
-    "preview": {
-      "distribution": "internal",
-      "ios": {
-        "resourceClass": "m-medium"
-      },
-      "android": {
-        "resourceClass": "medium"
-      }
-    },
-    "production": {
-      "ios": {
-        "resourceClass": "m-medium",
-        "buildConfiguration": "Release"
-      },
-      "android": {
-        "resourceClass": "medium",
-        "buildType": "app-bundle"
-      }
+    "android": {
+      "resourceClass": "medium"
     }
   },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "erhan.berse@googlemail.com",
-        "ascAppId": "6749276092",
-        "appleTeamId": "RLFRGC9727"
-      }
+  "production": {
+    "ios": {
+      "resourceClass": "m-medium",
+      "buildConfiguration": "Release"
+    },
+    "android": {
+      "resourceClass": "medium",
+      "buildType": "app-bundle"
     }
   }
+},
+"submit": {
+  "production": {
+    "ios": {
+      "appleId": "erhan.berse@googlemail.com",
+      "ascAppId": "6749276092",
+      "appleTeamId": "RLFRGC9727"
+    }
+  }
+}
 }
