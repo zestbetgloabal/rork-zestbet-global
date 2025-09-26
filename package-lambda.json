@@ -1,0 +1,31 @@
+{
+  "name": "zestbet-lambda",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "ZestBet AWS Lambda Backend",
+  "main": "aws-lambda-handler.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "deploy:prod": "serverless deploy --stage prod",
+    "remove": "serverless remove",
+    "logs": "serverless logs -f api",
+    "info": "serverless info"
+  },
+  "dependencies": {
+    "hono": "^4.0.0",
+    "@hono/trpc-server": "^0.3.0",
+    "@trpc/server": "^10.45.0",
+    "drizzle-orm": "^0.29.0",
+    "postgres": "^3.4.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-esbuild": "^1.52.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

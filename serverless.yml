@@ -1,0 +1,82 @@
+service: zestbet-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-central-1
+  stage: ${opt:stage, 'prod'}
+  memorySize: 512
+  timeout: 30
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: ${env:DATABASE_URL}
+    JWT_SECRET: ${env:JWT_SECRET}
+    JWT_EXPIRES_IN: ${env:JWT_EXPIRES_IN}
+    CORS_ORIGIN: ${env:CORS_ORIGIN}
+    EMAIL_FROM: ${env:EMAIL_FROM}
+    EMAIL_FROM_NAME: ${env:EMAIL_FROM_NAME}
+    SMTP_HOST: ${env:SMTP_HOST}
+    SMTP_PORT: ${env:SMTP_PORT}
+    SMTP_SECURE: ${env:SMTP_SECURE}
+    SMTP_USER: ${env:SMTP_USER}
+    SMTP_PASS: ${env:SMTP_PASS}
+    GOOGLE_CLIENT_ID: ${env:GOOGLE_CLIENT_ID}
+    GOOGLE_CLIENT_SECRET: ${env:GOOGLE_CLIENT_SECRET}
+    FACEBOOK_APP_ID: ${env:FACEBOOK_APP_ID}
+    FACEBOOK_APP_SECRET: ${env:FACEBOOK_APP_SECRET}
+    APPLE_CLIENT_ID: ${env:APPLE_CLIENT_ID}
+    APPLE_TEAM_ID: ${env:APPLE_TEAM_ID}
+    APPLE_KEY_ID: ${env:APPLE_KEY_ID}
+    APPLE_PRIVATE_KEY: ${env:APPLE_PRIVATE_KEY}
+    STRIPE_PUBLIC_KEY: ${env:STRIPE_PUBLIC_KEY}
+    STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
+    AWS_REGION: ${env:AWS_REGION}
+    AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
+
+functions:
+  api:
+    handler: aws-lambda-handler.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+    environment:
+      STAGE: ${self:provider.stage}
+
+plugins:
+  - serverless-esbuild
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: false
+    exclude:
+      - aws-sdk
+    target: node18
+    define:
+      'require.resolve': undefined
+    platform: node
+    concurrency: 10
+    external:
+      - '@aws-sdk/*'
+      - 'aws-sdk'
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.env*'
+    - '!*.md'
+    - '!app/**'
+    - '!components/**'
+    - '!assets/**'
+    - '!dist/**'
+    - '!django_server/**'
+    - '!lambda/**'
+    - 'backend/**'
