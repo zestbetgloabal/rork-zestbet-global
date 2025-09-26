@@ -235,8 +235,9 @@ export default function TestDashboard() {
         <View style={styles.links}>
           <Text style={styles.linksTitle}>🔗 Nützliche Links</Text>
           <Text style={styles.linkText}>
-            • App: https://rork-zestbet-global.vercel.app{'\n'}
-            • API: https://rork-zestbet-global.vercel.app/api{'\n'}
+            • App: https://zestapp.online{'\n'}
+            • API: https://zestapp.online/api{'\n'}
+            • Status: https://zestapp.online/api/status{'\n'}
             • Test Accounts verfügbar
           </Text>
         </View>

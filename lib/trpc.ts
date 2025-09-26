@@ -8,54 +8,34 @@ import { debugApiCall } from "@/utils/crashPrevention";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
+  // Production URL - direkt hardcoded da env vars nicht laden
+  const productionUrl = 'https://zestapp.online/api/trpc';
+  
   // Log environment variables for debugging
   console.log('🔍 Environment check:');
   console.log('EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
   console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
   console.log('EXPO_PUBLIC_BASE_URL:', process.env.EXPO_PUBLIC_BASE_URL);
   
-  // For AWS Amplify, use the current domain with /api/trpc
+  // For AWS Amplify web, use the current domain with /api/trpc
   if (typeof window !== "undefined" && window.location?.origin) {
-    const amplifyUrl = `${window.location.origin}/api/trpc`;
-    console.log('🔗 Using Amplify URL:', amplifyUrl);
-    return amplifyUrl;
+    // Check if we're on the production domain
+    if (window.location.origin.includes('zestapp.online') || 
+        window.location.origin.includes('amplifyapp.com')) {
+      const amplifyUrl = `${window.location.origin}/api/trpc`;
+      console.log('🔗 Using Amplify URL:', amplifyUrl);
+      return amplifyUrl;
+    }
+    // For localhost development
+    if (window.location.origin.includes('localhost')) {
+      const localUrl = `${window.location.origin}/api/trpc`;
+      console.log('🔗 Using local URL:', localUrl);
+      return localUrl;
+    }
   }
 
-  // First check for explicit tRPC URL
-  const explicit = process.env.EXPO_PUBLIC_TRPC_URL;
-  if (explicit && explicit !== 'https://your-api-gateway-id.execute-api.eu-central-1.amazonaws.com/prod') {
-    console.log('Using explicit tRPC URL:', explicit);
-    return explicit.endsWith('/trpc') ? explicit : `${explicit}/trpc`;
-  }
-
-  // Check for API URL and append /trpc
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (apiUrl && apiUrl !== 'https://your-api-gateway-id.execute-api.eu-central-1.amazonaws.com/prod') {
-    const base = apiUrl.replace(/\/$/, "");
-    const trpcUrl = `${base}/trpc`;
-    console.log('Using API URL for tRPC:', trpcUrl);
-    return trpcUrl;
-  }
-
-  // Check for base URL and append /api/trpc
-  const baseUrl = process.env.EXPO_PUBLIC_BASE_URL;
-  if (baseUrl && baseUrl !== 'https://your-api-gateway-id.execute-api.eu-central-1.amazonaws.com/prod') {
-    const base = baseUrl.replace(/\/$/, "");
-    const trpcUrl = `${base}/api/trpc`;
-    console.log('Using base URL for tRPC:', trpcUrl);
-    return trpcUrl;
-  }
-
-  // Fallback for Amplify function URL
-  const amplifyFunctionUrl = process.env.EXPO_PUBLIC_AMPLIFY_FUNCTION_URL;
-  if (amplifyFunctionUrl) {
-    const base = amplifyFunctionUrl.replace(/\/$/, "");
-    return `${base}/trpc`;
-  }
-
-  // Hardcoded fallback for production (since env vars are not loading)
-  const productionUrl = 'https://zestapp.online/api/trpc';
-  console.log('⚠️ Using hardcoded production URL:', productionUrl);
+  // For mobile/native, always use production URL
+  console.log('📱 Using production URL for mobile:', productionUrl);
   return productionUrl;
 };
 
