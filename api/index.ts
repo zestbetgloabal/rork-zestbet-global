@@ -4,8 +4,6 @@ import { trpcServer } from "@hono/trpc-server";
 import { cors } from "hono/cors";
 import { appRouter } from "../backend/trpc/app-router";
 import { createContext } from "../backend/trpc/create-context";
-import { loggerMiddleware, errorLoggerMiddleware } from "../backend/middleware/logger";
-import { generalRateLimit, authRateLimit } from "../backend/middleware/rate-limit";
 
 // Create Hono app for Vercel
 const app = new Hono().basePath("/api");
@@ -20,37 +18,6 @@ app.use("*", cors({
   ],
   credentials: true,
 }));
-
-// Rate limiting middleware
-app.use("/trpc/auth.*", authRateLimit);
-app.use("*", generalRateLimit);
-
-// Logging middleware
-app.use("*", async (c, next) => loggerMiddleware(c, next));
-app.use("*", async (c, next) => errorLoggerMiddleware(c, next));
-
-// Cache-control headers: never cache auth or trpc auth endpoints
-app.use("*", async (c, next) => {
-  await next();
-  const url = new URL(c.req.url);
-  const path = url.pathname.replace(/^\/api/, "");
-  const isAuthPath = path.startsWith("/auth") || path.startsWith("/trpc/auth");
-  if (isAuthPath) {
-    c.res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-    c.res.headers.set("Pragma", "no-cache");
-    c.res.headers.set("Expires", "0");
-  }
-});
-
-// Mount tRPC router at /trpc
-app.use(
-  "/trpc/*",
-  trpcServer({
-    endpoint: "/api/trpc",
-    router: appRouter,
-    createContext,
-  })
-);
 
 // Simple health check endpoint
 app.get("/", (c) => {
@@ -76,6 +43,28 @@ app.get("/status", (c) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Mount tRPC router at /trpc
+try {
+  app.use(
+    "/trpc/*",
+    trpcServer({
+      endpoint: "/api/trpc",
+      router: appRouter,
+      createContext,
+    })
+  );
+  console.log('✅ tRPC server mounted successfully');
+} catch (error) {
+  console.error('❌ Failed to mount tRPC server:', error);
+  // Fallback endpoint
+  app.get('/trpc/*', (c) => {
+    return c.json({ 
+      error: 'tRPC server failed to initialize', 
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  });
+}
 
 // Stateless logout endpoint to clear auth cookies (if any)
 app.post("/auth/logout", (c) => {

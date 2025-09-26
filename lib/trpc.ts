@@ -11,6 +11,7 @@ const getTrpcUrl = (): string => {
   // First check for explicit tRPC URL
   const explicit = process.env.EXPO_PUBLIC_TRPC_URL;
   if (explicit && explicit !== 'https://your-api-gateway-id.execute-api.eu-central-1.amazonaws.com/prod') {
+    console.log('Using explicit tRPC URL:', explicit);
     return explicit.endsWith('/trpc') ? explicit : `${explicit}/trpc`;
   }
 
@@ -18,7 +19,9 @@ const getTrpcUrl = (): string => {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL;
   if (apiUrl && apiUrl !== 'https://your-api-gateway-id.execute-api.eu-central-1.amazonaws.com/prod') {
     const base = apiUrl.replace(/\/$/, "");
-    return `${base}/trpc`;
+    const trpcUrl = `${base}/trpc`;
+    console.log('Using API URL for tRPC:', trpcUrl);
+    return trpcUrl;
   }
 
   // Fallback for Amplify function URL
@@ -33,7 +36,12 @@ const getTrpcUrl = (): string => {
     return `${window.location.origin}/api/trpc`;
   }
 
-  throw new Error("TRPC URL not configured. Set EXPO_PUBLIC_API_URL with your Lambda API Gateway URL.");
+  console.error('❌ No tRPC URL configured!');
+  console.error('Environment variables:');
+  console.error('EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
+  console.error('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
+  
+  throw new Error("TRPC URL not configured. Set EXPO_PUBLIC_API_URL with your Vercel deployment URL.");
 };
 
 const getWsUrl = (): string => {
@@ -83,15 +91,42 @@ const getTrpcUrlSafe = () => {
   }
 };
 
-// Simple HTTP link without excessive logging
+// HTTP link with better error handling
 const createHttpLink = () => {
   const url = getTrpcUrlSafe();
+  console.log('🔗 Creating tRPC HTTP link with URL:', url);
   
   return httpBatchLink({
     url,
     transformer: superjson,
     headers() {
-      return getAuthHeaders();
+      const headers = getAuthHeaders();
+      console.log('📡 tRPC request headers:', headers);
+      return headers;
+    },
+    fetch: async (input, init) => {
+      console.log('🌐 tRPC fetch request:', input, init?.method || 'GET');
+      
+      try {
+        const response = await fetch(input, init);
+        console.log('📥 tRPC response status:', response.status, response.statusText);
+        
+        // Log response headers for debugging
+        const contentType = response.headers.get('content-type');
+        console.log('📄 Response content-type:', contentType);
+        
+        // If we get HTML instead of JSON, log it
+        if (!contentType?.includes('application/json') && !response.ok) {
+          const text = await response.clone().text();
+          console.error('❌ Received HTML instead of JSON:', text.substring(0, 200));
+          console.error('This usually means the API endpoint is not working properly');
+        }
+        
+        return response;
+      } catch (error) {
+        console.error('❌ tRPC fetch error:', error);
+        throw error;
+      }
     },
   });
 };
