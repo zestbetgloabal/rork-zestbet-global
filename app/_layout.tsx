@@ -175,6 +175,7 @@ function RootLayoutNav() {
   const isInAuthGroup = hermesGuard(() => segments?.[0] === '(auth)', false, 'auth group check');
   const isInLegalGroup = hermesGuard(() => segments?.[0] === 'legal', false, 'legal group check');
   
+  // Simplified navigation logic - only redirect authenticated users from auth pages
   useEffect(() => {
     if (!_hasHydrated) return; // Don't navigate until hydrated
     if (isNavigating) return; // Prevent multiple navigations
@@ -183,26 +184,16 @@ function RootLayoutNav() {
       try {
         setIsNavigating(true);
         
-        // Add delay for iPad stability
-        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('Navigation check:', {
+          isAuthenticated,
+          hasToken: !!token,
+          isInAuthGroup,
+          currentSegments: segments
+        });
         
-        // If user is not authenticated and not in auth or legal group, redirect to welcome/login
-        if (!isAuthenticated || !token) {
-          if (!isInAuthGroup && !isInLegalGroup) {
-            console.log('RootLayout: Redirecting unauthenticated user to welcome');
-            await safeAsync(
-              async () => {
-                await router.replace('/(auth)/start');
-              },
-              undefined,
-              'redirect to welcome'
-            );
-          }
-          return;
-        }
-        
-        // If user is authenticated and in auth group, redirect to tabs
+        // Only redirect authenticated users who are in auth group to tabs
         if (isAuthenticated && token && isInAuthGroup) {
+          console.log('RootLayout: Redirecting authenticated user to tabs');
           await safeAsync(
             async () => {
               await router.replace('/(tabs)');
@@ -218,7 +209,7 @@ function RootLayoutNav() {
       }
     };
 
-    // Add longer delay for iPad compatibility with safe async handling
+    // Only run navigation check after a delay to allow user interaction
     const timer = setTimeout(() => {
       hermesGuard(() => {
         safeAsync(
@@ -229,9 +220,9 @@ function RootLayoutNav() {
           'navigation handling'
         );
       }, undefined, 'navigation timer');
-    }, 200); // Increased delay for iPad stability
+    }, 2000); // Longer delay to allow user interaction
     return () => clearTimeout(timer);
-  }, [isAuthenticated, token, isInAuthGroup, isInLegalGroup, router, isNavigating, _hasHydrated]);
+  }, [isAuthenticated, token, isInAuthGroup, router, isNavigating, _hasHydrated, segments]);
   
   // Show loading screen until hydration is complete
   if (!_hasHydrated) {
