@@ -74,10 +74,10 @@
     "experiments": {
       "typedRoutes": true
     },
-    "extra": {
-      "eas": {
-        "projectId": "4aa81beb-ebf2-4e52-85bd-a04abd142c5e"
-    }
+"extra": {
+"eas": {
+  "projectId": "4aa81beb-ebf2-4e52-85bd-a04abd142c5e"
+}
 },
 "cli": {
 "appVersionSource": "local"
