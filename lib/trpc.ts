@@ -8,6 +8,13 @@ import { debugApiCall } from "@/utils/crashPrevention";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
+  // For AWS Amplify, use the current domain with /api/trpc
+  if (typeof window !== "undefined" && window.location?.origin) {
+    const amplifyUrl = `${window.location.origin}/api/trpc`;
+    console.log('🔗 Using Amplify URL:', amplifyUrl);
+    return amplifyUrl;
+  }
+
   // First check for explicit tRPC URL
   const explicit = process.env.EXPO_PUBLIC_TRPC_URL;
   if (explicit && explicit !== 'https://your-api-gateway-id.execute-api.eu-central-1.amazonaws.com/prod') {
@@ -31,17 +38,13 @@ const getTrpcUrl = (): string => {
     return `${base}/trpc`;
   }
 
-  // Development fallback
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return `${window.location.origin}/api/trpc`;
-  }
-
   console.error('❌ No tRPC URL configured!');
   console.error('Environment variables:');
   console.error('EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
   console.error('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
   
-  throw new Error("TRPC URL not configured. Set EXPO_PUBLIC_API_URL with your Vercel deployment URL.");
+  // Default fallback for development
+  return 'http://localhost:3000/api/trpc';
 };
 
 const getWsUrl = (): string => {
