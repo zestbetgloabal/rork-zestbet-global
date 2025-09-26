@@ -33,11 +33,7 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -73,12 +69,14 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-"extra": {
-"eas": {
-  "projectId": "4aa81beb-ebf2-4e52-85bd-a04abd142c5e"
-}
-},
-"cli": {
-"appVersionSource": "local"
+    }
+  },
+  "extra": {
+    "eas": {
+      "projectId": "4aa81beb-ebf2-4e52-85bd-a04abd142c5e"
+    }
+  },
+  "cli": {
+    "appVersionSource": "local"
+  }
 }
