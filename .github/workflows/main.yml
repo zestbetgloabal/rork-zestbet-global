@@ -42,5 +42,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
+      - name: Configure EAS credentials
+        run: |
+          echo "Configuring EAS credentials..."
+          npx eas-cli credentials:configure --platform ios --profile production --non-interactive || echo "Credentials already configured"
+
       - name: Build iOS
-        run: npx eas-cli build --platform ios --profile production --auto-submit --non-interactive
+        run: |
+          echo "Starting iOS build..."
+          npx eas-cli build --platform ios --profile production --non-interactive --clear-cache
+        env:
+          EAS_NO_VCS: 1
