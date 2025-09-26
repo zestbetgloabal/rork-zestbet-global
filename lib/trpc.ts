@@ -8,6 +8,12 @@ import { debugApiCall } from "@/utils/crashPrevention";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
+  // Log environment variables for debugging
+  console.log('🔍 Environment check:');
+  console.log('EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
+  console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
+  console.log('EXPO_PUBLIC_BASE_URL:', process.env.EXPO_PUBLIC_BASE_URL);
+  
   // For AWS Amplify, use the current domain with /api/trpc
   if (typeof window !== "undefined" && window.location?.origin) {
     const amplifyUrl = `${window.location.origin}/api/trpc`;
@@ -31,6 +37,15 @@ const getTrpcUrl = (): string => {
     return trpcUrl;
   }
 
+  // Check for base URL and append /api/trpc
+  const baseUrl = process.env.EXPO_PUBLIC_BASE_URL;
+  if (baseUrl && baseUrl !== 'https://your-api-gateway-id.execute-api.eu-central-1.amazonaws.com/prod') {
+    const base = baseUrl.replace(/\/$/, "");
+    const trpcUrl = `${base}/api/trpc`;
+    console.log('Using base URL for tRPC:', trpcUrl);
+    return trpcUrl;
+  }
+
   // Fallback for Amplify function URL
   const amplifyFunctionUrl = process.env.EXPO_PUBLIC_AMPLIFY_FUNCTION_URL;
   if (amplifyFunctionUrl) {
@@ -38,13 +53,10 @@ const getTrpcUrl = (): string => {
     return `${base}/trpc`;
   }
 
-  console.error('❌ No tRPC URL configured!');
-  console.error('Environment variables:');
-  console.error('EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
-  console.error('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
-  
-  // Default fallback for development
-  return 'http://localhost:3000/api/trpc';
+  // Hardcoded fallback for production (since env vars are not loading)
+  const productionUrl = 'https://zestapp.online/api/trpc';
+  console.log('⚠️ Using hardcoded production URL:', productionUrl);
+  return productionUrl;
 };
 
 const getWsUrl = (): string => {
@@ -89,8 +101,8 @@ const getTrpcUrlSafe = () => {
     return getTrpcUrl();
   } catch (error) {
     console.warn('TRPC URL configuration error:', error);
-    // Fallback URL for development
-    return 'http://localhost:3000/api/trpc';
+    // Hardcoded fallback for production
+    return 'https://zestapp.online/api/trpc';
   }
 };
 
