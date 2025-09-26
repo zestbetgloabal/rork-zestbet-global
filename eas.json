@@ -20,11 +20,15 @@
   "production": {
     "ios": {
       "resourceClass": "m-medium",
-      "buildConfiguration": "Release"
+      "buildConfiguration": "Release",
+      "credentialsSource": "remote",
+      "autoIncrement": true
     },
     "android": {
       "resourceClass": "medium",
-      "buildType": "app-bundle"
+      "buildType": "app-bundle",
+      "credentialsSource": "remote",
+      "autoIncrement": true
     }
   }
 },
@@ -33,7 +37,8 @@
     "ios": {
       "appleId": "erhan.berse@googlemail.com",
       "ascAppId": "6749276092",
-      "appleTeamId": "RLFRGC9727"
+      "appleTeamId": "RLFRGC9727",
+      "sku": "zestbet-app"
     }
   }
 }
