@@ -26,6 +26,7 @@
         "dotenv": "^17.2.2",
         "drizzle-kit": "^0.31.4",
         "drizzle-orm": "^0.44.5",
+        "esbuild": "^0.25.10",
         "expo": "^53.0.4",
         "expo-auth-session": "~6.2.1",
         "expo-blur": "~14.1.4",

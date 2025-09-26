@@ -4,6 +4,8 @@ frontend:
     preBuild:
       commands:
         - 'npm install'
+        - 'echo Installing backend dependencies...'
+        - 'cd backend && npm install'
     build:
       commands:
         - 'echo Starting Expo web export'
@@ -14,6 +16,10 @@ frontend:
         - 'ENTRY_BASENAME=$(basename "$ENTRY_FILE") && echo Found $ENTRY_BASENAME'
         - 'sed -i "s#</head>#<script type=\"module\" src=\"/_expo/static/js/web/${ENTRY_BASENAME}\"></script></head>#g" dist/index.html'
         - 'echo Injected web entry into index'
+        - 'echo Building backend for Lambda...'
+        - 'npx esbuild backend/amplify/index.ts --bundle --platform=node --target=node18 --outfile=backend/dist/index.js --external:@aws-sdk/*'
+        - 'echo Copying Lambda function to dist...'
+        - 'mkdir -p dist/api && cp backend/dist/index.js dist/api/'
     postBuild:
       commands:
         - 'cp dist/index.html dist/200.html || copy dist/index.html dist/200.html || true'
@@ -25,3 +31,4 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
+      - backend/node_modules/**/*
