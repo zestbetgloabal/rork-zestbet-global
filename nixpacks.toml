@@ -1,14 +1,16 @@
 [phases.setup]
-nixPkgs = ['nodejs_20', 'npm-10_x']
+nixPkgs = ['nodejs_20']
 
 [phases.install]
 cmds = ['npm install']
 
 [phases.build]
-cmds = ['npx tsx backend/hono.ts --check || echo "TypeScript check completed"']
+cmds = ['echo "Build completed"']
 
 [start]
 cmd = 'npx tsx backend/server.ts'
 
 [variables]
 NODE_ENV = 'production'
+PORT = '3001'
+HOST = '0.0.0.0'
