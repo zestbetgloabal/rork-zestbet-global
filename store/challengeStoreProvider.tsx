@@ -16,10 +16,15 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     networkMode: 'offlineFirst',
   });
   
-  // Log query state changes
+  // Log query state changes with better error handling
   React.useEffect(() => {
     if (challengesQuery.error) {
-      console.error('❌ Challenges query error:', challengesQuery.error.message);
+      // Don't log mock mode errors as errors - they're expected
+      if (challengesQuery.error.message.includes('Mock mode')) {
+        console.log('🎭 Mock mode active - using fallback data');
+      } else {
+        console.error('❌ Challenges query error:', challengesQuery.error.message);
+      }
     }
     if (challengesQuery.data) {
       console.log('✅ Challenges loaded:', challengesQuery.data?.challenges?.length || 0);
@@ -42,7 +47,10 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
   }, [challengesQuery.data?.challenges]);
   
   const isLoading = challengesQuery.isLoading;
-  const error = challengesQuery.error?.message || null;
+  // Don't show mock mode errors as actual errors to the user
+  const error = challengesQuery.error?.message?.includes('Mock mode') 
+    ? null 
+    : challengesQuery.error?.message || null;
 
   // Mock user challenges for now - memoized to prevent re-renders
   const userChallenges = useMemo(() => [] as string[], []);
