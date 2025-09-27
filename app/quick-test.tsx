@@ -36,26 +36,53 @@ export default function QuickTestScreen() {
   const testDirectConnection = async () => {
     setTestResult('Testing direct connection...');
     
-    try {
-      const response = await fetch('https://zestapp.online/api/status', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.text();
-        setTestResult(`✅ Direct API Success: ${data.substring(0, 100)}`);
-        setIsConnected(true);
-      } else {
-        setTestResult(`❌ Direct API Failed: Status ${response.status}`);
-        setIsConnected(false);
+    // Test multiple endpoints to find working one
+    const endpoints = [
+      'https://zestapp.online/api/status',
+      'https://zestapp.online/api',
+      'https://zestapp.online/api/trpc/example.hi'
+    ];
+    
+    for (const endpoint of endpoints) {
+      try {
+        console.log('🔍 Testing endpoint:', endpoint);
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+        
+        const contentType = response.headers.get('content-type');
+        let data = '';
+        
+        try {
+          if (contentType?.includes('application/json')) {
+            const jsonData = await response.json();
+            data = JSON.stringify(jsonData, null, 2);
+          } else {
+            data = await response.text();
+          }
+        } catch {
+          data = 'Could not parse response';
+        }
+        
+        if (response.ok) {
+          setTestResult(`✅ Direct API Success (${endpoint}):\n${data.substring(0, 200)}`);
+          setIsConnected(true);
+          return; // Stop on first success
+        } else {
+          console.log(`❌ ${endpoint} failed with status ${response.status}`);
+        }
+      } catch (error) {
+        console.log(`❌ ${endpoint} error:`, error);
       }
-    } catch (error) {
-      setTestResult(`❌ Direct Connection Error: ${String(error)}`);
-      setIsConnected(false);
     }
+    
+    // If we get here, all endpoints failed
+    setTestResult(`❌ All API endpoints failed. The server may be down or misconfigured.\n\nTested endpoints:\n${endpoints.join('\n')}`);
+    setIsConnected(false);
   };
 
   return (
@@ -103,6 +130,16 @@ export default function QuickTestScreen() {
         >
           <Text style={styles.buttonText}>Test Direct Connection</Text>
         </TouchableOpacity>
+        
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Environment Info:</Text>
+          <Text style={styles.infoText}>
+            TRPC URL: {process.env.EXPO_PUBLIC_TRPC_URL || 'Not set'}{'\n'}
+            API URL: {process.env.EXPO_PUBLIC_API_URL || 'Not set'}{'\n'}
+            Platform: {typeof window !== 'undefined' ? 'Web' : 'Mobile'}{'\n'}
+            Origin: {typeof window !== 'undefined' ? window.location?.origin || 'N/A' : 'N/A'}
+          </Text>
+        </View>
         
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>What this means:</Text>
