@@ -116,7 +116,7 @@ export default function HomeScreen() {
       <View style={styles.welcomeSection}>
         <View style={styles.welcomeHeader}>
           <View>
-            <Text style={styles.welcomeText}>Welcome back,</Text>
+            <Text style={styles.welcomeText}>Welcome back! 🎯</Text>
             <Text style={styles.username}>{user?.username}</Text>
           </View>
           <View style={styles.balanceContainer}>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 56, // Added 1cm (approximately 38px) of padding to move content down
+    paddingTop: 20,
   },
   welcomeSection: {
     backgroundColor: colors.card,
