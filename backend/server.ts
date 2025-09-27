@@ -1,23 +1,20 @@
-#!/usr/bin/env bun
-
-import app from "./hono";
+import 'dotenv/config';
+import { serve } from '@hono/node-server';
+import app from './hono';
 
 const port = process.env.PORT || 3001;
+const host = process.env.HOST || '0.0.0.0';
 
-console.log(`🚀 Starting ZestBet Backend Server...`);
-console.log(`📍 Server will be available at: http://localhost:${port}`);
-console.log(`🔗 API Status: http://localhost:${port}/api/status`);
-console.log(`🔗 tRPC Endpoint: http://localhost:${port}/api/trpc`);
-console.log(`🔗 Health Check: http://localhost:${port}/api`);
-console.log("");
+console.log(`🚀 Starting ZestBet API server on ${host}:${port}`);
+console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`🗄️ Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
 
-// Export the app for Bun to serve
-export default {
+serve({
   fetch: app.fetch,
-  port: Number(port),
-  hostname: "0.0.0.0",
-};
-
-console.log(`✅ Backend server running at http://localhost:${port}`);
-console.log(`Press Ctrl+C to stop the server`);
-console.log("");
+  port: parseInt(port.toString()),
+  hostname: host,
+}, (info) => {
+  console.log(`✅ ZestBet API server is running on http://${info.address}:${info.port}`);
+  console.log(`🔗 Health check: http://${info.address}:${info.port}/api/health`);
+  console.log(`🔗 tRPC endpoint: http://${info.address}:${info.port}/api/trpc`);
+});
