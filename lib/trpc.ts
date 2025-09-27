@@ -30,8 +30,10 @@ const getTrpcUrl = (): string => {
   if (Platform.OS === "web") {
     if (typeof window !== "undefined" && window.location?.origin) {
       const origin = window.location.origin;
-      if (__DEV__ && origin.includes("localhost")) {
-        return "http://localhost:3001/api/trpc";
+      if (__DEV__ && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
+        const devUrl = "http://localhost:3001/api/trpc";
+        console.log("🌐 Using web dev URL:", devUrl);
+        return devUrl;
       }
       return `${origin}/api/trpc`;
     }
@@ -39,12 +41,12 @@ const getTrpcUrl = (): string => {
 
   if (__DEV__) {
     const host = resolveDevHost();
-    if (host) {
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
       const url = `http://${host}:3001/api/trpc`;
       console.log("🏠 Using LAN dev URL:", url);
       return url;
     }
-    console.log("⚠️ Could not resolve LAN host, falling back to localhost (may fail on device)");
+    console.log("🏠 Using localhost dev URL");
     return "http://localhost:3001/api/trpc";
   }
 
@@ -178,9 +180,7 @@ const createHttpLink = () => {
             if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
               const isLocal = /localhost|127\.0\.0\.1/.test(url);
               if (isLocal || url.includes(':3001')) {
-                const host = resolveDevHost();
-                const hint = host ? `http://${host}:3001` : 'your computer\'s LAN IP on port 3001';
-                throw new Error(`Cannot connect to local development server. Ensure backend runs and is reachable at ${hint}. Start it with: ./start-backend.sh or bun run dev-server.ts`);
+                throw new Error(`Cannot connect to local development server. Run: ./start-backend.sh or bun run dev-server.ts to start the backend on port 3001.`);
               }
               throw new Error('Network connection failed. Check your internet connection and API server status.');
             }
