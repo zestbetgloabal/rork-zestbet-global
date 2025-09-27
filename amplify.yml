@@ -16,6 +16,7 @@ frontend:
         - 'sed -i "s#</head>#<script type=\"module\" src=\"/_expo/static/js/web/${ENTRY_BASENAME}\"></script></head>#g" dist/index.html'
         - 'echo Injected web entry into index'
         - 'echo Building backend for Lambda...'
+        - 'mkdir -p backend/dist'
         - 'npx esbuild backend/amplify/index.ts --bundle --platform=node --target=node18 --outfile=backend/dist/index.js --external:@aws-sdk/*'
         - 'echo Copying Lambda function to dist...'
         - 'mkdir -p dist/api && cp backend/dist/index.js dist/api/'
