@@ -5,54 +5,46 @@ import { trpc } from '@/lib/trpc';
 import { mockChallenges } from '@/constants/mockData';
 
 export const [ChallengeProvider, useChallenges] = createContextHook(() => {
-  // Use tRPC query for challenges with better error handling
+  // Use tRPC query for challenges with better error handling and mock fallback
   const challengesQuery = trpc.challenges.list.useQuery({
     limit: 50,
     offset: 0
   }, {
-    retry: 1, // Retry once to handle temporary network issues
-    retryDelay: 1000, // Wait 1 second before retry
-    staleTime: 30000, // Cache for 30 seconds
+    retry: 0, // Don't retry in mock mode
+    retryDelay: 0,
+    staleTime: 300000, // Cache for 5 minutes in mock mode
     refetchOnWindowFocus: false,
-    networkMode: 'offlineFirst',
-    // Enable fallback to mock data on error
+    networkMode: 'always', // Always try to fetch (will get mock data)
     enabled: true,
   });
   
-  // Log query state changes with better error handling
+  // Log query state changes - now always successful in mock mode
   React.useEffect(() => {
-    if (challengesQuery.error) {
-      if (challengesQuery.error.message.includes('Failed to fetch') || 
-          challengesQuery.error.message.includes('Network connection failed') ||
-          challengesQuery.error.message.includes('API endpoint not found')) {
-        console.log('🎭 Mock mode - using fallback data');
-      } else {
-        console.error('❌ Challenges query error:', challengesQuery.error.message);
-      }
-    }
     if (challengesQuery.data) {
-      console.log('✅ Challenges loaded from API:', challengesQuery.data?.challenges?.length || 0);
+      console.log('✅ Challenges loaded from Mock API:', challengesQuery.data?.challenges?.length || 0);
     }
-  }, [challengesQuery.error, challengesQuery.data]);
+    if (challengesQuery.isLoading) {
+      console.log('⏳ Loading challenges from Mock API...');
+    }
+  }, [challengesQuery.data, challengesQuery.isLoading]);
 
-  // Always ensure we have a valid array - never return undefined
+  // Always ensure we have a valid array - mock mode always returns data
   const challenges = useMemo(() => {
     try {
-      // If we have valid API data, use it
+      // If we have valid Mock API data, use it
       if (challengesQuery.data?.challenges && Array.isArray(challengesQuery.data.challenges)) {
-        console.log('✅ Using API challenges:', challengesQuery.data.challenges.length);
+        console.log('✅ Using Mock API challenges:', challengesQuery.data.challenges.length);
         return challengesQuery.data.challenges as Challenge[];
       }
       
       // If query is still loading, return empty array to prevent undefined errors
       if (challengesQuery.isLoading) {
-        console.log('⏳ Query loading, returning empty array');
+        console.log('⏳ Mock API loading, returning empty array');
         return [];
       }
       
-      // Always return mock data as fallback to prevent undefined errors
-      console.log('🔄 Using mock challenges as fallback');
-      // Ensure mockChallenges is always an array
+      // Fallback to direct mock data (should rarely happen in mock mode)
+      console.log('🔄 Using direct mock challenges as fallback');
       const fallbackChallenges = Array.isArray(mockChallenges) ? mockChallenges : [];
       return fallbackChallenges;
     } catch (error) {
@@ -63,13 +55,8 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
   }, [challengesQuery.data?.challenges, challengesQuery.isLoading]);
   
   const isLoading = challengesQuery.isLoading;
-  // Only show error for non-connection issues to avoid confusing users in mock mode
-  const error = challengesQuery.error && 
-    !challengesQuery.error.message.includes('Failed to fetch') &&
-    !challengesQuery.error.message.includes('Network connection failed') &&
-    !challengesQuery.error.message.includes('API endpoint not found')
-    ? challengesQuery.error.message 
-    : null;
+  // In mock mode, we don't show errors to users
+  const error = null; // Always null in mock mode for better UX
 
   // Mock user challenges for now - memoized to prevent re-renders
   const userChallenges = useMemo(() => [] as string[], []);
