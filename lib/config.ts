@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { loadEnvironmentVariables } from './env-loader';
 
 /**
  * Configuration helper for environment variables in Expo
@@ -36,17 +37,28 @@ const getEnvVar = (key: 'EXPO_PUBLIC_API_URL' | 'EXPO_PUBLIC_TRPC_URL' | 'EXPO_P
       break;
   }
   
+  console.log(`🔍 Environment variable ${key}:`, {
+    processEnv: processEnvValue,
+    isValid: processEnvValue && processEnvValue !== 'undefined' && processEnvValue !== 'null'
+  });
+  
   if (processEnvValue && processEnvValue !== 'undefined' && processEnvValue !== 'null') {
     return processEnvValue;
   }
 
   // Try Constants.expoConfig.extra
   const expoConfigValue = Constants.expoConfig?.extra?.[key];
+  console.log(`🔍 Expo config ${key}:`, {
+    expoConfig: expoConfigValue,
+    isValid: expoConfigValue && expoConfigValue !== 'undefined' && expoConfigValue !== 'null'
+  });
+  
   if (expoConfigValue && expoConfigValue !== 'undefined' && expoConfigValue !== 'null') {
     return expoConfigValue;
   }
 
   // Return fallback
+  console.log(`🔍 Using fallback for ${key}:`, fallback);
   return fallback;
 };
 
@@ -54,6 +66,9 @@ const getEnvVar = (key: 'EXPO_PUBLIC_API_URL' | 'EXPO_PUBLIC_TRPC_URL' | 'EXPO_P
  * Get the app configuration with proper fallbacks
  */
 export const getAppConfig = (): AppConfig => {
+  // Ensure environment variables are loaded
+  const envVars = loadEnvironmentVariables();
+  
   const isDevelopment = __DEV__;
   const platform = Platform.OS;
 
@@ -66,16 +81,34 @@ export const getAppConfig = (): AppConfig => {
   const devApiUrl = 'http://localhost:3001/api';
   const devTrpcUrl = 'http://localhost:3001/api/trpc';
   const devBaseUrl = 'http://localhost:3001';
+  
+  // For web development, use localhost
+  if (platform === 'web' && isDevelopment) {
+    return {
+      apiUrl: devApiUrl,
+      trpcUrl: devTrpcUrl,
+      baseUrl: devBaseUrl,
+      isDevelopment,
+      platform,
+    };
+  }
 
   // Get environment variables with fallbacks
-  const apiUrl = getEnvVar('EXPO_PUBLIC_API_URL') || 
-                 (isDevelopment && platform !== 'web' ? devApiUrl : prodApiUrl);
+  // Always use production URLs for now since environment variables are not loading
+  const apiUrl = getEnvVar('EXPO_PUBLIC_API_URL') || prodApiUrl;
+  const trpcUrl = getEnvVar('EXPO_PUBLIC_TRPC_URL') || prodTrpcUrl;
+  const baseUrl = getEnvVar('EXPO_PUBLIC_BASE_URL') || prodBaseUrl;
   
-  const trpcUrl = getEnvVar('EXPO_PUBLIC_TRPC_URL') || 
-                  (isDevelopment && platform !== 'web' ? devTrpcUrl : prodTrpcUrl);
-  
-  const baseUrl = getEnvVar('EXPO_PUBLIC_BASE_URL') || 
-                  (isDevelopment && platform !== 'web' ? devBaseUrl : prodBaseUrl);
+  console.log('🔧 Config resolution:', {
+    isDevelopment,
+    platform,
+    envApiUrl: getEnvVar('EXPO_PUBLIC_API_URL'),
+    envTrpcUrl: getEnvVar('EXPO_PUBLIC_TRPC_URL'),
+    envBaseUrl: getEnvVar('EXPO_PUBLIC_BASE_URL'),
+    finalApiUrl: apiUrl,
+    finalTrpcUrl: trpcUrl,
+    finalBaseUrl: baseUrl
+  });
 
   const config: AppConfig = {
     apiUrl,

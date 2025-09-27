@@ -1,12 +1,12 @@
 import { Hono } from "hono";
-// AWS Amplify doesn't need special handler like Vercel
+import { handle } from "hono/aws-lambda";
 import { trpcServer } from "@hono/trpc-server";
 import { cors } from "hono/cors";
 import { appRouter } from "../backend/trpc/app-router";
 import { createContext } from "../backend/trpc/create-context";
 
 // Create Hono app for AWS Amplify
-const app = new Hono().basePath("/api");
+const app = new Hono();
 
 // Enable CORS for all routes
 app.use("*", cors({
@@ -44,11 +44,21 @@ app.get("/status", (c) => {
   });
 });
 
-// Mount tRPC router at /trpc
+// Mount tRPC router at /api/trpc
+app.use(
+  "/api/trpc/*",
+  trpcServer({
+    endpoint: "/api/trpc",
+    router: appRouter,
+    createContext,
+  })
+);
+
+// Also mount at /trpc for compatibility
 app.use(
   "/trpc/*",
   trpcServer({
-    endpoint: "/api/trpc",
+    endpoint: "/trpc",
     router: appRouter,
     createContext,
   })
@@ -85,3 +95,6 @@ app.post("/auth/logout", (c) => {
 
 // Export for AWS Amplify
 export default app;
+
+// Export Lambda handler for AWS Amplify
+export const handler = handle(app);

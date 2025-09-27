@@ -24,6 +24,8 @@ export const config = {
       'http://localhost:3000',
       'http://localhost:8081',
       'https://*.amplifyapp.com',
+      'https://zestapp.online',
+      'https://main.ddk0z2esbs19wf.amplifyapp.com',
     ],
     credentials: true,
   },
