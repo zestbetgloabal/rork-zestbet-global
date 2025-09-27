@@ -25,8 +25,7 @@
     },
     "ios": {
       "resourceClass": "m-medium",
-      "buildConfiguration": "Release",
-      "appleTeamId": "RLFRGC9727"
+      "buildConfiguration": "Release"
     },
     "android": {
       "resourceClass": "medium",
