@@ -40,7 +40,16 @@ app.use("*", async (c, next) => {
   }
 });
 
-// Mount tRPC router at /api/trpc
+// Mount tRPC router at /trpc
+app.use(
+  "/trpc/*",
+  trpcServer({
+    router: appRouter,
+    createContext,
+  })
+);
+
+// Also mount at /api/trpc for compatibility
 app.use(
   "/api/trpc/*",
   trpcServer({
