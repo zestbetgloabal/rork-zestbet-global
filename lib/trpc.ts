@@ -12,6 +12,7 @@ const getTrpcUrl = (): string => {
   if (__DEV__ || process.env.NODE_ENV === 'development') {
     const localUrl = 'http://localhost:3001/api/trpc';
     console.log('🏠 Using local development URL:', localUrl);
+    console.log('💡 If connection fails, run: ./start-backend.sh or bun run dev-server.ts');
     return localUrl;
   }
   
@@ -176,14 +177,14 @@ const createHttpLink = () => {
           if (error instanceof Error) {
             if (error.name === 'AbortError' || error.name === 'TimeoutError') {
               if (__DEV__ && url.includes('localhost')) {
-                throw new Error('Local development server not responding. Please start the backend server with: bun run dev:backend');
+                throw new Error('Local development server not responding. Please start the backend server with: ./start-backend.sh or bun run dev-server.ts');
               }
               throw new Error('Request timeout. The API server may be slow or unavailable.');
             }
             if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
               // Try to provide more specific error information
               if (url.includes('localhost')) {
-                throw new Error('Cannot connect to local development server. Make sure the backend is running on port 3001.');
+                throw new Error('Cannot connect to local development server. Run: ./start-backend.sh or bun run dev-server.ts to start the backend on port 3001.');
               }
               throw new Error('Network connection failed. Check your internet connection and API server status.');
             }
