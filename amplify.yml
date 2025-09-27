@@ -22,8 +22,9 @@ frontend:
         - 'mkdir -p dist/api && cp backend/dist/index.js dist/api/'
         - 'echo Creating API routing configuration...'
         - 'echo "/*    /index.html   200" > dist/_redirects'
-        - 'echo "/api/*  /.netlify/functions/api  200" >> dist/_redirects'
-        - 'mkdir -p dist/.netlify/functions && cp backend/dist/index.js dist/.netlify/functions/api.js'
+        - 'echo "/api/*  /api/index.js  200" >> dist/_redirects'
+        - 'echo "Creating API handler for Amplify..."'
+        - 'cp backend/dist/index.js dist/api/index.js'
     postBuild:
       commands:
         - 'cp dist/index.html dist/200.html || copy dist/index.html dist/200.html || true'

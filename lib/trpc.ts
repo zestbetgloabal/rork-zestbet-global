@@ -10,31 +10,40 @@ export const trpc = createTRPCReact<AppRouter>();
 const getTrpcUrl = (): string => {
   // Check environment variables first
   if (process.env.EXPO_PUBLIC_TRPC_URL) {
+    console.log('🔗 Using env TRPC URL:', process.env.EXPO_PUBLIC_TRPC_URL);
     return process.env.EXPO_PUBLIC_TRPC_URL;
   }
   
-  // Production URL - hardcoded fallback
-  const productionUrl = 'https://zestapp.online/api/trpc';
-  
   // For web environments, use current domain
   if (typeof window !== "undefined" && window.location?.origin) {
+    const origin = window.location.origin;
+    
     // Check if we're on production domains
-    if (window.location.origin.includes('zestapp.online') || 
-        window.location.origin.includes('amplifyapp.com')) {
-      const amplifyUrl = `${window.location.origin}/api/trpc`;
-      if (__DEV__) console.log('🔗 Using production URL:', amplifyUrl);
+    if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
+      // Try multiple possible API endpoints for AWS Amplify
+      const possibleUrls = [
+        `${origin}/api/trpc`,
+        `${origin}/.netlify/functions/api/trpc`,
+        `${origin}/trpc`
+      ];
+      
+      const amplifyUrl = possibleUrls[0]; // Start with the most likely
+      console.log('🔗 Using production URL:', amplifyUrl);
+      console.log('🔗 Fallback URLs available:', possibleUrls.slice(1));
       return amplifyUrl;
     }
+    
     // For localhost development
-    if (window.location.origin.includes('localhost')) {
-      const localUrl = `${window.location.origin}/api/trpc`;
-      if (__DEV__) console.log('🔗 Using local URL:', localUrl);
+    if (origin.includes('localhost')) {
+      const localUrl = `${origin}/api/trpc`;
+      console.log('🔗 Using local URL:', localUrl);
       return localUrl;
     }
   }
 
-  // For mobile/native, always use production URL
-  if (__DEV__) console.log('📱 Using production URL for mobile:', productionUrl);
+  // Production URL - hardcoded fallback for mobile
+  const productionUrl = 'https://zestapp.online/api/trpc';
+  console.log('📱 Using production URL for mobile:', productionUrl);
   return productionUrl;
 };
 
@@ -104,6 +113,8 @@ const createHttpLink = () => {
           throw new Error('Invalid request URL');
         }
         
+        console.log('🔄 tRPC request to:', input);
+        
         const response = await fetch(input, {
           ...init,
           headers: {
@@ -112,22 +123,36 @@ const createHttpLink = () => {
           },
         });
         
+        console.log('📡 tRPC response status:', response.status);
+        
         // Check if response is ok
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
+          console.log('📄 Response content-type:', contentType);
+          
           if (contentType?.includes('text/html')) {
             const text = await response.clone().text();
-            if (__DEV__) {
-              console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
-              console.error('Response:', text.substring(0, 300));
+            console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
+            console.error('Response preview:', text.substring(0, 500));
+            throw new Error(`API returned HTML instead of JSON. Status: ${response.status}. This usually means the API endpoint is not properly configured.`);
+          }
+          
+          // Try to get error message from JSON response
+          try {
+            const errorData = await response.clone().json();
+            throw new Error(`API Error ${response.status}: ${errorData.message || 'Unknown error'}`);
+          } catch {
+            // If it's a 404, suggest checking API deployment
+            if (response.status === 404) {
+              throw new Error(`API endpoint not found (404). The API may not be properly deployed or the routing is incorrect. Check AWS Amplify configuration.`);
             }
-            throw new Error(`API returned HTML instead of JSON. Status: ${response.status}`);
+            throw new Error(`API Error ${response.status}: ${response.statusText}`);
           }
         }
         
         return response;
       } catch (error) {
-        if (__DEV__) console.error('❌ tRPC fetch error:', error);
+        console.error('❌ tRPC fetch error:', error);
         throw error;
       }
     },
@@ -165,13 +190,69 @@ export const vanillaTrpcClient = createTRPCProxyClient<AppRouter>({
   ],
 });
 
-// Simple connection test
+// Enhanced connection test with multiple endpoints
 export const testTrpcConnection = async () => {
-  try {
-    const url = getTrpcUrlSafe();
-    const response = await fetch(url.replace('/trpc', '/status'));
-    return { success: response.ok, status: response.status };
-  } catch (error) {
-    return { success: false, error: String(error) };
+  const baseUrl = getTrpcUrlSafe().replace('/trpc', '');
+  
+  // Test multiple possible endpoints
+  const testEndpoints = [
+    `${baseUrl}/status`,
+    `${baseUrl}/api/status`,
+    `${baseUrl}/health`,
+    `${baseUrl}/api`,
+    baseUrl
+  ];
+  
+  const results = [];
+  
+  for (const endpoint of testEndpoints) {
+    try {
+      console.log('🔍 Testing endpoint:', endpoint);
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      const contentType = response.headers.get('content-type');
+      let data = null;
+      
+      try {
+        if (contentType?.includes('application/json')) {
+          data = await response.json();
+        } else {
+          data = await response.text();
+        }
+      } catch {
+        data = 'Could not parse response';
+      }
+      
+      results.push({
+        endpoint,
+        success: response.ok,
+        status: response.status,
+        contentType,
+        data: typeof data === 'string' ? data.substring(0, 200) : data
+      });
+      
+      // If we found a working endpoint, return early
+      if (response.ok) {
+        console.log('✅ Found working endpoint:', endpoint);
+        break;
+      }
+    } catch (error) {
+      results.push({
+        endpoint,
+        success: false,
+        error: String(error)
+      });
+    }
   }
+  
+  return {
+    baseUrl,
+    results,
+    workingEndpoint: results.find(r => r.success)?.endpoint || null
+  };
 };

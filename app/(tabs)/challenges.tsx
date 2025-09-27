@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Plus, Filter } from 'lucide-react-native';
+import { Plus, Filter, Bug } from 'lucide-react-native';
 import { useChallenges, useFilteredChallenges } from '@/store/challengeStoreProvider';
 import { useUserStore } from '@/store/userStore';
 import ChallengeCard from '@/components/ChallengeCard';
@@ -52,6 +52,10 @@ export default function ChallengesScreen() {
     setShowFilters(!showFilters);
   };
   
+  const handleDebug = () => {
+    router.push('/debug-trpc');
+  };
+  
   // Use filtered challenges hook
   const sortedChallenges = useFilteredChallenges(activeTab, statusFilter, userChallenges);
   
@@ -75,6 +79,10 @@ export default function ChallengesScreen() {
         
         <Pressable style={styles.filterButton} onPress={toggleFilters}>
           <Filter size={20} color={colors.primary} />
+        </Pressable>
+        
+        <Pressable style={styles.debugButton} onPress={handleDebug}>
+          <Bug size={20} color={colors.error} />
         </Pressable>
       </View>
       
@@ -205,6 +213,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
+  },
+  debugButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${colors.error}10`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   filtersContainer: {
     backgroundColor: colors.card,
