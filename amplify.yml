@@ -4,8 +4,7 @@ frontend:
     preBuild:
       commands:
         - 'npm install'
-        - 'echo Installing backend dependencies...'
-        - 'cd backend && npm install'
+        - 'echo Backend dependencies are included in main package.json'
     build:
       commands:
         - 'echo Starting Expo web export'
@@ -36,4 +35,3 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
-      - backend/node_modules/**/*
