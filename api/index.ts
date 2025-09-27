@@ -12,7 +12,7 @@ const app = new Hono().basePath("/api");
 app.use("*", cors({
   origin: [
     "https://zestapp.online",
-    "https://zestapp.online",
+    "https://main.ddk0z2esbs19wf.amplifyapp.com",
     "http://localhost:3000",
     "http://localhost:8081"
   ],
