@@ -56,8 +56,8 @@ export default function ChallengesScreen() {
     router.push('/api-status');
   };
   
-  // Use filtered challenges hook
-  const sortedChallenges = useFilteredChallenges(activeTab, statusFilter, userChallenges);
+  // Use filtered challenges hook with error handling
+  const sortedChallenges = useFilteredChallenges(activeTab, statusFilter, userChallenges || []);
   
   const renderItem = ({ item }: { item: Challenge }) => (
     <ChallengeCard challenge={item} />

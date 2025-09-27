@@ -364,7 +364,7 @@ export const mockLeaderboard: LeaderboardEntry[] = [
   }
 ];
 
-// Mock challenges for development
+// Mock challenges for development - ensure this is always exported as an array
 export const mockChallenges: Challenge[] = [
   {
     id: '1',
@@ -587,3 +587,19 @@ export const mockChallenges: Challenge[] = [
 ];
 
 // Add more mock data as needed for your app
+
+// Validation to ensure mock data is properly exported
+if (!Array.isArray(mockChallenges)) {
+  console.error('❌ mockChallenges is not an array!');
+}
+
+if (mockChallenges.length === 0) {
+  console.warn('⚠️ mockChallenges is empty!');
+}
+
+console.log('✅ Mock data loaded:', {
+  challenges: mockChallenges.length,
+  bets: mockBets.length,
+  socialPosts: mockSocialPosts.length,
+  badges: mockBadges.length
+});
