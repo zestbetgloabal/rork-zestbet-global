@@ -11,7 +11,9 @@ class DatenschutzErrorBoundary extends React.Component<{ children: React.ReactNo
     return { hasError: true };
   }
   componentDidCatch(error: unknown) {
-    console.log('Datenschutz page error', error);
+    if (__DEV__) {
+      console.log('Datenschutz page error', error);
+    }
   }
   render() {
     if (this.state.hasError) {
@@ -29,7 +31,9 @@ class DatenschutzErrorBoundary extends React.Component<{ children: React.ReactNo
 }
 
 export default function PrivacyPolicyScreen() {
-  console.log('Render Datenschutzrichtlinie für ZestApp');
+  if (__DEV__) {
+    console.log('Render Datenschutzrichtlinie für ZestApp');
+  }
   return (
     <DatenschutzErrorBoundary>
       <ScrollView style={styles.container} testID="privacy-scroll">

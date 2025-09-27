@@ -15,9 +15,13 @@ import { initializeCrashPrevention, hermesGuard, initializeIpadCrashPrevention, 
 try {
   initializeCrashPrevention();
   initializeIpadCrashPrevention();
-  console.log('Crash prevention initialized successfully (iPad optimized)');
+  if (__DEV__) {
+    console.log('Crash prevention initialized successfully (iPad optimized)');
+  }
 } catch (error) {
-  console.warn('Failed to initialize crash prevention:', error);
+  if (__DEV__) {
+    console.warn('Failed to initialize crash prevention:', error);
+  }
 }
 
 // Simple error handler for development
@@ -25,7 +29,9 @@ if (Platform.OS === 'web') {
   // Prevent hydration mismatches on web
   if (typeof window !== 'undefined') {
     window.addEventListener('unhandledrejection', (event) => {
-      console.warn('Unhandled promise rejection:', event.reason);
+      if (__DEV__) {
+        console.warn('Unhandled promise rejection:', event.reason);
+      }
       event.preventDefault();
     });
   }
@@ -76,12 +82,16 @@ class AppErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: Error) {
-    console.log('Error Boundary caught error:', error.message);
+    if (__DEV__) {
+      console.log('Error Boundary caught error:', error.message);
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('React Error Boundary caught error:', error.message);
+    if (__DEV__) {
+      console.error('React Error Boundary caught error:', error.message);
+    }
   }
 
   handleRetry = () => {
@@ -114,7 +124,7 @@ function RootLayoutComponent() {
   });
 
   useEffect(() => {
-    if (error) {
+    if (error && __DEV__) {
       console.error('Font loading error:', error);
     }
   }, [error]);
@@ -134,7 +144,9 @@ function RootLayoutComponent() {
           setIsReady(true);
         }
       } catch (e) {
-        console.warn('Error preparing app:', e);
+        if (__DEV__) {
+          console.warn('Error preparing app:', e);
+        }
         // Force ready state after delay even on error
         setTimeout(() => setIsReady(true), 500);
       }
@@ -184,16 +196,20 @@ function RootLayoutNav() {
       try {
         setIsNavigating(true);
         
-        console.log('Navigation check:', {
-          isAuthenticated,
-          hasToken: !!token,
-          isInAuthGroup,
-          currentSegments: segments
-        });
+        if (__DEV__) {
+          console.log('Navigation check:', {
+            isAuthenticated,
+            hasToken: !!token,
+            isInAuthGroup,
+            currentSegments: segments
+          });
+        }
         
         // Only redirect authenticated users who are in auth group to tabs
         if (isAuthenticated && token && isInAuthGroup) {
-          console.log('RootLayout: Redirecting authenticated user to tabs');
+          if (__DEV__) {
+            console.log('RootLayout: Redirecting authenticated user to tabs');
+          }
           await safeAsync(
             async () => {
               await router.replace('/(tabs)');
@@ -203,7 +219,9 @@ function RootLayoutNav() {
           );
         }
       } catch (error) {
-        console.warn('Navigation error:', error);
+        if (__DEV__) {
+          console.warn('Navigation error:', error);
+        }
       } finally {
         setIsNavigating(false);
       }

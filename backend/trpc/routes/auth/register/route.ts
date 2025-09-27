@@ -3,6 +3,7 @@ import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
 import Database from "../../../../utils/database";
 import EmailService from "../../../../services/email";
+import { hashPassword } from "../../../../utils/auth";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -90,10 +91,13 @@ export default publicProcedure
     const emailVerificationCode = generateVerificationCode();
     const phoneVerificationCode = phone ? generateVerificationCode() : null;
     
+    // Hash password securely
+    const hashedPassword = await hashPassword(password);
+    
     // Create user with pending verification status
     const user = await Database.createUser({
       email,
-      password, // In production, hash this password
+      password: hashedPassword, // Store hashed password
       name,
       phone,
       status: 'pending_verification', // User must verify email to activate account

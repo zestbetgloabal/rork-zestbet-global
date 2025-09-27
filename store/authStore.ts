@@ -122,7 +122,9 @@ export const useAuthStore = create<AuthState>()(
                 consentDate: new Date().toISOString()
               };
               
-              console.log('AuthStore: Setting user data after login', userData);
+              if (__DEV__) {
+                console.log('AuthStore: Setting user data after login', userData);
+              }
               setUser(userData);
               
               return true;
@@ -413,16 +415,22 @@ export const useAuthStore = create<AuthState>()(
       
       logout: async () => {
         return hermesGuard(async () => {
-          console.log('=== LOGOUT STARTED ===');
+          if (__DEV__) {
+            console.log('=== LOGOUT STARTED ===');
+          }
           
           // Clear user state FIRST
           try {
             const { useUserStore } = await import('./userStore');
             const { logout: userLogout } = useUserStore.getState();
             userLogout();
-            console.log('User state cleared first');
+            if (__DEV__) {
+              console.log('User state cleared first');
+            }
           } catch (userErr) {
-            console.warn('User state cleanup failed', userErr);
+            if (__DEV__) {
+              console.warn('User state cleanup failed', userErr);
+            }
           }
           
           // Clear auth state SECOND to immediately update UI
@@ -433,7 +441,9 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             pendingVerification: null
           });
-          console.log('Auth state cleared immediately');
+          if (__DEV__) {
+            console.log('Auth state cleared immediately');
+          }
           
           try {
             // Clear all possible storage keys
@@ -454,14 +464,20 @@ export const useAuthStore = create<AuthState>()(
             // Clear AsyncStorage
             try {
               await AsyncStorage.multiRemove(storageKeys);
-              console.log('AsyncStorage cleared');
+              if (__DEV__) {
+                console.log('AsyncStorage cleared');
+              }
             } catch (e) {
-              console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
+              if (__DEV__) {
+                console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
+              }
               for (const key of storageKeys) {
                 try {
                   await AsyncStorage.removeItem(key);
                 } catch (e2) {
-                  console.warn(`Failed to remove ${key}`, e2);
+                  if (__DEV__) {
+                    console.warn(`Failed to remove ${key}`, e2);
+                  }
                 }
               }
             }
@@ -484,9 +500,13 @@ export const useAuthStore = create<AuthState>()(
                   document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
                 });
                 
-                console.log('Web storage and cookies cleared');
+                if (__DEV__) {
+                  console.log('Web storage and cookies cleared');
+                }
               } catch (lsErr) {
-                console.warn('Web storage cleanup failed', lsErr);
+                if (__DEV__) {
+                  console.warn('Web storage cleanup failed', lsErr);
+                }
               }
             }
             
@@ -495,25 +515,37 @@ export const useAuthStore = create<AuthState>()(
               const { useUserStore } = await import('./userStore');
               const { logout: userLogout } = useUserStore.getState();
               userLogout();
-              console.log('User state cleared');
+              if (__DEV__) {
+                console.log('User state cleared');
+              }
             } catch (userErr) {
-              console.warn('User state cleanup failed', userErr);
+              if (__DEV__) {
+                console.warn('User state cleanup failed', userErr);
+              }
             }
             
             // Try backend logout (best-effort, don't block on failure)
             try {
               const { trpcClient } = await import('@/lib/trpc');
               await trpcClient.auth.logout.mutate();
-              console.log('Backend session revoked');
+              if (__DEV__) {
+                console.log('Backend session revoked');
+              }
             } catch (apiErr) {
-              console.warn('Backend logout failed or not necessary', apiErr);
+              if (__DEV__) {
+                console.warn('Backend logout failed or not necessary', apiErr);
+              }
             }
             
           } catch (error) {
-            console.error('Error during logout cleanup:', error);
+            if (__DEV__) {
+              console.error('Error during logout cleanup:', error);
+            }
           }
           
-          console.log('=== LOGOUT COMPLETE ===');
+          if (__DEV__) {
+            console.log('=== LOGOUT COMPLETE ===');
+          }
         }, undefined, 'auth logout');
       },
       

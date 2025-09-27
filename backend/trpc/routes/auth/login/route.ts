@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
 import Database from "../../../../utils/database";
-import { generateToken, jwtUtils } from "../../../../utils/auth";
+import { generateToken, jwtUtils, verifyPassword, comparePassword } from "../../../../utils/auth";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -19,14 +19,24 @@ export default publicProcedure
     if (!user) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
-        message: "Account not found. Only registered accounts are allowed.",
+        message: "Invalid credentials.",
       });
     }
 
-    if (user.password !== password) {
+    // Use secure password verification (try both new and legacy methods)
+    let isValidPassword = false;
+    try {
+      // Try new bcrypt method first
+      isValidPassword = await verifyPassword(password, user.password);
+    } catch (error) {
+      // Fallback to legacy method for existing users
+      isValidPassword = comparePassword(password, user.password);
+    }
+    
+    if (!isValidPassword) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
-        message: "Invalid password.",
+        message: "Invalid credentials.",
       });
     }
 
@@ -55,9 +65,8 @@ export default publicProcedure
       });
     }
     
-    console.log(`User ${user.email} logging in with status: ${user.status}`);
-
-    const token = generateToken({ userId: user.id, email: user.email, name: user.name }, '15m');
+    // Generate secure token with longer expiry
+    const token = generateToken({ userId: user.id, email: user.email, name: user.name }, '7d');
 
     return {
       success: true,
@@ -71,7 +80,7 @@ export default publicProcedure
         phoneVerified: user.phoneVerified,
       },
       token,
-      tokenExpiresIn: '15m',
+      tokenExpiresIn: '7d',
       alg: 'HS256',
       keyHint: jwtUtils.jwtSecret ? 'env' : 'default',
     };

@@ -61,10 +61,20 @@ export function verifyToken(token: string): JWTPayload | null {
   }
 }
 
-export function hashPassword(password: string): string {
-  return `hashed_${password}`;
+// Secure password hashing using bcrypt
+export async function hashPassword(password: string): Promise<string> {
+  const bcrypt = require('bcryptjs');
+  const saltRounds = 12;
+  return await bcrypt.hash(password, saltRounds);
 }
 
+// Secure password verification using bcrypt
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  const bcrypt = require('bcryptjs');
+  return await bcrypt.compare(password, hashedPassword);
+}
+
+// Legacy function for backward compatibility
 export function comparePassword(password: string, hashedPassword: string): boolean {
   return `hashed_${password}` === hashedPassword;
 }

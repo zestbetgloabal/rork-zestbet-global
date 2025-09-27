@@ -11,7 +11,9 @@ class TermsErrorBoundary extends React.Component<{ children: React.ReactNode }, 
     return { hasError: true };
   }
   componentDidCatch(error: unknown) {
-    console.log('AGB page error', error);
+    if (__DEV__) {
+      console.log('AGB page error', error);
+    }
   }
   render() {
     if (this.state.hasError) {
@@ -29,7 +31,9 @@ class TermsErrorBoundary extends React.Component<{ children: React.ReactNode }, 
 }
 
 export default function TermsScreen() {
-  console.log('Render AGB (DE) for ZestApp');
+  if (__DEV__) {
+    console.log('Render AGB (DE) for ZestApp');
+  }
   return (
     <TermsErrorBoundary>
       <ScrollView style={styles.container} testID="agb-scroll">
