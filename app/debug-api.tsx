@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
-import { getAppConfig, debugEnvironment } from '@/lib/config';
 
 export default function DebugAPIScreen() {
   const router = useRouter();
@@ -21,19 +20,12 @@ export default function DebugAPIScreen() {
     try {
       // Test 1: Check environment variables
       addResult('=== ENVIRONMENT CHECK ===');
-      const config = getAppConfig();
-      addResult(`API URL: ${config.apiUrl}`);
-      addResult(`tRPC URL: ${config.trpcUrl}`);
-      addResult(`Base URL: ${config.baseUrl}`);
-      addResult(`Is Development: ${config.isDevelopment}`);
-      addResult(`Platform: ${config.platform}`);
-      
-      // Debug environment variables
-      debugEnvironment();
+      addResult(`EXPO_PUBLIC_API_URL: ${process.env.EXPO_PUBLIC_API_URL}`);
+      addResult(`EXPO_PUBLIC_TRPC_URL: ${process.env.EXPO_PUBLIC_TRPC_URL}`);
       
       // Test 2: Test basic API endpoint
       addResult('=== TESTING BASIC API ===');
-      const apiUrl = config.apiUrl;
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL;
       if (apiUrl) {
         try {
           const response = await fetch(apiUrl);
@@ -47,7 +39,7 @@ export default function DebugAPIScreen() {
       
       // Test 3: Test tRPC endpoint
       addResult('=== TESTING TRPC ENDPOINT ===');
-      const trpcUrl = config.trpcUrl;
+      const trpcUrl = process.env.EXPO_PUBLIC_TRPC_URL;
       if (trpcUrl) {
         try {
           const response = await fetch(trpcUrl);
