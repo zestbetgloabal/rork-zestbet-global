@@ -10,27 +10,35 @@ export const trpc = createTRPCReact<AppRouter>();
 const getTrpcUrl = (): string => {
   // Check environment variables first
   if (process.env.EXPO_PUBLIC_TRPC_URL) {
+    console.log('🔧 Using EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
     return process.env.EXPO_PUBLIC_TRPC_URL;
   }
   
   // For web environments, use current domain
   if (typeof window !== "undefined" && window.location?.origin) {
     const origin = window.location.origin;
+    console.log('🌐 Detected web origin:', origin);
     
     // For localhost development - try local backend first
     if (origin.includes('localhost')) {
-      return 'http://localhost:3001/api/trpc';
+      const localUrl = 'http://localhost:3001/api/trpc';
+      console.log('🏠 Using local development URL:', localUrl);
+      return localUrl;
     }
     
     // Check if we're on production domains
     if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
       // Use current origin for production
-      return `${origin}/api/trpc`;
+      const prodUrl = `${origin}/api/trpc`;
+      console.log('🚀 Using production URL from origin:', prodUrl);
+      return prodUrl;
     }
   }
 
   // Production URL - hardcoded fallback for mobile
-  return 'https://zestapp.online/api/trpc';
+  const fallbackUrl = 'https://zestapp.online/api/trpc';
+  console.log('📱 Using fallback production URL:', fallbackUrl);
+  return fallbackUrl;
 };
 
 const getWsUrl = (): string => {
@@ -94,9 +102,9 @@ const createHttpLink = () => {
         try {
           console.log(`🔄 tRPC request attempt ${retryCount + 1} to:`, url);
           
-          // Create timeout signal
+          // Create timeout signal with longer timeout for production
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
           
           const response = await fetch(url, {
             ...init,
@@ -110,6 +118,7 @@ const createHttpLink = () => {
           
           clearTimeout(timeoutId);
           console.log('📡 tRPC response status:', response.status);
+          console.log('📡 tRPC response headers:', Object.fromEntries(response.headers.entries()));
           
           // Check if response is ok
           if (!response.ok) {
@@ -119,42 +128,58 @@ const createHttpLink = () => {
             if (contentType?.includes('text/html')) {
               const text = await response.clone().text();
               console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
-              console.error('Response preview:', text.substring(0, 200));
+              console.error('Response preview:', text.substring(0, 500));
               
-              throw new Error(`Mock mode - using fallback data. API returned HTML instead of JSON.`);
+              // Check if it's a 404 page or error page
+              if (text.includes('404') || text.includes('Not Found')) {
+                throw new Error(`API endpoint not found. The tRPC server may not be deployed correctly.`);
+              }
+              
+              throw new Error(`API returned HTML instead of JSON. Server may be misconfigured.`);
             }
             
             // Try to get error message from JSON response
             try {
               const errorData = await response.clone().json();
-              throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${errorData.message || 'Unknown error'}`);
+              throw new Error(`API Error ${response.status}: ${errorData.message || errorData.error || 'Unknown error'}`);
             } catch {
               // If it's a 404, suggest checking API deployment
               if (response.status === 404) {
-                throw new Error(`Mock mode - using fallback data. API endpoint not found (404).`);
+                throw new Error(`API endpoint not found (404). Check if the tRPC server is deployed.`);
               }
-              throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${response.statusText}`);
+              if (response.status === 500) {
+                throw new Error(`Internal server error (500). Check server logs.`);
+              }
+              if (response.status === 502 || response.status === 503) {
+                throw new Error(`Server unavailable (${response.status}). The API server may be down.`);
+              }
+              throw new Error(`API Error ${response.status}: ${response.statusText}`);
             }
           }
           
+          console.log('✅ tRPC request successful');
           return response;
         } catch (error) {
           console.error(`❌ tRPC fetch error (attempt ${retryCount + 1}):`, error);
           
-          // Convert all network errors to mock mode errors
+          // Handle specific error types
           if (error instanceof Error) {
             if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-              throw new Error('Mock mode - using fallback data. Request timeout.');
+              throw new Error('Request timeout. The API server may be slow or unavailable.');
             }
             if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
-              throw new Error('Mock mode - using fallback data. Network connection failed.');
+              // Try to provide more specific error information
+              if (url.includes('localhost')) {
+                throw new Error('Cannot connect to local development server. Make sure the backend is running on port 3001.');
+              }
+              throw new Error('Network connection failed. Check your internet connection and API server status.');
             }
-            // Re-throw if already a mock mode error
-            if (error.message.includes('Mock mode')) {
+            // Re-throw API-specific errors
+            if (error.message.includes('API Error') || error.message.includes('API endpoint')) {
               throw error;
             }
           }
-          throw new Error('Mock mode - using fallback data. Connection error.');
+          throw new Error(`Connection error: ${String(error)}`);
         }
       };
       
