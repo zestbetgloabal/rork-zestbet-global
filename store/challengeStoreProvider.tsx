@@ -10,10 +10,9 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     limit: 50,
     offset: 0
   }, {
-    retry: 1, // Reduce retries to fail faster
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 0, // Don't retry in mock mode
+    staleTime: 0, // Don't cache in mock mode
     refetchOnWindowFocus: false,
-    // Set a timeout to fail faster
     networkMode: 'offlineFirst',
   });
   
