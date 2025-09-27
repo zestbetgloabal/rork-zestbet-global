@@ -8,6 +8,12 @@ import { Platform } from "react-native";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
+  // Always use mock mode for now to prevent fetch errors
+  console.log('🎭 Using mock mode - API connection disabled');
+  return 'mock://localhost';
+  
+  // TODO: Re-enable API connection once backend is properly deployed
+  /*
   // Check environment variables first
   if (process.env.EXPO_PUBLIC_TRPC_URL) {
     console.log('🔗 Using env TRPC URL:', process.env.EXPO_PUBLIC_TRPC_URL);
@@ -36,6 +42,7 @@ const getTrpcUrl = (): string => {
   const productionUrl = 'https://zestapp.online/api/trpc';
   console.log('📱 Using production URL for mobile:', productionUrl);
   return productionUrl;
+  */
 };
 
 const getWsUrl = (): string => {

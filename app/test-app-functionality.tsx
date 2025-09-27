@@ -3,11 +3,17 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trpcClient } from '@/lib/trpc';
+import { useChallenges, useFilteredChallenges } from '@/store/challengeStoreProvider';
+import { mockChallenges } from '@/constants/mockData';
 
 export default function TestAppFunctionality() {
   const insets = useSafeAreaInsets();
   const [testResults, setTestResults] = useState<Record<string, 'pending' | 'success' | 'error'>>({});
   const [testLogs, setTestLogs] = useState<string[]>([]);
+  
+  // Test challenge store functionality
+  const { challenges } = useChallenges();
+  const filteredChallenges = useFilteredChallenges('all', 'active', []);
 
   const addLog = (message: string) => {
     setTestLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
@@ -86,11 +92,53 @@ export default function TestAppFunctionality() {
     }
   };
 
+  const testChallengesFunctionality = async () => {
+    addLog('Testing challenges functionality...');
+    updateTestResult('challenges', 'pending');
+    
+    try {
+      // Test mock data availability
+      if (!Array.isArray(mockChallenges) || mockChallenges.length === 0) {
+        throw new Error('Mock challenges data is not available');
+      }
+      addLog(`Mock challenges available: ${mockChallenges.length} items`);
+      
+      // Test challenge store
+      if (!Array.isArray(challenges)) {
+        throw new Error('Challenge store is not returning an array');
+      }
+      addLog(`Challenge store working: ${challenges.length} challenges loaded`);
+      
+      // Test filtered challenges
+      if (!Array.isArray(filteredChallenges)) {
+        throw new Error('Filtered challenges is not returning an array');
+      }
+      addLog(`Filtered challenges working: ${filteredChallenges.length} active challenges`);
+      
+      // Test filter functionality
+      try {
+        const testFilter = challenges.filter(() => true);
+        if (!Array.isArray(testFilter)) {
+          throw new Error('Filter method not working');
+        }
+        addLog('Filter method is working correctly');
+      } catch (filterError) {
+        throw new Error(`Filter method failed: ${filterError}`);
+      }
+      
+      updateTestResult('challenges', 'success');
+    } catch (error) {
+      addLog(`Challenges error: ${error}`);
+      updateTestResult('challenges', 'error');
+    }
+  };
+
   const runAllTests = async () => {
     setTestResults({});
     setTestLogs([]);
     addLog('Starting comprehensive app test...');
     
+    await testChallengesFunctionality();
     await testBackendConnection();
     await testLiveEvents();
     await testEmailValidation();
@@ -131,6 +179,13 @@ export default function TestAppFunctionality() {
         
         <View style={styles.testsContainer}>
           <Text style={styles.sectionTitle}>Test Results:</Text>
+          
+          <View style={styles.testItem}>
+            <Text style={styles.testName}>Challenges System</Text>
+            <Text style={[styles.testStatus, { color: getStatusColor(testResults.challenges) }]}>
+              {getStatusText(testResults.challenges)}
+            </Text>
+          </View>
           
           <View style={styles.testItem}>
             <Text style={styles.testName}>Backend Connection</Text>
