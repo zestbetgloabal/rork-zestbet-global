@@ -26,14 +26,10 @@ const getTrpcUrl = (): string => {
     
     // Check if we're on production domains
     if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
-      // Try multiple possible endpoints
-      const possibleUrls = [
-        `${origin}/api/trpc`,
-        `${origin}/trpc`,
-        'https://zestapp.online/api/trpc'
-      ];
-      console.log('🔗 Production domain detected, will try:', possibleUrls[0]);
-      return possibleUrls[0];
+      // Use current origin for production
+      const trpcUrl = `${origin}/api/trpc`;
+      console.log('🔗 Production domain detected, using:', trpcUrl);
+      return trpcUrl;
     }
   }
 
@@ -115,7 +111,7 @@ const createHttpLink = () => {
               ...init?.headers,
             },
             // Add timeout to prevent hanging requests
-            signal: AbortSignal.timeout(8000), // 8 second timeout
+            signal: AbortSignal.timeout(10000), // 10 second timeout
           });
           
           console.log('📡 tRPC response status:', response.status);
@@ -128,28 +124,7 @@ const createHttpLink = () => {
             if (contentType?.includes('text/html')) {
               const text = await response.clone().text();
               console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
-              console.error('Response preview:', text.substring(0, 500));
-              
-              // Try alternative endpoints if this is the first attempt
-              if (retryCount === 0 && typeof input === 'string') {
-                const baseUrl = input.replace('/api/trpc', '').replace('/trpc', '');
-                const alternativeUrls = [
-                  `${baseUrl}/trpc`,
-                  `${baseUrl}/api/trpc`,
-                  'https://zestapp.online/api/trpc',
-                  'https://zestapp.online/trpc'
-                ].filter(u => u !== url);
-                
-                for (const altUrl of alternativeUrls) {
-                  try {
-                    console.log('🔄 Trying alternative URL:', altUrl);
-                    return await tryFetch(altUrl, retryCount + 1);
-                  } catch (e) {
-                    console.log('❌ Alternative URL failed:', altUrl);
-                    continue;
-                  }
-                }
-              }
+              console.error('Response preview:', text.substring(0, 200));
               
               throw new Error(`Mock mode - using fallback data. API returned HTML instead of JSON.`);
             }
@@ -170,27 +145,6 @@ const createHttpLink = () => {
           return response;
         } catch (error) {
           console.error(`❌ tRPC fetch error (attempt ${retryCount + 1}):`, error);
-          
-          // Try alternative endpoints on network errors (but only once)
-          if (retryCount === 0 && typeof input === 'string') {
-            const baseUrl = input.replace('/api/trpc', '').replace('/trpc', '');
-            const alternativeUrls = [
-              `${baseUrl}/trpc`,
-              `${baseUrl}/api/trpc`,
-              'https://zestapp.online/api/trpc',
-              'https://zestapp.online/trpc'
-            ].filter(u => u !== url);
-            
-            for (const altUrl of alternativeUrls) {
-              try {
-                console.log('🔄 Trying alternative URL after error:', altUrl);
-                return await tryFetch(altUrl, retryCount + 1);
-              } catch (e) {
-                console.log('❌ Alternative URL failed:', altUrl);
-                continue;
-              }
-            }
-          }
           
           // Convert all network errors to mock mode errors
           if (error instanceof Error) {
