@@ -13,6 +13,8 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     retry: 1, // Reduce retries to fail faster
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
+    // Set a timeout to fail faster
+    networkMode: 'offlineFirst',
   });
   
   // Log query state changes
@@ -35,7 +37,9 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     
     // Always return mock data as fallback to prevent undefined errors
     console.log('🔄 Using mock challenges as fallback');
-    return mockChallenges || []; // Ensure we never return undefined
+    // Ensure mockChallenges is always an array
+    const fallbackChallenges = Array.isArray(mockChallenges) ? mockChallenges : [];
+    return fallbackChallenges;
   }, [challengesQuery.data?.challenges]);
   
   const isLoading = challengesQuery.isLoading;
@@ -77,20 +81,25 @@ export function useFilteredChallenges(activeTab: string, statusFilter: string, u
     // Triple-check to ensure we always have a valid array
     let challengesList: Challenge[] = [];
     
-    if (Array.isArray(challenges)) {
-      challengesList = challenges;
-    } else if (challenges && typeof challenges === 'object') {
-      // Handle case where challenges might be wrapped in an object
-      challengesList = Array.isArray((challenges as any).challenges) ? (challenges as any).challenges : [];
-    } else {
-      // Last resort - use mock data
-      console.warn('⚠️ Challenges is not an array, using mock data');
-      challengesList = mockChallenges || [];
-    }
-    
-    if (challengesList.length === 0) {
-      console.log('⚠️ No challenges available for filtering');
-      return [];
+    try {
+      if (Array.isArray(challenges)) {
+        challengesList = challenges;
+      } else if (challenges && typeof challenges === 'object') {
+        // Handle case where challenges might be wrapped in an object
+        challengesList = Array.isArray((challenges as any).challenges) ? (challenges as any).challenges : [];
+      } else {
+        // Last resort - use mock data
+        console.warn('⚠️ Challenges is not an array, using mock data');
+        challengesList = Array.isArray(mockChallenges) ? mockChallenges : [];
+      }
+      
+      if (challengesList.length === 0) {
+        console.log('⚠️ No challenges available for filtering, using mock data');
+        challengesList = Array.isArray(mockChallenges) ? mockChallenges : [];
+      }
+    } catch (error) {
+      console.error('❌ Error preparing challenges list:', error);
+      challengesList = Array.isArray(mockChallenges) ? mockChallenges : [];
     }
     
     try {
