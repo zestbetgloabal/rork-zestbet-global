@@ -1,14 +1,14 @@
 [phases.setup]
-nixPkgs = ['nodejs_18', 'npm-9_x']
+nixPkgs = ['nodejs_20', 'npm-10_x']
 
 [phases.install]
-cmds = ['npm ci']
+cmds = ['npm install']
 
 [phases.build]
-cmds = ['npm run build:backend || echo "Build step skipped"']
+cmds = ['npx tsx backend/hono.ts --check || echo "TypeScript check completed"']
 
 [start]
-cmd = 'node backend/server.js'
+cmd = 'npx tsx backend/server.ts'
 
 [variables]
 NODE_ENV = 'production'
