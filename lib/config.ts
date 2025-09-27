@@ -72,26 +72,26 @@ export const getAppConfig = (): AppConfig => {
   const isDevelopment = __DEV__;
   const platform = Platform.OS;
 
-  // Production URLs (your deployed Amplify app)
-  const prodApiUrl = 'https://zestapp.online/api';
-  const prodTrpcUrl = 'https://zestapp.online/api/trpc';
-  const prodBaseUrl = 'https://zestapp.online';
+  // Production URLs (Railway deployment)
+  const prodApiUrl = 'https://rork-zestbet-global-production.up.railway.app/api';
+  const prodTrpcUrl = 'https://rork-zestbet-global-production.up.railway.app/api/trpc';
+  const prodBaseUrl = 'https://rork-zestbet-global-production.up.railway.app';
 
   // Development URLs
   const devApiUrl = 'http://localhost:3001/api';
   const devTrpcUrl = 'http://localhost:3001/api/trpc';
   const devBaseUrl = 'http://localhost:3001';
   
-  // For web development, use localhost
-  if (platform === 'web' && isDevelopment) {
-    return {
-      apiUrl: devApiUrl,
-      trpcUrl: devTrpcUrl,
-      baseUrl: devBaseUrl,
-      isDevelopment,
-      platform,
-    };
-  }
+  // For now, always use Railway since local backend isn't running
+  // if (platform === 'web' && isDevelopment) {
+  //   return {
+  //     apiUrl: devApiUrl,
+  //     trpcUrl: devTrpcUrl,
+  //     baseUrl: devBaseUrl,
+  //     isDevelopment,
+  //     platform,
+  //   };
+  // }
 
   // Get environment variables with fallbacks
   // Always use production URLs for now since environment variables are not loading
