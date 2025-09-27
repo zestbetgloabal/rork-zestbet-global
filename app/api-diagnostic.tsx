@@ -18,12 +18,12 @@ export default function ApiDiagnosticScreen() {
   const [isRunning, setIsRunning] = useState(false);
 
   const testUrls = [
-    'http://localhost:3001/api',
-    'http://localhost:3001/api/status',
-    'http://localhost:3001/api/trpc',
+    'https://main.ddk0z2esbs19wf.amplifyapp.com/api',
+    'https://main.ddk0z2esbs19wf.amplifyapp.com/api/trpc',
+    'https://main.ddk0z2esbs19wf.amplifyapp.com/api/trpc/example.hi',
     'https://zestapp.online/api',
-    'https://zestapp.online/api/status',
     'https://zestapp.online/api/trpc',
+    'https://zestapp.online/api/trpc/example.hi',
   ];
 
   const testUrl = async (url: string): Promise<DiagnosticResult> => {
