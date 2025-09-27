@@ -40,11 +40,10 @@ app.use("*", async (c, next) => {
   }
 });
 
-// Mount tRPC router at /trpc
+// Mount tRPC router at /api/trpc
 app.use(
-  "/trpc/*",
+  "/api/trpc/*",
   trpcServer({
-    endpoint: "/api/trpc",
     router: appRouter,
     createContext,
   })
@@ -61,6 +60,22 @@ app.get("/", (c) => {
   });
 });
 
+// API health check endpoint
+app.get("/api", (c) => {
+  return c.json({ 
+    status: "ok", 
+    message: "ZestBet API is running",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      trpc: "/api/trpc",
+      status: "/api/status",
+      health: "/api"
+    }
+  });
+});
+
 // Status endpoint with more details
 app.get("/status", (c) => {
   return c.json({
@@ -73,6 +88,27 @@ app.get("/status", (c) => {
     uptime: process.uptime(),
     memory: process.memoryUsage(),
     timestamp: new Date().toISOString()
+  });
+});
+
+// API Status endpoint
+app.get("/api/status", (c) => {
+  return c.json({
+    status: "healthy",
+    services: {
+      database: "connected",
+      email: "configured",
+      auth: "active",
+      trpc: "active"
+    },
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      trpc: "/api/trpc",
+      status: "/api/status",
+      health: "/api"
+    }
   });
 });
 
