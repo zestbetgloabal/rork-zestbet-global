@@ -11,8 +11,8 @@ frontend:
       commands:
         - 'echo Starting Expo web export'
         - 'echo Setting environment variables for build...'
-        - 'export EXPO_PUBLIC_API_URL=https://main.ddk0z2esbs19wf.amplifyapp.com/api'
-        - 'export EXPO_PUBLIC_TRPC_URL=https://main.ddk0z2esbs19wf.amplifyapp.com/api/trpc'
+        - 'export EXPO_PUBLIC_API_URL=https://zestapp.online/api'
+        - 'export EXPO_PUBLIC_TRPC_URL=https://zestapp.online/api/trpc'
         - 'echo EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL'
         - 'echo EXPO_PUBLIC_TRPC_URL=$EXPO_PUBLIC_TRPC_URL'
         - 'EXPO_NO_METRO_LAZY=1 npx expo export --platform web --output-dir dist --clear'

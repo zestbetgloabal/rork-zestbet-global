@@ -109,13 +109,13 @@ const getTrpcUrl = (): string => {
   // Check for environment variables first
   const envUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_TRPC_URL || process.env.EXPO_PUBLIC_TRPC_URL;
   
-  if (envUrl) {
+  if (envUrl && envUrl !== 'undefined') {
     console.log("🔗 Using environment TRPC URL:", envUrl);
     return envUrl;
   }
   
-  // Production fallback - your Amplify URL
-  const prodUrl = "https://main.ddk0z2esbs19wf.amplifyapp.com/api/trpc";
+  // Production fallback - your Amplify URL (updated to zestapp.online)
+  const prodUrl = "https://zestapp.online/api/trpc";
   
   // Development fallback
   const devUrl = Platform.select({
@@ -123,7 +123,7 @@ const getTrpcUrl = (): string => {
     default: __DEV__ ? "http://localhost:3001/api/trpc" : prodUrl
   });
   
-  console.log("🔗 Using development TRPC URL:", devUrl);
+  console.log("🔗 Using fallback TRPC URL:", devUrl);
   return devUrl;
 };
 
@@ -166,7 +166,7 @@ const getTrpcUrlSafe = () => {
     return getTrpcUrl();
   } catch (error) {
     console.warn('TRPC URL configuration error:', error);
-    return 'https://main.ddk0z2esbs19wf.amplifyapp.com/api/trpc';
+    return 'https://zestapp.online/api/trpc';
   }
 };
 
