@@ -56,10 +56,14 @@ export default function ConnectionTestScreen() {
 
   const testDirectFetch = async () => {
     const testUrls = [
+      // Local development server
+      'http://localhost:3001/api',
+      'http://localhost:3001/api/status',
+      'http://localhost:3001/api/trpc',
+      // Production server
       'https://zestapp.online/api',
       'https://zestapp.online/api/status',
-      'https://zestapp.online/api/trpc',
-      'https://zestapp.online/status'
+      'https://zestapp.online/api/trpc'
     ];
 
     for (const url of testUrls) {
@@ -191,6 +195,35 @@ export default function ConnectionTestScreen() {
             NODE_ENV: {process.env.NODE_ENV || 'Not set'}
           </Text>
         </View>
+        
+        {/* Troubleshooting */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Troubleshooting</Text>
+          <Text style={styles.troubleshootingText}>
+            If you&apos;re seeing connection errors, try the following:
+          </Text>
+          
+          <View style={styles.troubleshootingItem}>
+            <Text style={styles.troubleshootingTitle}>1. Start the backend server</Text>
+            <Text style={styles.codeBlock}>./start-backend.sh</Text>
+            <Text style={styles.troubleshootingText}>or</Text>
+            <Text style={styles.codeBlock}>bun run dev-server.ts</Text>
+          </View>
+          
+          <View style={styles.troubleshootingItem}>
+            <Text style={styles.troubleshootingTitle}>2. Check port availability</Text>
+            <Text style={styles.troubleshootingText}>
+              Make sure port 3001 is not in use by another application.
+            </Text>
+          </View>
+          
+          <View style={styles.troubleshootingItem}>
+            <Text style={styles.troubleshootingTitle}>3. Verify network connectivity</Text>
+            <Text style={styles.troubleshootingText}>
+              Ensure your device can connect to the development server.
+            </Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -294,5 +327,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 5,
     fontFamily: 'monospace',
+  },
+  // Troubleshooting styles
+  troubleshootingText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    marginBottom: 10,
+  },
+  troubleshootingItem: {
+    marginBottom: 15,
+    backgroundColor: '#2a2a2a',
+    padding: 12,
+    borderRadius: 8,
+  },
+  troubleshootingTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  codeBlock: {
+    color: '#FF9500',
+    fontSize: 14,
+    backgroundColor: '#222',
+    padding: 10,
+    borderRadius: 4,
+    fontFamily: 'monospace',
+    marginBottom: 8,
   },
 });
