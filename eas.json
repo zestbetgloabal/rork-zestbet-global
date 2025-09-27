@@ -1,45 +1,46 @@
 {
 "cli": {
-"version": ">= 12.0.0",
-"appVersionSource": "local"
+  "version": ">= 12.0.0",
+  "appVersionSource": "local"
 },
 "build": {
-"development": {
-  "developmentClient": true,
-  "distribution": "internal"
-},
-"preview": {
-  "distribution": "internal",
-  "ios": {
-    "resourceClass": "m-medium"
+  "development": {
+    "developmentClient": true,
+    "distribution": "internal"
   },
-  "android": {
-    "resourceClass": "medium"
+  "preview": {
+    "distribution": "internal",
+    "ios": {
+      "resourceClass": "m-medium"
+    },
+    "android": {
+      "resourceClass": "medium"
+    }
+  },
+  "production": {
+    "env": {
+      "EXPO_PUBLIC_API_URL": "https://rork-zestbet-global.vercel.app/api",
+      "EXPO_PUBLIC_TRPC_URL": "https://rork-zestbet-global.vercel.app/api/trpc",
+      "EXPO_PUBLIC_BASE_URL": "https://zestapp.online"
+    },
+    "ios": {
+      "resourceClass": "m-medium",
+      "buildConfiguration": "Release",
+      "appleTeamId": "RLFRGC9727"
+    },
+    "android": {
+      "resourceClass": "medium",
+      "buildType": "app-bundle"
+    }
   }
-},
-"production": {
-  "env": {
-    "EXPO_PUBLIC_API_URL": "https://rork-zestbet-global.vercel.app/api",
-    "EXPO_PUBLIC_TRPC_URL": "https://rork-zestbet-global.vercel.app/api/trpc",
-    "EXPO_PUBLIC_BASE_URL": "https://zestapp.online"
-  },
-  "ios": {
-    "resourceClass": "m-medium",
-    "buildConfiguration": "Release"
-  },
-  "android": {
-    "resourceClass": "medium",
-    "buildType": "app-bundle"
-  }
-}
 },
 "submit": {
-"production": {
-  "ios": {
-    "appleId": "erhan.berse@googlemail.com",
-    "ascAppId": "6749276092",
-    "appleTeamId": "RLFRGC9727"
+  "production": {
+    "ios": {
+      "appleId": "erhan.berse@googlemail.com",
+      "ascAppId": "6749276092",
+      "appleTeamId": "RLFRGC9727"
+    }
   }
-}
 }
 }
