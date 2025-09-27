@@ -20,6 +20,8 @@ frontend:
         - 'npx esbuild backend/amplify/index.ts --bundle --platform=node --target=node18 --outfile=backend/dist/index.js --external:@aws-sdk/*'
         - 'echo Copying Lambda function to dist...'
         - 'mkdir -p dist/api && cp backend/dist/index.js dist/api/'
+        - 'echo Creating API routing configuration...'
+        - 'echo "{ \"version\": 1, \"functions\": { \"api/index.js\": { \"runtime\": \"nodejs18.x\" } }, \"rewrites\": [{ \"source\": \"/api/*\", \"function\": \"api/index.js\" }] }" > dist/_redirects'
     postBuild:
       commands:
         - 'cp dist/index.html dist/200.html || copy dist/index.html dist/200.html || true'

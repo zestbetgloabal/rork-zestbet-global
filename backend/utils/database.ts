@@ -4,7 +4,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { config } from '../config/environment';
-import * as schema from './schema';
+import * as schema from '../database/schema';
 
 // PostgreSQL connection pool
 const pool = new Pool({
