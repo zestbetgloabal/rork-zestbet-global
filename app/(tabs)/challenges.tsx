@@ -5,10 +5,10 @@ import {
   StyleSheet, 
   FlatList, 
   Pressable, 
-  ActivityIndicator,
-  RefreshControl
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus, Filter } from 'lucide-react-native';
 import { useChallengeStore } from '@/store/challengeStore';
 import { useUserStore } from '@/store/userStore';
@@ -20,6 +20,7 @@ import { Challenge } from '@/types';
 
 export default function ChallengesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useUserStore();
   const { 
     challenges, 
@@ -31,7 +32,7 @@ export default function ChallengesScreen() {
   
   const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [refreshing, setRefreshing] = useState(false);
+
   const [showFilters, setShowFilters] = useState(false);
   
   useEffect(() => {
@@ -39,16 +40,9 @@ export default function ChallengesScreen() {
     if (user?.id) {
       fetchUserChallenges(user.id);
     }
-  }, [user?.id]);
+  }, [user?.id, fetchChallenges, fetchUserChallenges]);
   
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchChallenges();
-    if (user?.id) {
-      await fetchUserChallenges(user.id);
-    }
-    setRefreshing(false);
-  };
+
   
   const handleCreateChallenge = () => {
     router.push('/create-challenge');
@@ -59,9 +53,9 @@ export default function ChallengesScreen() {
   };
   
   // Filter challenges based on active tab and status filter
-  const filteredChallenges = challenges.filter(challenge => {
+  const filteredChallenges = (challenges || []).filter(challenge => {
     // Filter by tab
-    if (activeTab === 'my' && !userChallenges.includes(challenge.id)) {
+    if (activeTab === 'my' && !(userChallenges || []).includes(challenge.id)) {
       return false;
     }
     
@@ -101,7 +95,7 @@ export default function ChallengesScreen() {
   };
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <SegmentedControl
           values={['all', 'my', 'team', 'individual']}
@@ -183,7 +177,7 @@ export default function ChallengesScreen() {
         </View>
       )}
       
-      {isLoading && !refreshing ? (
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -193,14 +187,7 @@ export default function ChallengesScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
-            />
-          }
+
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
@@ -233,6 +220,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',

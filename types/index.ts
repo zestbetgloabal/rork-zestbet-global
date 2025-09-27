@@ -106,7 +106,7 @@ export interface Bet {
   endDate: Date;
   category: string;
   image?: string;
-  mediaFiles?: Array<{uri: string, type: 'image' | 'video', name?: string}>;
+  mediaFiles?: {uri: string, type: 'image' | 'video', name?: string}[];
   visibility: 'public' | 'private';
   invitedFriends?: string[];
 }
@@ -270,6 +270,72 @@ export interface LanguageState {
   currentLanguage: Language;
   setLanguage: (language: Language) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
+}
+
+// Challenge types
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  creator: string;
+  startDate: Date;
+  endDate: Date;
+  category: string;
+  image?: string;
+  status: 'upcoming' | 'active' | 'completed';
+  participants: ChallengeParticipant[];
+  type: 'individual' | 'team';
+  visibility: 'public' | 'private';
+  invitedFriends?: string[];
+  hasPool: boolean;
+  pool?: ChallengePool;
+  teams?: ChallengeTeam[];
+}
+
+export interface ChallengeParticipant {
+  id: string;
+  userId: string;
+  username: string;
+  joinedAt: Date;
+  score: number;
+  rank?: number;
+  contribution?: number;
+  teamId?: string;
+}
+
+export interface ChallengePool {
+  id: string;
+  challengeId: string;
+  totalAmount: number;
+  minContribution: number;
+  maxContribution: number;
+  distributionStrategy: 'standard' | 'custom';
+  customDistribution?: {
+    firstPlace?: number;
+    secondPlace?: number;
+    thirdPlace?: number;
+    participation?: number;
+  };
+  contributions: PoolContribution[];
+  isDistributed: boolean;
+  distributedAt?: Date;
+}
+
+export interface PoolContribution {
+  id: string;
+  userId: string;
+  username: string;
+  amount: number;
+  timestamp: Date;
+}
+
+export interface ChallengeTeam {
+  id: string;
+  name: string;
+  challengeId: string;
+  members: ChallengeParticipant[];
+  score: number;
+  rank?: number;
 }
 
 // Add this helper function to utils/helpers.ts if it doesn't exist

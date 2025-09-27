@@ -1,6 +1,6 @@
 // Add this to your existing mockData.ts file if it doesn't already exist
 
-import { Bet, SocialPost, Badge, UserRank, Mission, ImpactProject, LeaderboardEntry } from '@/types';
+import { Bet, SocialPost, Badge, UserRank, Mission, ImpactProject, LeaderboardEntry, Challenge } from '@/types';
 
 // Mock bets for development
 export const mockBets: Bet[] = [
@@ -361,6 +361,228 @@ export const mockLeaderboard: LeaderboardEntry[] = [
     rank: 5,
     change: 3,
     badge: mockBadges[2] // Sergeant
+  }
+];
+
+// Mock challenges for development
+export const mockChallenges: Challenge[] = [
+  {
+    id: '1',
+    title: '30-Day Fitness Challenge',
+    description: 'Complete 30 days of daily exercise to improve your fitness level.',
+    creator: 'fitness_guru',
+    startDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+    endDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), // 25 days from now
+    category: 'fitness',
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1000',
+    status: 'active',
+    participants: [
+      {
+        id: 'p1',
+        userId: 'user1',
+        username: 'FitnessFan',
+        joinedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+        score: 85,
+        rank: 1
+      },
+      {
+        id: 'p2',
+        userId: 'user2',
+        username: 'HealthyLife',
+        joinedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        score: 72,
+        rank: 2
+      }
+    ],
+    type: 'individual',
+    visibility: 'public',
+    hasPool: false
+  },
+  {
+    id: '2',
+    title: 'Reading Marathon',
+    description: 'Read 12 books in 3 months and share your reviews.',
+    creator: 'book_lover',
+    startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    endDate: new Date(Date.now() + 97 * 24 * 60 * 60 * 1000), // ~3 months from now
+    category: 'education',
+    image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1000',
+    status: 'upcoming',
+    participants: [
+      {
+        id: 'p3',
+        userId: 'user3',
+        username: 'BookWorm',
+        joinedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+        score: 0
+      }
+    ],
+    type: 'individual',
+    visibility: 'public',
+    hasPool: true,
+    pool: {
+      id: 'pool1',
+      challengeId: '2',
+      totalAmount: 500,
+      minContribution: 25,
+      maxContribution: 200,
+      distributionStrategy: 'standard',
+      contributions: [
+        {
+          id: 'c1',
+          userId: 'user3',
+          username: 'BookWorm',
+          amount: 50,
+          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+        }
+      ],
+      isDistributed: false
+    }
+  },
+  {
+    id: '3',
+    title: 'Team Coding Bootcamp',
+    description: 'Build a complete web application as a team in 6 weeks.',
+    creator: 'tech_lead',
+    startDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+    endDate: new Date(Date.now() + 32 * 24 * 60 * 60 * 1000), // ~6 weeks from start
+    category: 'technology',
+    image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?q=80&w=1000',
+    status: 'active',
+    participants: [
+      {
+        id: 'p4',
+        userId: 'user4',
+        username: 'CodeMaster',
+        joinedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+        score: 95,
+        rank: 1,
+        teamId: 'team1'
+      },
+      {
+        id: 'p5',
+        userId: 'user5',
+        username: 'DevNinja',
+        joinedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+        score: 88,
+        rank: 2,
+        teamId: 'team1'
+      },
+      {
+        id: 'p6',
+        userId: 'user6',
+        username: 'WebWizard',
+        joinedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        score: 82,
+        rank: 3,
+        teamId: 'team2'
+      }
+    ],
+    type: 'team',
+    visibility: 'public',
+    hasPool: false,
+    teams: [
+      {
+        id: 'team1',
+        name: 'Code Warriors',
+        challengeId: '3',
+        members: [
+          {
+            id: 'p4',
+            userId: 'user4',
+            username: 'CodeMaster',
+            joinedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+            score: 95,
+            teamId: 'team1'
+          },
+          {
+            id: 'p5',
+            userId: 'user5',
+            username: 'DevNinja',
+            joinedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+            score: 88,
+            teamId: 'team1'
+          }
+        ],
+        score: 183,
+        rank: 1
+      },
+      {
+        id: 'team2',
+        name: 'Tech Titans',
+        challengeId: '3',
+        members: [
+          {
+            id: 'p6',
+            userId: 'user6',
+            username: 'WebWizard',
+            joinedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            score: 82,
+            teamId: 'team2'
+          }
+        ],
+        score: 82,
+        rank: 2
+      }
+    ]
+  },
+  {
+    id: '4',
+    title: 'Meditation Mindfulness',
+    description: 'Practice daily meditation for inner peace and mental clarity.',
+    creator: 'zen_master',
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+    endDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+    category: 'wellness',
+    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=1000',
+    status: 'completed',
+    participants: [
+      {
+        id: 'p7',
+        userId: 'user7',
+        username: 'PeacefulMind',
+        joinedAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+        score: 100,
+        rank: 1
+      },
+      {
+        id: 'p8',
+        userId: 'user8',
+        username: 'CalmSoul',
+        joinedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+        score: 95,
+        rank: 2
+      }
+    ],
+    type: 'individual',
+    visibility: 'public',
+    hasPool: true,
+    pool: {
+      id: 'pool2',
+      challengeId: '4',
+      totalAmount: 300,
+      minContribution: 15,
+      maxContribution: 150,
+      distributionStrategy: 'standard',
+      contributions: [
+        {
+          id: 'c2',
+          userId: 'user7',
+          username: 'PeacefulMind',
+          amount: 100,
+          timestamp: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)
+        },
+        {
+          id: 'c3',
+          userId: 'user8',
+          username: 'CalmSoul',
+          amount: 75,
+          timestamp: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)
+        }
+      ],
+      isDistributed: true,
+      distributedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+    }
   }
 ];
 
