@@ -104,7 +104,7 @@ const createHttpLink = () => {
           
           // Create timeout signal with longer timeout for production
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
           
           const response = await fetch(url, {
             ...init,
@@ -118,7 +118,6 @@ const createHttpLink = () => {
           
           clearTimeout(timeoutId);
           console.log('📡 tRPC response status:', response.status);
-          console.log('📡 tRPC response headers:', Object.fromEntries(response.headers.entries()));
           
           // Check if response is ok
           if (!response.ok) {
@@ -128,7 +127,6 @@ const createHttpLink = () => {
             if (contentType?.includes('text/html')) {
               const text = await response.clone().text();
               console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
-              console.error('Response preview:', text.substring(0, 500));
               
               // Check if it's a 404 page or error page
               if (text.includes('404') || text.includes('Not Found')) {
