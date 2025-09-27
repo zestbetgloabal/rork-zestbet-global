@@ -43,16 +43,29 @@ export default function QuickTestScreen() {
       'https://zestapp.online/api/trpc/example.hi'
     ];
     
+    let results = [];
+    
     for (const endpoint of endpoints) {
       try {
         console.log('🔍 Testing endpoint:', endpoint);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
         const response = await fetch(endpoint, {
-          method: 'GET',
+          method: endpoint.includes('trpc') ? 'POST' : 'GET',
           headers: {
             'Accept': 'application/json',
+            'Content-Type': 'application/json',
           },
-          signal: AbortSignal.timeout(10000)
+          body: endpoint.includes('trpc') ? JSON.stringify({
+            "0": {
+              "json": { "name": "DirectTest" }
+            }
+          }) : undefined,
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         const contentType = response.headers.get('content-type');
         let data = '';
@@ -68,20 +81,28 @@ export default function QuickTestScreen() {
           data = 'Could not parse response';
         }
         
+        results.push(`${endpoint}: ${response.status} ${response.statusText}`);
+        
         if (response.ok) {
-          setTestResult(`✅ Direct API Success (${endpoint}):\n${data.substring(0, 200)}`);
+          setTestResult(`✅ Direct API Success (${endpoint}):\nStatus: ${response.status}\nContent-Type: ${contentType}\nResponse: ${data.substring(0, 300)}`);
           setIsConnected(true);
           return; // Stop on first success
         } else {
           console.log(`❌ ${endpoint} failed with status ${response.status}`);
+          if (response.status === 404) {
+            results.push(`   → 404: Endpoint not found`);
+          } else if (response.status >= 500) {
+            results.push(`   → Server error: ${data.substring(0, 100)}`);
+          }
         }
       } catch (error) {
         console.log(`❌ ${endpoint} error:`, error);
+        results.push(`${endpoint}: Failed - ${String(error)}`);
       }
     }
     
     // If we get here, all endpoints failed
-    setTestResult(`❌ All API endpoints failed. The server may be down or misconfigured.\n\nTested endpoints:\n${endpoints.join('\n')}`);
+    setTestResult(`❌ All API endpoints failed:\n\n${results.join('\n')}\n\nPossible issues:\n• API server not deployed\n• Network connectivity problems\n• CORS configuration issues`);
     setIsConnected(false);
   };
 
