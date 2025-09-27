@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
-import { cors } from "hono/cors";
+
 import { createServer } from "http";
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 import WebRTCService from "./services/webrtc";
 import { loggerMiddleware, errorLoggerMiddleware } from "./middleware/logger";
 import { generalRateLimit, authRateLimit } from "./middleware/rate-limit";
+import { corsMiddleware } from "./middleware/cors";
 
 // Extend global type for WebRTC service
 declare global {
@@ -16,8 +17,8 @@ declare global {
 // app will be mounted at /api
 const app = new Hono();
 
-// Enable CORS for all routes
-app.use("*", cors());
+// Enable CORS for all routes with proper configuration
+app.use("*", corsMiddleware);
 
 // Rate limiting middleware
 app.use("/trpc/auth.*", authRateLimit);
