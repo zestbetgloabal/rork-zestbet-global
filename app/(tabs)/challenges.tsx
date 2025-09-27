@@ -66,7 +66,7 @@ export default function ChallengesScreen() {
   };
   
   const handleDebug = () => {
-    router.push('/test-connection');
+    router.push('/quick-test');
   };
   
   // Use filtered challenges hook with error handling

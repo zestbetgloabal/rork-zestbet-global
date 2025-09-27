@@ -10,7 +10,6 @@ export const trpc = createTRPCReact<AppRouter>();
 const getTrpcUrl = (): string => {
   // Check environment variables first
   if (process.env.EXPO_PUBLIC_TRPC_URL) {
-    console.log('🔗 Using env TRPC URL:', process.env.EXPO_PUBLIC_TRPC_URL);
     return process.env.EXPO_PUBLIC_TRPC_URL;
   }
   
@@ -20,23 +19,18 @@ const getTrpcUrl = (): string => {
     
     // For localhost development - try local backend first
     if (origin.includes('localhost')) {
-      console.log('🔗 Development mode - trying local backend first');
       return 'http://localhost:3001/api/trpc';
     }
     
     // Check if we're on production domains
     if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
       // Use current origin for production
-      const trpcUrl = `${origin}/api/trpc`;
-      console.log('🔗 Production domain detected, using:', trpcUrl);
-      return trpcUrl;
+      return `${origin}/api/trpc`;
     }
   }
 
   // Production URL - hardcoded fallback for mobile
-  const productionUrl = 'https://zestapp.online/api/trpc';
-  console.log('📱 Using production URL for mobile:', productionUrl);
-  return productionUrl;
+  return 'https://zestapp.online/api/trpc';
 };
 
 const getWsUrl = (): string => {
@@ -88,20 +82,21 @@ const getTrpcUrlSafe = () => {
 // HTTP link with better error handling and graceful fallback
 const createHttpLink = () => {
   const url = getTrpcUrlSafe();
-  console.log('🔗 Creating tRPC HTTP link with URL:', url);
   
   return httpBatchLink({
     url,
     transformer: superjson,
     headers() {
-      const headers = getAuthHeaders();
-      console.log('📡 tRPC request headers:', headers);
-      return headers;
+      return getAuthHeaders();
     },
     fetch: async (input, init) => {
       const tryFetch = async (url: string, retryCount = 0): Promise<Response> => {
         try {
           console.log(`🔄 tRPC request attempt ${retryCount + 1} to:`, url);
+          
+          // Create timeout signal
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
           
           const response = await fetch(url, {
             ...init,
@@ -110,10 +105,10 @@ const createHttpLink = () => {
               'Accept': 'application/json',
               ...init?.headers,
             },
-            // Add timeout to prevent hanging requests
-            signal: AbortSignal.timeout(10000), // 10 second timeout
+            signal: controller.signal,
           });
           
+          clearTimeout(timeoutId);
           console.log('📡 tRPC response status:', response.status);
           
           // Check if response is ok
