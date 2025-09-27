@@ -114,8 +114,8 @@ const getTrpcUrl = (): string => {
     return envUrl;
   }
   
-  // Production fallback - replace with your Amplify URL
-  const prodUrl = "https://main.d1234567890.amplifyapp.com/api/trpc";
+  // Production fallback - your Amplify URL
+  const prodUrl = "https://main.ddk0z2esbs19wf.amplifyapp.com/api/trpc";
   
   // Development fallback
   const devUrl = Platform.select({
@@ -166,7 +166,7 @@ const getTrpcUrlSafe = () => {
     return getTrpcUrl();
   } catch (error) {
     console.warn('TRPC URL configuration error:', error);
-    return 'https://zestapp.online/api/trpc';
+    return 'https://main.ddk0z2esbs19wf.amplifyapp.com/api/trpc';
   }
 };
 
