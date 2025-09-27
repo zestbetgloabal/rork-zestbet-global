@@ -12,5 +12,3 @@ cmd = 'npx tsx backend/server.ts'
 
 [variables]
 NODE_ENV = 'production'
-PORT = '3001'
-HOST = '0.0.0.0'
