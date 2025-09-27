@@ -3,8 +3,8 @@ import { createTRPCProxyClient, httpBatchLink, splitLink, wsLink, createWSClient
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
-import { mockChallenges, mockBets, mockSocialPosts, mockMissions, mockImpactProjects, mockLeaderboard } from '@/constants/mockData';
+import { getAppConfig, debugEnvironment } from '@/lib/config';
+import { mockChallenges, mockBets } from '@/constants/mockData';
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -106,25 +106,12 @@ const generateMockResponse = (url: string, body: any) => {
 
 
 const getTrpcUrl = (): string => {
-  // Check for environment variables first
-  const envUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_TRPC_URL || process.env.EXPO_PUBLIC_TRPC_URL;
+  // Use the centralized config helper
+  debugEnvironment();
+  const config = getAppConfig();
   
-  if (envUrl && envUrl !== 'undefined') {
-    console.log("🔗 Using environment TRPC URL:", envUrl);
-    return envUrl;
-  }
-  
-  // Production fallback - your Amplify URL (updated to zestapp.online)
-  const prodUrl = "https://zestapp.online/api/trpc";
-  
-  // Development fallback
-  const devUrl = Platform.select({
-    web: __DEV__ ? "http://localhost:3001/api/trpc" : prodUrl,
-    default: __DEV__ ? "http://localhost:3001/api/trpc" : prodUrl
-  });
-  
-  console.log("🔗 Using fallback TRPC URL:", devUrl);
-  return devUrl;
+  console.log("🔗 Using tRPC URL from config:", config.trpcUrl);
+  return config.trpcUrl;
 };
 
 const getWsUrl = (): string => {
