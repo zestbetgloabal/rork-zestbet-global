@@ -8,6 +8,13 @@ import { Platform } from "react-native";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
+  // For development, always use local server
+  if (__DEV__ || process.env.NODE_ENV === 'development') {
+    const localUrl = 'http://localhost:3001/api/trpc';
+    console.log('🏠 Using local development URL:', localUrl);
+    return localUrl;
+  }
+  
   // Check environment variables first
   if (process.env.EXPO_PUBLIC_TRPC_URL) {
     console.log('🔧 Using EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
@@ -102,9 +109,10 @@ const createHttpLink = () => {
         try {
           console.log(`🔄 tRPC request attempt ${retryCount + 1} to:`, url);
           
-          // Create timeout signal with longer timeout for production
+          // Create timeout signal with shorter timeout for development
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+          const timeoutMs = __DEV__ ? 10000 : 30000; // 10s dev, 30s prod
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           
           const response = await fetch(url, {
             ...init,
@@ -167,6 +175,9 @@ const createHttpLink = () => {
           // Handle specific error types
           if (error instanceof Error) {
             if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+              if (__DEV__ && url.includes('localhost')) {
+                throw new Error('Local development server not responding. Please start the backend server with: bun run dev:backend');
+              }
               throw new Error('Request timeout. The API server may be slow or unavailable.');
             }
             if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {

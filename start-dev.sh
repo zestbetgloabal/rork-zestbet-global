@@ -12,7 +12,7 @@ fi
 
 # Start backend server in background
 echo "🔧 Starting backend server on port 3001..."
-bun run backend/hono.ts &
+bun run dev-server.ts &
 BACKEND_PID=$!
 
 # Wait a moment for backend to start
