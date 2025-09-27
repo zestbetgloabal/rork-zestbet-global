@@ -18,6 +18,10 @@ import resetPasswordRoute from "./routes/auth/reset-password/route";
 import createBetRoute from "./routes/bets/create/route";
 import listBetsRoute from "./routes/bets/list/route";
 
+// Challenge routes
+import createChallengeRoute from "./routes/challenges/create/route";
+import listChallengesRoute from "./routes/challenges/list/route";
+
 
 
 // User routes
@@ -64,6 +68,12 @@ export const appRouter = createTRPCRouter({
   bets: createTRPCRouter({
     create: createBetRoute,
     list: listBetsRoute,
+  }),
+  
+  // Challenges
+  challenges: createTRPCRouter({
+    create: createChallengeRoute,
+    list: listChallengesRoute,
   }),
   
 

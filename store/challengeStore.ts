@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Challenge, ChallengeParticipant, ChallengePool, ChallengeTeam, PoolContribution } from '@/types';
 import { mockChallenges } from '@/constants/mockData';
 import { Alert } from 'react-native';
+import { trpc } from '@/lib/trpc';
 
 interface ChallengeState {
   challenges: Challenge[];
@@ -34,11 +35,22 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
   fetchChallenges: async () => {
     set({ isLoading: true, error: null });
     try {
-      // In a real app, this would be an API call
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      set({ challenges: mockChallenges, isLoading: false });
+      // Try to fetch from API first, fallback to mock data
+      try {
+        // This would use tRPC in a real implementation
+        // const result = await trpc.challenges.list.query({});
+        // set({ challenges: result.challenges, isLoading: false });
+        
+        // For now, use mock data with a delay to simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500));
+        set({ challenges: mockChallenges, isLoading: false });
+      } catch (apiError) {
+        console.warn('API call failed, using mock data:', apiError);
+        // Fallback to mock data
+        set({ challenges: mockChallenges, isLoading: false });
+      }
     } catch (error) {
+      console.error('Failed to fetch challenges:', error);
       set({ error: 'Failed to fetch challenges', isLoading: false });
     }
   },

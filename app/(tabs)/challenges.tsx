@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus, Filter } from 'lucide-react-native';
-import { useChallengeStore } from '@/store/challengeStore';
+import { useChallenges, useFilteredChallenges } from '@/store/challengeStoreProvider';
 import { useUserStore } from '@/store/userStore';
 import ChallengeCard from '@/components/ChallengeCard';
 import SegmentedControl from '@/components/SegmentedControl';
@@ -26,21 +26,21 @@ export default function ChallengesScreen() {
     challenges, 
     userChallenges, 
     isLoading, 
-    fetchChallenges, 
-    fetchUserChallenges 
-  } = useChallengeStore();
+    error,
+    refetchChallenges
+  } = useChallenges();
   
   const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
 
   const [showFilters, setShowFilters] = useState(false);
   
+  // Auto-refetch on mount and when user changes
   useEffect(() => {
-    fetchChallenges();
     if (user?.id) {
-      fetchUserChallenges(user.id);
+      refetchChallenges();
     }
-  }, [user?.id, fetchChallenges, fetchUserChallenges]);
+  }, [user?.id, refetchChallenges]);
   
 
   
@@ -52,39 +52,8 @@ export default function ChallengesScreen() {
     setShowFilters(!showFilters);
   };
   
-  // Filter challenges based on active tab and status filter
-  const filteredChallenges = (challenges || []).filter(challenge => {
-    // Filter by tab
-    if (activeTab === 'my' && !(userChallenges || []).includes(challenge.id)) {
-      return false;
-    }
-    
-    if (activeTab === 'team' && challenge.type !== 'team') {
-      return false;
-    }
-    
-    if (activeTab === 'individual' && challenge.type !== 'individual') {
-      return false;
-    }
-    
-    // Filter by status
-    if (statusFilter !== 'all' && challenge.status !== statusFilter) {
-      return false;
-    }
-    
-    return true;
-  });
-  
-  // Sort challenges: active first, then upcoming, then completed
-  const sortedChallenges = [...filteredChallenges].sort((a, b) => {
-    if (a.status === 'active' && b.status !== 'active') return -1;
-    if (a.status !== 'active' && b.status === 'active') return 1;
-    if (a.status === 'upcoming' && b.status === 'completed') return -1;
-    if (a.status === 'completed' && b.status === 'upcoming') return 1;
-    
-    // If same status, sort by start date (newest first)
-    return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-  });
+  // Use filtered challenges hook
+  const sortedChallenges = useFilteredChallenges(activeTab, statusFilter, userChallenges);
   
   const renderItem = ({ item }: { item: Challenge }) => (
     <ChallengeCard challenge={item} />

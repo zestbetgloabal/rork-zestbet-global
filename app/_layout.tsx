@@ -9,6 +9,7 @@ import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { ChallengeProvider } from "@/store/challengeStoreProvider";
 import { initializeCrashPrevention, hermesGuard, initializeIpadCrashPrevention, safeNavigate, safeAsync } from "@/utils/crashPrevention";
 
 // Initialize comprehensive crash prevention with iPad optimizations
@@ -170,7 +171,9 @@ function RootLayoutComponent() {
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <RootLayoutNav />
+          <ChallengeProvider>
+            <RootLayoutNav />
+          </ChallengeProvider>
         </trpc.Provider>
       </QueryClientProvider>
     </AppErrorBoundary>
