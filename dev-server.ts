@@ -50,9 +50,9 @@ const app = new Hono();
 
 // Enable CORS for all routes
 app.use("*", cors({
-  origin: ["http://localhost:8081", "http://localhost:3000", "https://localhost:8081"],
+  origin: ["http://localhost:8081", "http://localhost:3000", "https://localhost:8081", "http://192.168.1.1:8081", "http://192.168.1.2:8081", "http://192.168.1.3:8081", "http://192.168.1.4:8081", "http://192.168.1.5:8081"],
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization", "Accept"],
+  allowHeaders: ["Content-Type", "Authorization", "Accept", "Cache-Control", "User-Agent"],
   credentials: true,
 }));
 
@@ -80,19 +80,32 @@ app.get("/api/status", (c) => {
 });
 
 // Mock tRPC endpoints
-app.post("/api/trpc/example.hi", (c) => {
-  return c.json({
-    result: {
-      data: {
-        message: "Hello from development server!"
+app.post("/api/trpc/example.hi", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    console.log("📝 Example.hi request:", body);
+    
+    return c.json({
+      result: {
+        data: {
+          message: "Hello from development server!"
+        }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error("❌ Error in example.hi:", error);
+    return c.json({
+      error: {
+        message: "Internal server error",
+        code: -32603
+      }
+    }, 500);
+  }
 });
 
 app.post("/api/trpc/challenges.list", async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await c.req.json().catch(() => ({}));
     console.log("📝 Challenges list request:", body);
     
     return c.json({
@@ -118,14 +131,29 @@ app.post("/api/trpc/challenges.list", async (c) => {
 // Batch tRPC endpoint (for multiple queries)
 app.post("/api/trpc", async (c) => {
   try {
-    const body = await c.req.json();
+    let body;
+    try {
+      body = await c.req.json();
+    } catch (parseError) {
+      console.error("❌ JSON parse error:", parseError);
+      return c.json({
+        error: {
+          message: "Invalid JSON in request body",
+          code: -32700
+        }
+      }, 400);
+    }
+    
     console.log("📦 Batch tRPC request:", JSON.stringify(body, null, 2));
     
     // Handle batch requests
     if (Array.isArray(body)) {
-      const responses = body.map((item) => {
+      const responses = body.map((item, index) => {
+        const response = { id: index };
+        
         if (item.path === "example.hi") {
           return {
+            ...response,
             result: {
               data: {
                 message: "Hello from development server!"
@@ -134,6 +162,7 @@ app.post("/api/trpc", async (c) => {
           };
         } else if (item.path === "challenges.list") {
           return {
+            ...response,
             result: {
               data: {
                 challenges: mockChallenges,
@@ -144,6 +173,7 @@ app.post("/api/trpc", async (c) => {
           };
         } else {
           return {
+            ...response,
             error: {
               message: `Procedure ${item.path} not found`,
               code: -32601
@@ -178,7 +208,7 @@ app.post("/api/trpc", async (c) => {
     
     return c.json({
       error: {
-        message: `Procedure ${body.path} not found`,
+        message: `Procedure ${body.path || 'unknown'} not found`,
         code: -32601
       }
     }, 404);
@@ -197,10 +227,18 @@ app.post("/api/trpc", async (c) => {
 // Catch all for debugging
 app.all("*", (c) => {
   console.log(`🔍 Unhandled request: ${c.req.method} ${c.req.url}`);
+  console.log(`🔍 Headers:`, Object.fromEntries(c.req.raw.headers.entries()));
   return c.json({
     error: "Not found",
     method: c.req.method,
-    path: c.req.url
+    path: c.req.url,
+    availableEndpoints: [
+      "GET /api",
+      "GET /api/status", 
+      "POST /api/trpc",
+      "POST /api/trpc/example.hi",
+      "POST /api/trpc/challenges.list"
+    ]
   }, 404);
 });
 
