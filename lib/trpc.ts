@@ -106,10 +106,22 @@ const generateMockResponse = (url: string, body: any) => {
 
 
 const getTrpcUrl = (): string => {
-  // Always use mock mode for production-ready demo
-  const mockUrl = "https://mock-api.zestbet.demo/api/trpc";
-  console.log("🎭 Using mock API URL:", mockUrl);
-  return mockUrl;
+  // Check for environment variables first
+  const envUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_TRPC_URL || process.env.EXPO_PUBLIC_TRPC_URL;
+  
+  if (envUrl) {
+    console.log("🔗 Using environment TRPC URL:", envUrl);
+    return envUrl;
+  }
+  
+  // Development fallback
+  const devUrl = Platform.select({
+    web: "http://localhost:3001/api/trpc",
+    default: "http://localhost:3001/api/trpc"
+  });
+  
+  console.log("🔗 Using development TRPC URL:", devUrl);
+  return devUrl;
 };
 
 const getWsUrl = (): string => {
@@ -165,27 +177,53 @@ const createHttpLink = () => {
       return getAuthHeaders();
     },
     fetch: async (input, init) => {
-      // Mock fetch that always returns demo data
-      console.log('🎭 Mock API call intercepted:', typeof input === 'string' ? input : input.toString());
-      
-      // Simulate network delay
-      await new Promise((resolve) => {
-        if (resolve) setTimeout(resolve, 500 + Math.random() * 1000);
-      });
-      
-      // Parse the request to determine what mock data to return
-      const url = typeof input === 'string' ? input : input.toString();
-      const body = init?.body ? JSON.parse(init.body as string) : null;
-      
-      // Generate mock response based on the request
-      const mockResponse = generateMockResponse(url, body);
-      
-      return new Response(JSON.stringify(mockResponse), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      try {
+        console.log('🌐 Making real API call to:', typeof input === 'string' ? input : input.toString());
+        
+        // Make real fetch request
+        const response = await fetch(input, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          console.error('❌ API request failed:', response.status, response.statusText);
+          
+          // If backend is not available, fall back to mock data
+          if (response.status >= 500 || !response.status) {
+            console.log('🎭 Falling back to mock data due to server error');
+            const url = typeof input === 'string' ? input : input.toString();
+            const body = init?.body ? JSON.parse(init.body as string) : null;
+            const mockResponse = generateMockResponse(url, body);
+            
+            return new Response(JSON.stringify(mockResponse), {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+          }
+        }
+        
+        return response;
+      } catch (error) {
+        console.error('❌ Network error, falling back to mock data:', error);
+        
+        // Network error - fall back to mock data
+        const url = typeof input === 'string' ? input : input.toString();
+        const body = init?.body ? JSON.parse(init.body as string) : null;
+        const mockResponse = generateMockResponse(url, body);
+        
+        return new Response(JSON.stringify(mockResponse), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      }
     },
   });
 };
