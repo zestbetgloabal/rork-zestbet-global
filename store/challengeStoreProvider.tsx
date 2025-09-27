@@ -10,21 +10,36 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     limit: 50,
     offset: 0
   }, {
-    retry: 1,
+    retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });
+  
+  // Log query state changes
+  React.useEffect(() => {
+    if (challengesQuery.error) {
+      console.error('❌ Challenges query error:', challengesQuery.error.message);
+    }
+    if (challengesQuery.data) {
+      console.log('✅ Challenges loaded:', challengesQuery.data?.challenges?.length || 0);
+    }
+  }, [challengesQuery.error, challengesQuery.data]);
 
   // Fallback to mock data if API fails
   const challenges = useMemo(() => {
-    return (challengesQuery.data?.challenges as Challenge[]) || mockChallenges;
+    if (challengesQuery.data?.challenges && Array.isArray(challengesQuery.data.challenges)) {
+      return challengesQuery.data.challenges as Challenge[];
+    }
+    // Always return mock data as fallback to prevent undefined errors
+    console.log('🔄 Using mock challenges as fallback');
+    return mockChallenges;
   }, [challengesQuery.data?.challenges]);
   
   const isLoading = challengesQuery.isLoading;
   const error = challengesQuery.error?.message || null;
 
-  // Mock user challenges for now
-  const userChallenges: string[] = [];
+  // Mock user challenges for now - memoized to prevent re-renders
+  const userChallenges = useMemo(() => [] as string[], []);
 
   const refetchChallenges = useCallback(() => {
     challengesQuery.refetch();
@@ -56,7 +71,15 @@ export function useFilteredChallenges(activeTab: string, statusFilter: string, u
   const { challenges } = useChallenges();
 
   return React.useMemo(() => {
-    const filteredChallenges = (challenges || []).filter(challenge => {
+    // Ensure challenges is always an array
+    const challengesList = Array.isArray(challenges) ? challenges : [];
+    
+    if (challengesList.length === 0) {
+      console.log('⚠️ No challenges available for filtering');
+      return [];
+    }
+    
+    const filteredChallenges = challengesList.filter(challenge => {
       // Filter by tab
       if (activeTab === 'my' && !(userChallenges || []).includes(challenge.id)) {
         return false;
