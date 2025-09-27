@@ -1,18 +1,17 @@
 import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
 
-import { createServer } from "http";
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
-import WebRTCService from "./services/webrtc";
+// import WebRTCService from "./services/webrtc";
 import { loggerMiddleware, errorLoggerMiddleware } from "./middleware/logger";
 import { generalRateLimit, authRateLimit } from "./middleware/rate-limit";
 import { corsMiddleware } from "./middleware/cors";
 
 // Extend global type for WebRTC service
-declare global {
-  var webrtcService: WebRTCService | undefined;
-}
+// declare global {
+//   var webrtcService: WebRTCService | undefined;
+// }
 
 // app will be mounted at /api
 const app = new Hono();
@@ -164,23 +163,23 @@ app.get("/live-betting-status", (c) => {
   return c.json({ 
     status: "ok", 
     message: "Live betting service is running",
-    activeRooms: globalThis.webrtcService?.getActiveRooms() || []
+    activeRooms: []
   });
 });
 
-// Initialize WebRTC service when server starts
-if (typeof global !== 'undefined') {
-  // Create HTTP server for Socket.IO
-  const httpServer = createServer();
-  
-  // Initialize WebRTC service
-  globalThis.webrtcService = new WebRTCService(httpServer);
-  
-  // Start HTTP server for Socket.IO on a different port
-  const SOCKET_PORT = process.env.SOCKET_PORT || 3001;
-  httpServer.listen(SOCKET_PORT, () => {
-    console.log(`WebRTC/Socket.IO server running on port ${SOCKET_PORT}`);
-  });
-}
+// Initialize WebRTC service when server starts (disabled for Railway deployment)
+// if (typeof global !== 'undefined') {
+//   // Create HTTP server for Socket.IO
+//   const httpServer = createServer();
+//   
+//   // Initialize WebRTC service
+//   globalThis.webrtcService = new WebRTCService(httpServer);
+//   
+//   // Start HTTP server for Socket.IO on a different port
+//   const SOCKET_PORT = process.env.SOCKET_PORT || 3002;
+//   httpServer.listen(SOCKET_PORT, () => {
+//     console.log(`WebRTC/Socket.IO server running on port ${SOCKET_PORT}`);
+//   });
+// }
 
 export default app;

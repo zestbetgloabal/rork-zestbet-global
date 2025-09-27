@@ -306,7 +306,9 @@ export class Database {
   }
 }
 
-// Initialize database on startup
-Database.init().catch(console.error);
+// Initialize database on startup (non-blocking)
+Database.init().catch((error) => {
+  console.warn('Database initialization failed, using mock database:', error.message);
+});
 
 export default Database;
