@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ['nodejs_18', 'npm-9_x']
+
+[phases.install]
+cmds = ['npm ci']
+
+[phases.build]
+cmds = ['npm run build:backend || echo "Build step skipped"']
+
+[start]
+cmd = 'node backend/server.js'
+
+[variables]
+NODE_ENV = 'production'
