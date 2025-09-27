@@ -4,11 +4,13 @@ frontend:
     preBuild:
       commands:
         - 'npm install'
+        - 'echo Creating temporary backend package.json for Expo...'
+        - 'echo "{\"name\": \"backend\", \"version\": \"1.0.0\", \"private\": true}" > backend/package.json'
         - 'echo Backend dependencies are included in main package.json'
     build:
       commands:
         - 'echo Starting Expo web export'
-        - 'npx expo export --platform web --output-dir dist --clear'
+        - 'EXPO_NO_METRO_LAZY=1 npx expo export --platform web --output-dir dist --clear'
         - 'echo Finding generated web entry file'
         - 'ENTRY_FILE=$(find dist/_expo/static/js/web -maxdepth 1 -type f -name "entry-*.js" | head -n 1) && echo ENTRY_FILE=$ENTRY_FILE'
         - 'if [ -z "$ENTRY_FILE" ]; then echo ERROR Could not find entry js; ls -lah dist/_expo/static/js/web || true; exit 1; fi'
@@ -17,7 +19,7 @@ frontend:
         - 'echo Injected web entry into index'
         - 'echo Building backend for Lambda...'
         - 'mkdir -p backend/dist'
-        - 'npx esbuild backend/amplify/index.ts --bundle --platform=node --target=node18 --outfile=backend/dist/index.js --external:@aws-sdk/*'
+        - 'npx esbuild backend/amplify/index.ts --bundle --platform=node --target=node18 --outfile=backend/dist/index.js --external:@aws-sdk/* --external:drizzle-orm --external:postgres'
         - 'echo Copying Lambda function to dist...'
         - 'mkdir -p dist/api && cp backend/dist/index.js dist/api/'
         - 'echo Creating API routing configuration...'
