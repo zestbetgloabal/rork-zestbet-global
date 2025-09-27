@@ -3,60 +3,63 @@ import { createTRPCProxyClient, httpBatchLink, splitLink, wsLink, createWSClient
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import { Platform } from "react-native";
-
+import Constants from "expo-constants";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const getTrpcUrl = (): string => {
-  // For development, always use local server
-  if (__DEV__ || process.env.NODE_ENV === 'development') {
-    const localUrl = 'http://localhost:3001/api/trpc';
-    console.log('🏠 Using local development URL:', localUrl);
-    console.log('💡 If connection fails, run: ./start-backend.sh or bun run dev-server.ts');
-    return localUrl;
-  }
-  
-  // Check environment variables first
-  if (process.env.EXPO_PUBLIC_TRPC_URL) {
-    console.log('🔧 Using EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
-    return process.env.EXPO_PUBLIC_TRPC_URL;
-  }
-  
-  // For web environments, use current domain
-  if (typeof window !== "undefined" && window.location?.origin) {
-    const origin = window.location.origin;
-    console.log('🌐 Detected web origin:', origin);
-    
-    // For localhost development - try local backend first
-    if (origin.includes('localhost')) {
-      const localUrl = 'http://localhost:3001/api/trpc';
-      console.log('🏠 Using local development URL:', localUrl);
-      return localUrl;
+const resolveDevHost = (): string | null => {
+  try {
+    const hostUri: string | undefined = (Constants.expoConfig as any)?.hostUri ?? (Constants as any)?.manifest2?.extra?.expoClient?.hostUri ?? (Constants as any)?.manifest?.debuggerHost;
+    if (hostUri) {
+      const host = hostUri.split(":")[0];
+      if (host && host !== "localhost" && host !== "127.0.0.1") {
+        return host;
+      }
     }
-    
-    // Check if we're on production domains
-    if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com') || origin.includes('rork.com')) {
-      // Use current origin for production
-      const prodUrl = `${origin}/api/trpc`;
-      console.log('🚀 Using production URL from origin:', prodUrl);
-      return prodUrl;
+  } catch {}
+  return null;
+};
+
+const getTrpcUrl = (): string => {
+  const envUrl = process.env.EXPO_PUBLIC_TRPC_URL ?? process.env.TRPC_URL;
+  if (envUrl && envUrl.startsWith("http")) {
+    console.log("🔧 Using EXPO_PUBLIC_TRPC_URL:", envUrl);
+    return envUrl;
+  }
+
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined" && window.location?.origin) {
+      const origin = window.location.origin;
+      if (__DEV__ && origin.includes("localhost")) {
+        return "http://localhost:3001/api/trpc";
+      }
+      return `${origin}/api/trpc`;
     }
   }
 
-  // Production URL - hardcoded fallback for mobile
-  const fallbackUrl = 'https://zestapp.online/api/trpc';
-  console.log('📱 Using fallback production URL:', fallbackUrl);
+  if (__DEV__) {
+    const host = resolveDevHost();
+    if (host) {
+      const url = `http://${host}:3001/api/trpc`;
+      console.log("🏠 Using LAN dev URL:", url);
+      return url;
+    }
+    console.log("⚠️ Could not resolve LAN host, falling back to localhost (may fail on device)");
+    return "http://localhost:3001/api/trpc";
+  }
+
+  const fallbackUrl = "https://zestapp.online/api/trpc";
+  console.log("📱 Using fallback production URL:", fallbackUrl);
   return fallbackUrl;
 };
 
 const getWsUrl = (): string => {
   const httpUrl = getTrpcUrl();
-  return httpUrl.replace(/^http/, 'ws');
+  return httpUrl.replace(/^http/, "ws");
 };
 
 const getAuthHeaders = () => {
   try {
-    // Dynamic import to avoid import cycles
     const { useAuthStore } = require('@/store/authStore') as { useAuthStore: any };
     const token: string | null = useAuthStore.getState()?.token ?? null;
     if (token && token !== 'null' && token !== 'undefined') {
@@ -84,21 +87,18 @@ const createWebSocketClient = () => {
 
 const wsClient = createWebSocketClient();
 
-// Simple function to get TRPC URL without excessive logging
 const getTrpcUrlSafe = () => {
   try {
     return getTrpcUrl();
   } catch (error) {
     console.warn('TRPC URL configuration error:', error);
-    // Hardcoded fallback for production
     return 'https://zestapp.online/api/trpc';
   }
 };
 
-// HTTP link with better error handling and graceful fallback
 const createHttpLink = () => {
   const url = getTrpcUrlSafe();
-  
+
   return httpBatchLink({
     url,
     transformer: superjson,
@@ -109,12 +109,11 @@ const createHttpLink = () => {
       const tryFetch = async (url: string, retryCount = 0): Promise<Response> => {
         try {
           console.log(`🔄 tRPC request attempt ${retryCount + 1} to:`, url);
-          
-          // Create timeout signal with shorter timeout for development
+
           const controller = new AbortController();
-          const timeoutMs = __DEV__ ? 10000 : 30000; // 10s dev, 30s prod
+          const timeoutMs = __DEV__ ? 10000 : 30000;
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-          
+
           const response = await fetch(url, {
             ...init,
             method: init?.method || 'POST',
@@ -127,34 +126,30 @@ const createHttpLink = () => {
             },
             signal: controller.signal,
           });
-          
+
           clearTimeout(timeoutId);
           console.log('📡 tRPC response status:', response.status);
-          
-          // Check if response is ok
+
           if (!response.ok) {
             const contentType = response.headers.get('content-type');
             console.log('📄 Response content-type:', contentType);
-            
+
             if (contentType?.includes('text/html')) {
               const text = await response.clone().text();
               console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
               console.log('HTML response preview:', text.substring(0, 500));
-              
-              // Check if it's a 404 page or error page
+
               if (text.includes('404') || text.includes('Not Found')) {
                 throw new Error(`API endpoint not found. The tRPC server may not be deployed correctly.`);
               }
-              
+
               throw new Error(`API returned HTML instead of JSON. Server may be misconfigured.`);
             }
-            
-            // Try to get error message from JSON response
+
             try {
               const errorData = await response.clone().json();
               throw new Error(`API Error ${response.status}: ${errorData.message || errorData.error || 'Unknown error'}`);
             } catch {
-              // If it's a 404, suggest checking API deployment
               if (response.status === 404) {
                 throw new Error(`API endpoint not found (404). Check if the tRPC server is deployed.`);
               }
@@ -167,13 +162,12 @@ const createHttpLink = () => {
               throw new Error(`API Error ${response.status}: ${response.statusText}`);
             }
           }
-          
+
           console.log('✅ tRPC request successful');
           return response;
         } catch (error) {
           console.error(`❌ tRPC fetch error (attempt ${retryCount + 1}):`, error);
-          
-          // Handle specific error types
+
           if (error instanceof Error) {
             if (error.name === 'AbortError' || error.name === 'TimeoutError') {
               if (__DEV__ && url.includes('localhost')) {
@@ -182,13 +176,14 @@ const createHttpLink = () => {
               throw new Error('Request timeout. The API server may be slow or unavailable.');
             }
             if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
-              // Try to provide more specific error information
-              if (url.includes('localhost')) {
-                throw new Error('Cannot connect to local development server. Run: ./start-backend.sh or bun run dev-server.ts to start the backend on port 3001.');
+              const isLocal = /localhost|127\.0\.0\.1/.test(url);
+              if (isLocal || url.includes(':3001')) {
+                const host = resolveDevHost();
+                const hint = host ? `http://${host}:3001` : 'your computer\'s LAN IP on port 3001';
+                throw new Error(`Cannot connect to local development server. Ensure backend runs and is reachable at ${hint}. Start it with: ./start-backend.sh or bun run dev-server.ts`);
               }
               throw new Error('Network connection failed. Check your internet connection and API server status.');
             }
-            // Re-throw API-specific errors
             if (error.message.includes('API Error') || error.message.includes('API endpoint')) {
               throw error;
             }
@@ -196,12 +191,11 @@ const createHttpLink = () => {
           throw new Error(`Connection error: ${String(error)}`);
         }
       };
-      
-      // Validate input URL
+
       if (!input || (typeof input === 'string' && input.trim().length === 0)) {
         throw new Error('Invalid request URL');
       }
-      
+
       return await tryFetch(typeof input === 'string' ? input : input.toString());
     },
   });
@@ -222,7 +216,6 @@ export const trpcClient = trpc.createClient({
   ],
 });
 
-// Create a vanilla client for direct usage (non-React)
 export const vanillaTrpcClient = createTRPCProxyClient<AppRouter>({
   links: [
     wsClient ? splitLink({
@@ -238,11 +231,9 @@ export const vanillaTrpcClient = createTRPCProxyClient<AppRouter>({
   ],
 });
 
-// Enhanced connection test with multiple endpoints
 export const testTrpcConnection = async () => {
   const baseUrl = getTrpcUrlSafe().replace('/trpc', '');
-  
-  // Test multiple possible endpoints
+
   const testEndpoints = [
     `${baseUrl}/status`,
     `${baseUrl}/api/status`,
@@ -250,9 +241,9 @@ export const testTrpcConnection = async () => {
     `${baseUrl}/api`,
     baseUrl
   ];
-  
-  const results = [];
-  
+
+  const results: Array<{ endpoint: string; success: boolean; status?: number; contentType?: string | null; data?: unknown; error?: string }> = [];
+
   for (const endpoint of testEndpoints) {
     try {
       console.log('🔍 Testing endpoint:', endpoint);
@@ -262,10 +253,10 @@ export const testTrpcConnection = async () => {
           'Accept': 'application/json',
         },
       });
-      
+
       const contentType = response.headers.get('content-type');
-      let data = null;
-      
+      let data: unknown = null;
+
       try {
         if (contentType?.includes('application/json')) {
           data = await response.json();
@@ -275,16 +266,15 @@ export const testTrpcConnection = async () => {
       } catch {
         data = 'Could not parse response';
       }
-      
+
       results.push({
         endpoint,
         success: response.ok,
         status: response.status,
         contentType,
-        data: typeof data === 'string' ? data.substring(0, 200) : data
+        data: typeof data === 'string' ? (data as string).substring(0, 200) : data,
       });
-      
-      // If we found a working endpoint, return early
+
       if (response.ok) {
         console.log('✅ Found working endpoint:', endpoint);
         break;
@@ -293,26 +283,25 @@ export const testTrpcConnection = async () => {
       results.push({
         endpoint,
         success: false,
-        error: String(error)
+        error: String(error),
       });
     }
   }
-  
+
   return {
     baseUrl,
     results,
-    workingEndpoint: results.find(r => r.success)?.endpoint || null
+    workingEndpoint: results.find((r) => r.success)?.endpoint || null,
   };
 };
 
-// Simple function to test if tRPC is working
 export const testTrpcHello = async () => {
   try {
     const result = await vanillaTrpcClient.example.hi.query({ name: 'ConnectionTest' });
     console.log('✅ tRPC connection successful:', result);
-    return { success: true, data: result };
+    return { success: true, data: result } as const;
   } catch (error) {
     console.error('❌ tRPC connection failed:', error);
-    return { success: false, error: String(error) };
+    return { success: false, error: String(error) } as const;
   }
 };
