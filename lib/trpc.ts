@@ -8,6 +8,11 @@ import { Platform } from "react-native";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
+  // Check environment variables first
+  if (process.env.EXPO_PUBLIC_TRPC_URL) {
+    return process.env.EXPO_PUBLIC_TRPC_URL;
+  }
+  
   // Production URL - hardcoded fallback
   const productionUrl = 'https://zestapp.online/api/trpc';
   
@@ -17,19 +22,19 @@ const getTrpcUrl = (): string => {
     if (window.location.origin.includes('zestapp.online') || 
         window.location.origin.includes('amplifyapp.com')) {
       const amplifyUrl = `${window.location.origin}/api/trpc`;
-      console.log('🔗 Using production URL:', amplifyUrl);
+      if (__DEV__) console.log('🔗 Using production URL:', amplifyUrl);
       return amplifyUrl;
     }
     // For localhost development
     if (window.location.origin.includes('localhost')) {
       const localUrl = `${window.location.origin}/api/trpc`;
-      console.log('🔗 Using local URL:', localUrl);
+      if (__DEV__) console.log('🔗 Using local URL:', localUrl);
       return localUrl;
     }
   }
 
   // For mobile/native, always use production URL
-  console.log('📱 Using production URL for mobile:', productionUrl);
+  if (__DEV__) console.log('📱 Using production URL for mobile:', productionUrl);
   return productionUrl;
 };
 
@@ -40,15 +45,14 @@ const getWsUrl = (): string => {
 
 const getAuthHeaders = () => {
   try {
-    // Lazy require to avoid import cycles in some environments
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useAuthStore } = require('@/store/authStore');
+    // Dynamic import to avoid import cycles
+    const { useAuthStore } = require('@/store/authStore') as { useAuthStore: any };
     const token: string | null = useAuthStore.getState()?.token ?? null;
     if (token && token !== 'null' && token !== 'undefined') {
       return { authorization: `Bearer ${token}` } as Record<string, string>;
     }
-  } catch (e) {
-    console.warn('Auth store not available for TRPC headers');
+  } catch {
+    if (__DEV__) console.warn('Auth store not available for TRPC headers');
   }
   return {} as Record<string, string>;
 };
@@ -59,8 +63,8 @@ const createWebSocketClient = () => {
       return createWSClient({
         url: getWsUrl(),
       });
-    } catch (error) {
-      console.warn('WebSocket not supported, falling back to HTTP only');
+    } catch {
+      if (__DEV__) console.warn('WebSocket not supported, falling back to HTTP only');
       return null;
     }
   }
@@ -95,6 +99,11 @@ const createHttpLink = () => {
     },
     fetch: async (input, init) => {
       try {
+        // Validate input URL
+        if (!input || (typeof input === 'string' && input.trim().length === 0)) {
+          throw new Error('Invalid request URL');
+        }
+        
         const response = await fetch(input, {
           ...init,
           headers: {
@@ -108,15 +117,17 @@ const createHttpLink = () => {
           const contentType = response.headers.get('content-type');
           if (contentType?.includes('text/html')) {
             const text = await response.clone().text();
-            console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
-            console.error('Response:', text.substring(0, 300));
+            if (__DEV__) {
+              console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
+              console.error('Response:', text.substring(0, 300));
+            }
             throw new Error(`API returned HTML instead of JSON. Status: ${response.status}`);
           }
         }
         
         return response;
       } catch (error) {
-        console.error('❌ tRPC fetch error:', error);
+        if (__DEV__) console.error('❌ tRPC fetch error:', error);
         throw error;
       }
     },
