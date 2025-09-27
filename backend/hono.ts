@@ -117,8 +117,17 @@ app.get("/api/status", (c) => {
     endpoints: {
       trpc: "/api/trpc",
       status: "/api/status",
-      health: "/api"
+      health: "/api/health"
     }
+  });
+});
+
+// Railway health check endpoint
+app.get("/api/health", (c) => {
+  return c.json({
+    status: "ok",
+    message: "ZestBet API is healthy",
+    timestamp: new Date().toISOString()
   });
 });
 
