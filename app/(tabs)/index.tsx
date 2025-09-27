@@ -16,6 +16,7 @@ import colors from '@/constants/colors';
 import { DAILY_BET_LIMIT } from '@/constants/app';
 import { Brain } from 'lucide-react-native';
 import { hermesGuard, safeArrayOperation } from '@/utils/crashPrevention';
+import DemoModeIndicator from '@/components/DemoModeIndicator';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -112,6 +113,12 @@ export default function HomeScreen() {
   
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Demo Mode Indicator */}
+      <DemoModeIndicator 
+        message="🎭 Production Demo - Experience all features with sample data" 
+        variant="info"
+      />
+      
       {/* Welcome Section */}
       <View style={styles.welcomeSection}>
         <View style={styles.welcomeHeader}>

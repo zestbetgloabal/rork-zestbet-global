@@ -105,9 +105,10 @@ export default function ChallengesScreen() {
         </Pressable>
       </View>
       
-      {showMockIndicator && (
-        <DemoModeIndicator message="🎭 Demo Mode - Showing sample challenges" />
-      )}
+      <DemoModeIndicator 
+        message="🎭 Production Demo - All features work with sample data" 
+        variant="success"
+      />
       
       {showFilters && (
         <View style={styles.filtersContainer}>
