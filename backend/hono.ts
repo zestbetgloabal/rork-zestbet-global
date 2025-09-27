@@ -16,6 +16,15 @@ import { corsMiddleware } from "./middleware/cors";
 // app will be mounted at /api
 const app = new Hono();
 
+// Simple health check endpoint for Railway (before middleware)
+app.get("/health", (c) => {
+  return c.json({ 
+    status: "ok", 
+    message: "ZestBet API is healthy",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Enable CORS for all routes with proper configuration
 app.use("*", corsMiddleware);
 
@@ -58,14 +67,15 @@ app.use(
   })
 );
 
-// Simple health check endpoint
+// Simple health check endpoint for Railway
 app.get("/", (c) => {
   return c.json({ 
     status: "ok", 
     message: "ZestBet API is running",
     version: "1.0.0",
     environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    health: "healthy"
   });
 });
 
