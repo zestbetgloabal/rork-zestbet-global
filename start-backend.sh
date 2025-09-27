@@ -19,5 +19,5 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-# Run the development server
-bun run dev-server.ts
+# Run the real backend server with tRPC
+bun run backend/server.ts
