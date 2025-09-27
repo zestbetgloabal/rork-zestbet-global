@@ -11,7 +11,7 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     offset: 0
   }, {
     retry: 1, // Retry once to handle temporary network issues
-    retryDelay: 2000, // Wait 2 seconds before retry
+    retryDelay: 1000, // Wait 1 second before retry
     staleTime: 30000, // Cache for 30 seconds
     refetchOnWindowFocus: false,
     networkMode: 'offlineFirst',
@@ -22,12 +22,12 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
   // Log query state changes with better error handling
   React.useEffect(() => {
     if (challengesQuery.error) {
-      console.error('❌ Challenges query error:', challengesQuery.error.message);
-      // Check if it's a connection error
       if (challengesQuery.error.message.includes('Failed to fetch') || 
           challengesQuery.error.message.includes('Network connection failed') ||
           challengesQuery.error.message.includes('API endpoint not found')) {
-        console.log('🔌 Connection issue detected - using fallback data');
+        console.log('🎭 Mock mode - using fallback data');
+      } else {
+        console.error('❌ Challenges query error:', challengesQuery.error.message);
       }
     }
     if (challengesQuery.data) {
@@ -63,8 +63,13 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
   }, [challengesQuery.data?.challenges, challengesQuery.isLoading]);
   
   const isLoading = challengesQuery.isLoading;
-  // Provide error information for debugging but don't break the UI
-  const error = challengesQuery.error?.message || null;
+  // Only show error for non-connection issues to avoid confusing users in mock mode
+  const error = challengesQuery.error && 
+    !challengesQuery.error.message.includes('Failed to fetch') &&
+    !challengesQuery.error.message.includes('Network connection failed') &&
+    !challengesQuery.error.message.includes('API endpoint not found')
+    ? challengesQuery.error.message 
+    : null;
 
   // Mock user challenges for now - memoized to prevent re-renders
   const userChallenges = useMemo(() => [] as string[], []);
