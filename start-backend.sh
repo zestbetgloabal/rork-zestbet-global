@@ -24,4 +24,10 @@ echo "Press Ctrl+C to stop the server"
 echo ""
 
 # Run the real backend server with tRPC
-bun run backend/server.ts
+# Try bun first, fallback to npx tsx
+if command -v bun &> /dev/null; then
+    bun run backend/server.ts
+else
+    echo "⚠️  Bun not found, using npx tsx instead..."
+    npx tsx backend/server.ts
+fi
