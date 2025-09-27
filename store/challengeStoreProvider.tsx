@@ -5,12 +5,12 @@ import { trpc } from '@/lib/trpc';
 import { mockChallenges } from '@/constants/mockData';
 
 export const [ChallengeProvider, useChallenges] = createContextHook(() => {
-  // Use tRPC query for challenges
+  // Use tRPC query for challenges with better error handling
   const challengesQuery = trpc.challenges.list.useQuery({
     limit: 50,
     offset: 0
   }, {
-    retry: 2,
+    retry: 1, // Reduce retries to fail faster
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });
@@ -25,14 +25,17 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     }
   }, [challengesQuery.error, challengesQuery.data]);
 
-  // Fallback to mock data if API fails
+  // Always ensure we have a valid array - never return undefined
   const challenges = useMemo(() => {
+    // If we have valid API data, use it
     if (challengesQuery.data?.challenges && Array.isArray(challengesQuery.data.challenges)) {
+      console.log('✅ Using API challenges:', challengesQuery.data.challenges.length);
       return challengesQuery.data.challenges as Challenge[];
     }
+    
     // Always return mock data as fallback to prevent undefined errors
     console.log('🔄 Using mock challenges as fallback');
-    return mockChallenges;
+    return mockChallenges || []; // Ensure we never return undefined
   }, [challengesQuery.data?.challenges]);
   
   const isLoading = challengesQuery.isLoading;
@@ -66,50 +69,76 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
   }), [challenges, userChallenges, isLoading, error, refetchChallenges, getChallenge, getUserParticipation]);
 });
 
-// Hook for filtered challenges
+// Hook for filtered challenges with robust error handling
 export function useFilteredChallenges(activeTab: string, statusFilter: string, userChallenges: string[]) {
   const { challenges } = useChallenges();
 
   return React.useMemo(() => {
-    // Ensure challenges is always an array
-    const challengesList = Array.isArray(challenges) ? challenges : [];
+    // Triple-check to ensure we always have a valid array
+    let challengesList: Challenge[] = [];
+    
+    if (Array.isArray(challenges)) {
+      challengesList = challenges;
+    } else if (challenges && typeof challenges === 'object') {
+      // Handle case where challenges might be wrapped in an object
+      challengesList = Array.isArray((challenges as any).challenges) ? (challenges as any).challenges : [];
+    } else {
+      // Last resort - use mock data
+      console.warn('⚠️ Challenges is not an array, using mock data');
+      challengesList = mockChallenges || [];
+    }
     
     if (challengesList.length === 0) {
       console.log('⚠️ No challenges available for filtering');
       return [];
     }
     
-    const filteredChallenges = challengesList.filter(challenge => {
-      // Filter by tab
-      if (activeTab === 'my' && !(userChallenges || []).includes(challenge.id)) {
-        return false;
-      }
-      
-      if (activeTab === 'team' && challenge.type !== 'team') {
-        return false;
-      }
-      
-      if (activeTab === 'individual' && challenge.type !== 'individual') {
-        return false;
-      }
-      
-      // Filter by status
-      if (statusFilter !== 'all' && challenge.status !== statusFilter) {
-        return false;
-      }
-      
-      return true;
-    });
+    try {
+      const filteredChallenges = challengesList.filter(challenge => {
+        // Ensure challenge object is valid
+        if (!challenge || typeof challenge !== 'object' || !challenge.id) {
+          console.warn('⚠️ Invalid challenge object:', challenge);
+          return false;
+        }
+        
+        // Filter by tab
+        if (activeTab === 'my' && !(userChallenges || []).includes(challenge.id)) {
+          return false;
+        }
+        
+        if (activeTab === 'team' && challenge.type !== 'team') {
+          return false;
+        }
+        
+        if (activeTab === 'individual' && challenge.type !== 'individual') {
+          return false;
+        }
+        
+        // Filter by status
+        if (statusFilter !== 'all' && challenge.status !== statusFilter) {
+          return false;
+        }
+        
+        return true;
+      });
 
-    // Sort challenges: active first, then upcoming, then completed
-    return [...filteredChallenges].sort((a, b) => {
-      if (a.status === 'active' && b.status !== 'active') return -1;
-      if (a.status !== 'active' && b.status === 'active') return 1;
-      if (a.status === 'upcoming' && b.status === 'completed') return -1;
-      if (a.status === 'completed' && b.status === 'upcoming') return 1;
-      
-      // If same status, sort by start date (newest first)
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-    });
+      // Sort challenges: active first, then upcoming, then completed
+      return [...filteredChallenges].sort((a, b) => {
+        if (a.status === 'active' && b.status !== 'active') return -1;
+        if (a.status !== 'active' && b.status === 'active') return 1;
+        if (a.status === 'upcoming' && b.status === 'completed') return -1;
+        if (a.status === 'completed' && b.status === 'upcoming') return 1;
+        
+        // If same status, sort by start date (newest first)
+        try {
+          return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+        } catch {
+          return 0; // If date parsing fails, maintain order
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error filtering challenges:', error);
+      return []; // Return empty array on any error
+    }
   }, [challenges, activeTab, statusFilter, userChallenges]);
 }
