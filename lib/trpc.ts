@@ -18,10 +18,10 @@ const getTrpcUrl = (): string => {
   if (typeof window !== "undefined" && window.location?.origin) {
     const origin = window.location.origin;
     
-    // For localhost development - try API first, fallback to mock if needed
+    // For localhost development - try local first, then production
     if (origin.includes('localhost')) {
-      console.log('🔗 Development mode - trying API connection first');
-      return 'https://zestapp.online/api/trpc'; // Try production API even in dev
+      console.log('🔗 Development mode - using production API');
+      return 'https://zestapp.online/api/trpc';
     }
     
     // Check if we're on production domains
@@ -113,6 +113,8 @@ const createHttpLink = () => {
             'Accept': 'application/json',
             ...init?.headers,
           },
+          // Add timeout to prevent hanging requests
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         });
         
         console.log('📡 tRPC response status:', response.status);
@@ -126,26 +128,39 @@ const createHttpLink = () => {
             const text = await response.clone().text();
             console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
             console.error('Response preview:', text.substring(0, 500));
-            throw new Error(`API returned HTML instead of JSON. Status: ${response.status}. This usually means the API endpoint is not properly configured.`);
+            throw new Error(`Mock mode - using fallback data. API returned HTML instead of JSON.`);
           }
           
           // Try to get error message from JSON response
           try {
             const errorData = await response.clone().json();
-            throw new Error(`API Error ${response.status}: ${errorData.message || 'Unknown error'}`);
+            throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${errorData.message || 'Unknown error'}`);
           } catch {
             // If it's a 404, suggest checking API deployment
             if (response.status === 404) {
-              throw new Error(`API endpoint not found (404). The API may not be properly deployed or the routing is incorrect. Check AWS Amplify configuration.`);
+              throw new Error(`Mock mode - using fallback data. API endpoint not found (404).`);
             }
-            throw new Error(`API Error ${response.status}: ${response.statusText}`);
+            throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${response.statusText}`);
           }
         }
         
         return response;
       } catch (error) {
         console.error('❌ tRPC fetch error:', error);
-        throw error;
+        // Convert all network errors to mock mode errors
+        if (error instanceof Error) {
+          if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+            throw new Error('Mock mode - using fallback data. Request timeout.');
+          }
+          if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+            throw new Error('Mock mode - using fallback data. Network connection failed.');
+          }
+          // Re-throw if already a mock mode error
+          if (error.message.includes('Mock mode')) {
+            throw error;
+          }
+        }
+        throw new Error('Mock mode - using fallback data. Connection error.');
       }
     },
   });

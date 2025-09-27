@@ -72,8 +72,11 @@ export default function ChallengesScreen() {
   // Use filtered challenges hook with error handling
   const sortedChallenges = useFilteredChallenges(activeTab, statusFilter, userChallenges || []);
   
-  // Show mock mode indicator instead of error for better UX
-  const showMockIndicator = !isLoading && challenges?.length > 0 && !error;
+  // Show mock mode indicator when using fallback data
+  const showMockIndicator = !isLoading && sortedChallenges.length > 0 && (error || !challenges?.length);
+  
+  // Show loading state properly
+  const showLoading = isLoading && sortedChallenges.length === 0;
   
   const renderItem = ({ item }: { item: Challenge }) => (
     <ChallengeCard challenge={item} />
@@ -174,21 +177,24 @@ export default function ChallengesScreen() {
         </View>
       )}
       
-      {isLoading ? (
+      {showLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading challenges...</Text>
         </View>
       ) : (
         <FlatList
-          data={sortedChallenges}
+          data={sortedChallenges || []}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item?.id || Math.random().toString()}
           contentContainerStyle={styles.listContent}
-
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
-                No challenges found. Try changing your filters or create a new challenge.
+                {error 
+                  ? "Unable to load challenges. Showing demo data instead." 
+                  : "No challenges found. Try changing your filters or create a new challenge."
+                }
               </Text>
               <Button
                 title="Create Challenge"
@@ -290,6 +296,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   listContent: {
     padding: 16,
