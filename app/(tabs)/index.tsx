@@ -138,34 +138,24 @@ export default function HomeScreen() {
             onPress={() => router.push('/bets')}
             variant="primary"
             size="medium"
-            style={styles.actionButton}
-          />
-          <Button 
-            title="Get Zest" 
-            onPress={() => router.push('/wallet')}
-            variant="outline"
-            size="medium"
-            style={styles.actionButton}
+            style={styles.primaryActionButton}
           />
         </View>
       </View>
       
-      {/* AI Recommendations Section */}
+      {/* AI Recommendations Section - Simplified */}
       {recommendations.length > 0 && (
-        <View style={styles.section}>
+        <View style={styles.compactSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <Brain size={20} color={colors.primary} />
-              <Text style={styles.sectionTitle}>For You</Text>
+              <Brain size={18} color={colors.primary} />
+              <Text style={styles.compactSectionTitle}>Recommended</Text>
             </View>
-            <Pressable onPress={() => fetchRecommendations('bet', 2)}>
-              <Text style={styles.seeAllText}>Refresh</Text>
-            </Pressable>
           </View>
           
           {safeArrayOperation(
             recommendations,
-            (safeRecommendations) => safeRecommendations.map(recommendation => (
+            (safeRecommendations) => safeRecommendations.slice(0, 1).map(recommendation => (
               <AIRecommendationCard 
                 key={recommendation?.id || Math.random()} 
                 recommendation={recommendation} 
@@ -184,18 +174,18 @@ export default function HomeScreen() {
         />
       )}
       
-      {/* Featured Bets Section */}
-      <View style={styles.section}>
+      {/* Featured Bets Section - Simplified */}
+      <View style={styles.compactSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Bets</Text>
+          <Text style={styles.compactSectionTitle}>Popular Bets</Text>
           <Pressable onPress={() => router.push('/bets')}>
-            <Text style={styles.seeAllText}>See All</Text>
+            <Text style={styles.seeAllText}>View All</Text>
           </Pressable>
         </View>
         
         {safeArrayOperation(
           publicBets,
-          (safeBets) => safeBets.map(bet => (
+          (safeBets) => safeBets.slice(0, 1).map(bet => (
             <BetCard 
               key={bet?.id || Math.random()} 
               bet={bet} 
@@ -206,40 +196,38 @@ export default function HomeScreen() {
         )}
       </View>
       
-      {/* Missions Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Your Missions</Text>
-          <Pressable onPress={() => router.push('/profile')}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </Pressable>
+      {/* Missions Section - Compact */}
+      {activeMissions.length > 0 && (
+        <View style={styles.compactSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.compactSectionTitle}>Active Mission</Text>
+            <Pressable onPress={() => router.push('/profile')}>
+              <Text style={styles.seeAllText}>View All</Text>
+            </Pressable>
+          </View>
+          
+          {safeArrayOperation(
+            activeMissions,
+            (safeMissions) => safeMissions.slice(0, 1).map(mission => (
+              <MissionCard 
+                key={mission?.id || Math.random()} 
+                mission={mission}
+              />
+            )),
+            []
+          )}
         </View>
-        
-        {safeArrayOperation(
-          activeMissions,
-          (safeMissions) => safeMissions.map(mission => (
-            <MissionCard 
-              key={mission?.id || Math.random()} 
-              mission={mission}
-            />
-          )),
-          []
-        )}
-      </View>
+      )}
       
-      {/* Purchase Zest Promo */}
-      <View style={styles.purchasePromo}>
-        <Text style={styles.purchasePromoTitle}>Need More Zest?</Text>
-        <Text style={styles.purchasePromoText}>
-          You can get Ƶ{DAILY_BET_LIMIT} free Zest daily, or purchase more to keep betting!
-        </Text>
-        <Button 
-          title="Purchase Zest" 
+      {/* Quick Access to Wallet */}
+      <View style={styles.walletQuickAccess}>
+        <Text style={styles.walletAccessText}>Need more Zest?</Text>
+        <Pressable 
+          style={styles.walletAccessButton}
           onPress={() => router.push('/wallet')}
-          variant="primary"
-          size="medium"
-          style={styles.purchaseButton}
-        />
+        >
+          <Text style={styles.walletAccessButtonText}>Go to Wallet</Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -310,12 +298,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  actionButton: {
+  primaryActionButton: {
     flex: 1,
-    marginHorizontal: 4,
   },
   section: {
     marginBottom: 24,
+  },
+  compactSection: {
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -333,30 +323,38 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginLeft: 6,
   },
+  compactSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginLeft: 6,
+  },
   seeAllText: {
     fontSize: 14,
     color: colors.primary,
   },
-  purchasePromo: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
+  walletQuickAccess: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: `${colors.primary}08`,
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  purchasePromoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  purchasePromoText: {
+  walletAccessText: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 16,
   },
-  purchaseButton: {
-    alignSelf: 'flex-start',
+  walletAccessButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  walletAccessButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
