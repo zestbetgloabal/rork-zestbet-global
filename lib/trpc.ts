@@ -18,10 +18,10 @@ const getTrpcUrl = (): string => {
   if (typeof window !== "undefined" && window.location?.origin) {
     const origin = window.location.origin;
     
-    // For localhost development - try local first, then production
+    // For localhost development - try local backend first
     if (origin.includes('localhost')) {
-      console.log('🔗 Development mode - using production API');
-      return 'https://zestapp.online/api/trpc';
+      console.log('🔗 Development mode - trying local backend first');
+      return 'http://localhost:3001/api/trpc';
     }
     
     // Check if we're on production domains
@@ -114,7 +114,7 @@ const createHttpLink = () => {
             ...init?.headers,
           },
           // Add timeout to prevent hanging requests
-          signal: AbortSignal.timeout(10000), // 10 second timeout
+          signal: AbortSignal.timeout(5000), // 5 second timeout for faster fallback
         });
         
         console.log('📡 tRPC response status:', response.status);
