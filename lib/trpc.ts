@@ -26,9 +26,14 @@ const getTrpcUrl = (): string => {
     
     // Check if we're on production domains
     if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
-      const amplifyUrl = `${origin}/api/trpc`;
-      console.log('🔗 Using production URL:', amplifyUrl);
-      return amplifyUrl;
+      // Try multiple possible endpoints
+      const possibleUrls = [
+        `${origin}/api/trpc`,
+        `${origin}/trpc`,
+        'https://zestapp.online/api/trpc'
+      ];
+      console.log('🔗 Production domain detected, will try:', possibleUrls[0]);
+      return possibleUrls[0];
     }
   }
 
@@ -98,70 +103,118 @@ const createHttpLink = () => {
       return headers;
     },
     fetch: async (input, init) => {
-      try {
-        // Validate input URL
-        if (!input || (typeof input === 'string' && input.trim().length === 0)) {
-          throw new Error('Invalid request URL');
-        }
-        
-        console.log('🔄 tRPC request to:', input);
-        
-        const response = await fetch(input, {
-          ...init,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            ...init?.headers,
-          },
-          // Add timeout to prevent hanging requests
-          signal: AbortSignal.timeout(5000), // 5 second timeout for faster fallback
-        });
-        
-        console.log('📡 tRPC response status:', response.status);
-        
-        // Check if response is ok
-        if (!response.ok) {
-          const contentType = response.headers.get('content-type');
-          console.log('📄 Response content-type:', contentType);
+      const tryFetch = async (url: string, retryCount = 0): Promise<Response> => {
+        try {
+          console.log(`🔄 tRPC request attempt ${retryCount + 1} to:`, url);
           
-          if (contentType?.includes('text/html')) {
-            const text = await response.clone().text();
-            console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
-            console.error('Response preview:', text.substring(0, 500));
-            throw new Error(`Mock mode - using fallback data. API returned HTML instead of JSON.`);
-          }
+          const response = await fetch(url, {
+            ...init,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...init?.headers,
+            },
+            // Add timeout to prevent hanging requests
+            signal: AbortSignal.timeout(8000), // 8 second timeout
+          });
           
-          // Try to get error message from JSON response
-          try {
-            const errorData = await response.clone().json();
-            throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${errorData.message || 'Unknown error'}`);
-          } catch {
-            // If it's a 404, suggest checking API deployment
-            if (response.status === 404) {
-              throw new Error(`Mock mode - using fallback data. API endpoint not found (404).`);
+          console.log('📡 tRPC response status:', response.status);
+          
+          // Check if response is ok
+          if (!response.ok) {
+            const contentType = response.headers.get('content-type');
+            console.log('📄 Response content-type:', contentType);
+            
+            if (contentType?.includes('text/html')) {
+              const text = await response.clone().text();
+              console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
+              console.error('Response preview:', text.substring(0, 500));
+              
+              // Try alternative endpoints if this is the first attempt
+              if (retryCount === 0 && typeof input === 'string') {
+                const baseUrl = input.replace('/api/trpc', '').replace('/trpc', '');
+                const alternativeUrls = [
+                  `${baseUrl}/trpc`,
+                  `${baseUrl}/api/trpc`,
+                  'https://zestapp.online/api/trpc',
+                  'https://zestapp.online/trpc'
+                ].filter(u => u !== url);
+                
+                for (const altUrl of alternativeUrls) {
+                  try {
+                    console.log('🔄 Trying alternative URL:', altUrl);
+                    return await tryFetch(altUrl, retryCount + 1);
+                  } catch (e) {
+                    console.log('❌ Alternative URL failed:', altUrl);
+                    continue;
+                  }
+                }
+              }
+              
+              throw new Error(`Mock mode - using fallback data. API returned HTML instead of JSON.`);
             }
-            throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${response.statusText}`);
+            
+            // Try to get error message from JSON response
+            try {
+              const errorData = await response.clone().json();
+              throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${errorData.message || 'Unknown error'}`);
+            } catch {
+              // If it's a 404, suggest checking API deployment
+              if (response.status === 404) {
+                throw new Error(`Mock mode - using fallback data. API endpoint not found (404).`);
+              }
+              throw new Error(`Mock mode - using fallback data. API Error ${response.status}: ${response.statusText}`);
+            }
           }
+          
+          return response;
+        } catch (error) {
+          console.error(`❌ tRPC fetch error (attempt ${retryCount + 1}):`, error);
+          
+          // Try alternative endpoints on network errors (but only once)
+          if (retryCount === 0 && typeof input === 'string') {
+            const baseUrl = input.replace('/api/trpc', '').replace('/trpc', '');
+            const alternativeUrls = [
+              `${baseUrl}/trpc`,
+              `${baseUrl}/api/trpc`,
+              'https://zestapp.online/api/trpc',
+              'https://zestapp.online/trpc'
+            ].filter(u => u !== url);
+            
+            for (const altUrl of alternativeUrls) {
+              try {
+                console.log('🔄 Trying alternative URL after error:', altUrl);
+                return await tryFetch(altUrl, retryCount + 1);
+              } catch (e) {
+                console.log('❌ Alternative URL failed:', altUrl);
+                continue;
+              }
+            }
+          }
+          
+          // Convert all network errors to mock mode errors
+          if (error instanceof Error) {
+            if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+              throw new Error('Mock mode - using fallback data. Request timeout.');
+            }
+            if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+              throw new Error('Mock mode - using fallback data. Network connection failed.');
+            }
+            // Re-throw if already a mock mode error
+            if (error.message.includes('Mock mode')) {
+              throw error;
+            }
+          }
+          throw new Error('Mock mode - using fallback data. Connection error.');
         }
-        
-        return response;
-      } catch (error) {
-        console.error('❌ tRPC fetch error:', error);
-        // Convert all network errors to mock mode errors
-        if (error instanceof Error) {
-          if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-            throw new Error('Mock mode - using fallback data. Request timeout.');
-          }
-          if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
-            throw new Error('Mock mode - using fallback data. Network connection failed.');
-          }
-          // Re-throw if already a mock mode error
-          if (error.message.includes('Mock mode')) {
-            throw error;
-          }
-        }
-        throw new Error('Mock mode - using fallback data. Connection error.');
+      };
+      
+      // Validate input URL
+      if (!input || (typeof input === 'string' && input.trim().length === 0)) {
+        throw new Error('Invalid request URL');
       }
+      
+      return await tryFetch(typeof input === 'string' ? input : input.toString());
     },
   });
 };
