@@ -10,10 +10,12 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
     limit: 50,
     offset: 0
   }, {
-    retry: 0, // Don't retry in mock mode
-    staleTime: 0, // Don't cache in mock mode
+    retry: 1, // Retry once
+    staleTime: 30000, // Cache for 30 seconds
     refetchOnWindowFocus: false,
     networkMode: 'offlineFirst',
+    // Enable fallback to mock data on error
+    enabled: true,
   });
   
   // Log query state changes with better error handling
@@ -33,18 +35,30 @@ export const [ChallengeProvider, useChallenges] = createContextHook(() => {
 
   // Always ensure we have a valid array - never return undefined
   const challenges = useMemo(() => {
-    // If we have valid API data, use it
-    if (challengesQuery.data?.challenges && Array.isArray(challengesQuery.data.challenges)) {
-      console.log('✅ Using API challenges:', challengesQuery.data.challenges.length);
-      return challengesQuery.data.challenges as Challenge[];
+    try {
+      // If we have valid API data, use it
+      if (challengesQuery.data?.challenges && Array.isArray(challengesQuery.data.challenges)) {
+        console.log('✅ Using API challenges:', challengesQuery.data.challenges.length);
+        return challengesQuery.data.challenges as Challenge[];
+      }
+      
+      // If query is still loading, return empty array to prevent undefined errors
+      if (challengesQuery.isLoading) {
+        console.log('⏳ Query loading, returning empty array');
+        return [];
+      }
+      
+      // Always return mock data as fallback to prevent undefined errors
+      console.log('🔄 Using mock challenges as fallback');
+      // Ensure mockChallenges is always an array
+      const fallbackChallenges = Array.isArray(mockChallenges) ? mockChallenges : [];
+      return fallbackChallenges;
+    } catch (error) {
+      console.error('❌ Error in challenges memo:', error);
+      // Return mock data on any error
+      return Array.isArray(mockChallenges) ? mockChallenges : [];
     }
-    
-    // Always return mock data as fallback to prevent undefined errors
-    console.log('🔄 Using mock challenges as fallback');
-    // Ensure mockChallenges is always an array
-    const fallbackChallenges = Array.isArray(mockChallenges) ? mockChallenges : [];
-    return fallbackChallenges;
-  }, [challengesQuery.data?.challenges]);
+  }, [challengesQuery.data?.challenges, challengesQuery.isLoading]);
   
   const isLoading = challengesQuery.isLoading;
   // Don't show mock mode errors as actual errors to the user
