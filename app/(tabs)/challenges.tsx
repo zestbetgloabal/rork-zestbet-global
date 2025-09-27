@@ -15,6 +15,7 @@ import { useUserStore } from '@/store/userStore';
 import ChallengeCard from '@/components/ChallengeCard';
 import SegmentedControl from '@/components/SegmentedControl';
 import Button from '@/components/Button';
+import DemoModeIndicator from '@/components/DemoModeIndicator';
 import colors from '@/constants/colors';
 import { Challenge } from '@/types';
 
@@ -42,6 +43,18 @@ export default function ChallengesScreen() {
     }
   }, [user?.id, refetchChallenges]);
   
+  // Log current state for debugging
+  useEffect(() => {
+    console.log('🎯 Challenges screen state:', {
+      challengesCount: challenges?.length || 0,
+      isLoading,
+      hasError: !!error,
+      errorMessage: error,
+      activeTab,
+      statusFilter
+    });
+  }, [challenges, isLoading, error, activeTab, statusFilter]);
+  
 
   
   const handleCreateChallenge = () => {
@@ -58,6 +71,9 @@ export default function ChallengesScreen() {
   
   // Use filtered challenges hook with error handling
   const sortedChallenges = useFilteredChallenges(activeTab, statusFilter, userChallenges || []);
+  
+  // Show mock mode indicator instead of error for better UX
+  const showMockIndicator = !isLoading && challenges?.length > 0 && !error;
   
   const renderItem = ({ item }: { item: Challenge }) => (
     <ChallengeCard challenge={item} />
@@ -85,6 +101,10 @@ export default function ChallengesScreen() {
           <Bug size={20} color={colors.error} />
         </Pressable>
       </View>
+      
+      {showMockIndicator && (
+        <DemoModeIndicator message="🎭 Demo Mode - Showing sample challenges" />
+      )}
       
       {showFilters && (
         <View style={styles.filtersContainer}>
@@ -289,6 +309,7 @@ const styles = StyleSheet.create({
   createButton: {
     minWidth: 200,
   },
+
   fab: {
     position: 'absolute',
     bottom: 24,

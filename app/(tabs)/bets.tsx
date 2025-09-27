@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
 import { useBetStore } from '@/store/betStore';
 import BetCard from '@/components/BetCard';
 import Button from '@/components/Button';
 import SegmentedControl from '@/components/SegmentedControl';
+import DemoModeIndicator from '@/components/DemoModeIndicator';
 import colors from '@/constants/colors';
 import { Bet } from '@/types';
 
 export default function BetsScreen() {
   const router = useRouter();
-  const { bets, isLoading, fetchBets, likeBet, setVisibilityFilter, getFilteredBets, visibilityFilter } = useBetStore();
+  const insets = useSafeAreaInsets();
+  const { isLoading, fetchBets, likeBet, setVisibilityFilter, getFilteredBets, visibilityFilter } = useBetStore();
   const [refreshing, setRefreshing] = useState(false);
   
   useEffect(() => {
     fetchBets();
-  }, []);
+  }, [fetchBets]);
   
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -38,7 +41,7 @@ export default function BetsScreen() {
   const filteredBets = getFilteredBets();
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Trending Bets</Text>
         <Button
@@ -59,6 +62,10 @@ export default function BetsScreen() {
           tintColor={colors.primary}
         />
       </View>
+      
+      {!isLoading && filteredBets.length > 0 && (
+        <DemoModeIndicator message="🎭 Demo Mode - Showing sample bets" />
+      )}
       
       {isLoading && !refreshing ? (
         <View style={styles.loadingContainer}>
