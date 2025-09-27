@@ -183,21 +183,33 @@ export default function BackendDiagnosticScreen() {
       ))}
 
       <View style={styles.instructions}>
-        <Text style={styles.instructionsTitle}>🔧 Troubleshooting</Text>
+        <Text style={styles.instructionsTitle}>🔧 Backend Fix Instructions</Text>
         <Text style={styles.instructionsText}>
-          If you see errors above, try these steps:
+          If you see errors above, follow these steps:
         </Text>
         <Text style={styles.instructionsText}>
-          1. Make sure the backend server is running: ./start-backend.sh
+          1. Open a new terminal window
         </Text>
         <Text style={styles.instructionsText}>
-          2. Check that port 3001 is not blocked by firewall
+          2. Run: ./fix-backend-now.sh
         </Text>
         <Text style={styles.instructionsText}>
-          3. Verify environment variables in .env file
+          3. Wait for &quot;✅ Backend is working!&quot; message
         </Text>
         <Text style={styles.instructionsText}>
-          4. Try restarting both frontend and backend
+          4. Keep that terminal open (don&apos;t close it)
+        </Text>
+        <Text style={styles.instructionsText}>
+          5. Come back here and tap &quot;Refresh&quot; button
+        </Text>
+        <Text style={styles.instructionsText}>
+          6. All tests should show ✅ success
+        </Text>
+        <Text style={styles.instructionsText}>
+          
+        </Text>
+        <Text style={styles.instructionsText}>
+          Alternative: Run &quot;./start-backend.sh&quot; or &quot;bun run dev-server.ts&quot;
         </Text>
       </View>
       </ScrollView>

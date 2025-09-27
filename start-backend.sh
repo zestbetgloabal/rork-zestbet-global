@@ -10,6 +10,10 @@ if ! command -v bun &> /dev/null; then
     exit 1
 fi
 
+# Kill any existing process on port 3001
+echo "🔧 Checking for existing processes on port 3001..."
+lsof -ti:3001 | xargs kill -9 2>/dev/null || true
+
 # Start backend server
 echo "🔧 Starting backend server on port 3001..."
 echo "📍 Server will be available at: http://localhost:3001"
