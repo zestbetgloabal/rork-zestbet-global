@@ -8,11 +8,12 @@ export default function ConnectionTestSimple() {
   const [isLoading, setIsLoading] = useState(false);
 
   const testEndpoints = [
+    'http://localhost:3001/api',
+    'http://localhost:3001/api/status',
+    'http://localhost:3001/api/trpc',
     'https://zestapp.online/api',
     'https://zestapp.online/api/status',
     'https://zestapp.online/api/trpc',
-    'https://zestapp.online/status',
-    'https://zestapp.online',
   ];
 
   const testConnection = async () => {
@@ -89,27 +90,48 @@ export default function ConnectionTestSimple() {
     try {
       console.log('🔍 Testing tRPC specific endpoint...');
       
-      const trpcUrl = 'https://zestapp.online/api/trpc/example.hi';
+      // Try local first, then production
+      const trpcUrls = [
+        'http://localhost:3001/api/trpc',
+        'https://zestapp.online/api/trpc'
+      ];
       
-      const response = await fetch(trpcUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          "0": {
-            "json": { "name": "Test" }
+      for (const trpcUrl of trpcUrls) {
+        try {
+          console.log(`Testing ${trpcUrl}...`);
+          
+          const response = await fetch(trpcUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+              "0": {
+                "json": { "name": "Test" }
+              }
+            }),
+          });
+          
+          const data = await response.text();
+          
+          Alert.alert(
+            `tRPC Test Result (${trpcUrl})`,
+            `Status: ${response.status}\nContent-Type: ${response.headers.get('content-type')}\nData: ${data.substring(0, 300)}`
+          );
+          
+          if (response.ok) {
+            break; // Stop if we get a successful response
           }
-        }),
-      });
-      
-      const data = await response.text();
-      
-      Alert.alert(
-        'tRPC Test Result',
-        `Status: ${response.status}\nContent-Type: ${response.headers.get('content-type')}\nData: ${data.substring(0, 300)}`
-      );
+          
+        } catch (urlError) {
+          console.log(`Failed ${trpcUrl}:`, urlError);
+          if (trpcUrl === trpcUrls[trpcUrls.length - 1]) {
+            // This was the last URL, show the error
+            throw urlError;
+          }
+        }
+      }
       
     } catch (error) {
       Alert.alert('tRPC Test Error', String(error));

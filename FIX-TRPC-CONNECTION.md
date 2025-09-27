@@ -1,59 +1,90 @@
-# Fix tRPC Connection Error
+# Fix tRPC Connection Issues
 
-The "Failed to fetch" error occurs because the backend API is not running or not accessible. Here are the solutions:
+## Problem
+The app is showing "❌ tRPC fetch error (attempt 1): TypeError: Failed to fetch" because the production API server at `https://zestapp.online/api/trpc` is not responding.
 
-## Quick Fix (Recommended)
+## Solution
 
-1. **Start the development server:**
-   ```bash
-   bun run dev-server.ts
-   ```
+### 1. Start Local Development Server
 
-2. **Or use the shell script:**
-   ```bash
-   chmod +x start-dev.sh
-   ./start-dev.sh
-   ```
+Run the local development server to provide a working tRPC endpoint:
 
-3. **Then start your Expo app:**
-   ```bash
-   npm start
-   ```
+```bash
+# Make the script executable
+chmod +x start-dev.sh
 
-## What This Fixes
-
-- ✅ Provides a working API server on `http://localhost:3001`
-- ✅ Mock tRPC endpoints that return proper data
-- ✅ CORS configured for local development
-- ✅ Challenges data that matches your frontend types
-
-## Test the Connection
-
-1. Open the app and go to the Challenges tab
-2. Click the debug button (bug icon) to open the connection test
-3. You should see successful API connections
-
-## Environment Variables
-
-Make sure your `.env` file has:
-```
-EXPO_PUBLIC_TRPC_URL=http://localhost:3001/api/trpc
-EXPO_PUBLIC_API_URL=http://localhost:3001/api
+# Start the development environment
+./start-dev.sh
 ```
 
-## Production Deployment
+This will:
+- Start a local backend server on port 3001
+- Provide mock tRPC endpoints
+- Show connection status
 
-For production, you'll need to:
-1. Deploy the backend to AWS Amplify or another hosting service
-2. Update the environment variables to point to your production API
-3. Configure proper database connections
+### 2. Alternative: Direct Server Start
 
-## Troubleshooting
+If you prefer to start just the backend server:
 
-If you still see "Mock mode" messages:
-1. Check that the dev server is running on port 3001
-2. Verify the tRPC URL in the connection test page
-3. Make sure CORS is allowing your domain
-4. Check the browser network tab for actual HTTP errors
+```bash
+bun run dev-server.ts
+```
 
-The app will automatically fall back to mock data if the API is unavailable, so it will always work even without a backend.
+### 3. Test the Connection
+
+Once the server is running, you can test the connection:
+
+1. Open the app
+2. Navigate to "Connection Test Simple" page
+3. The test should show successful connections to `http://localhost:3001/api/*`
+
+### 4. What the Development Server Provides
+
+The local development server provides:
+- Health check endpoints (`/api`, `/api/status`)
+- Mock tRPC endpoints (`/api/trpc`)
+- Mock data for challenges and other features
+- CORS configuration for local development
+
+### 5. Expected Results
+
+After starting the local server, you should see:
+- ✅ `http://localhost:3001/api` - 200 OK
+- ✅ `http://localhost:3001/api/status` - 200 OK  
+- ✅ `http://localhost:3001/api/trpc` - 200 OK
+
+### 6. Configuration
+
+The tRPC client is configured to:
+1. Use local development server (`http://localhost:3001/api/trpc`) in development mode
+2. Fall back to production server in production mode
+3. Provide helpful error messages when connections fail
+
+### 7. Troubleshooting
+
+If you still see connection errors:
+
+1. **Check if the server is running:**
+   ```bash
+   curl http://localhost:3001/api/status
+   ```
+
+2. **Check the console logs** for detailed error messages
+
+3. **Verify port 3001 is available** (not used by another process)
+
+4. **Try the connection test page** in the app to see detailed results
+
+## Files Modified
+
+- `/lib/trpc.ts` - Updated to prioritize local development server
+- `/dev-server.ts` - Mock development server with tRPC endpoints
+- `/start-dev.sh` - Script to start development environment
+- `/app/connection-test-simple.tsx` - Updated to test local endpoints
+
+## Next Steps
+
+1. Start the local development server
+2. Test the connection using the app
+3. Develop your features using the local backend
+4. Deploy to production when ready
