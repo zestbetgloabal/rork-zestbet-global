@@ -27,7 +27,7 @@ const getTrpcUrl = (): string => {
     }
     
     // Check if we're on production domains
-    if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
+    if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com') || origin.includes('rork.com')) {
       // Use current origin for production
       const prodUrl = `${origin}/api/trpc`;
       console.log('🚀 Using production URL from origin:', prodUrl);
@@ -104,13 +104,16 @@ const createHttpLink = () => {
           
           // Create timeout signal with longer timeout for production
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
           
           const response = await fetch(url, {
             ...init,
+            method: init?.method || 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              'Cache-Control': 'no-cache',
+              'User-Agent': 'ZestBet-Mobile-App',
               ...init?.headers,
             },
             signal: controller.signal,
@@ -127,6 +130,7 @@ const createHttpLink = () => {
             if (contentType?.includes('text/html')) {
               const text = await response.clone().text();
               console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
+              console.log('HTML response preview:', text.substring(0, 500));
               
               // Check if it's a 404 page or error page
               if (text.includes('404') || text.includes('Not Found')) {
@@ -287,4 +291,16 @@ export const testTrpcConnection = async () => {
     results,
     workingEndpoint: results.find(r => r.success)?.endpoint || null
   };
+};
+
+// Simple function to test if tRPC is working
+export const testTrpcHello = async () => {
+  try {
+    const result = await vanillaTrpcClient.example.hi.query({ name: 'ConnectionTest' });
+    console.log('✅ tRPC connection successful:', result);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('❌ tRPC connection failed:', error);
+    return { success: false, error: String(error) };
+  }
 };
