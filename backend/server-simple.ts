@@ -1,12 +1,9 @@
 #!/usr/bin/env bun
 
 import { Hono } from "hono";
-import { trpcServer } from "@hono/trpc-server";
 import { cors } from "hono/cors";
-import { appRouter } from "./trpc/app-router";
-import { createContext } from "./trpc/create-context";
 
-console.log("🚀 Starting ZestBet Backend Server (Simplified)...");
+console.log("🚀 Starting ZestBet Simple Backend Server...");
 
 const app = new Hono();
 
@@ -34,23 +31,101 @@ app.use("*", async (c, next) => {
   }
 });
 
-// Mount tRPC router
-try {
-  console.log("🔧 Mounting tRPC router...");
-  
-  app.use(
-    "/api/trpc/*",
-    trpcServer({
-      router: appRouter,
-      createContext,
-    })
-  );
-  
-  console.log("✅ tRPC router mounted successfully");
-} catch (error) {
-  console.error("❌ Failed to mount tRPC router:", error);
-  process.exit(1);
-}
+// Mock tRPC endpoints (simplified)
+app.post("/api/trpc", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    console.log("📦 tRPC request:", JSON.stringify(body, null, 2));
+    
+    // Handle batch requests
+    if (Array.isArray(body)) {
+      const responses = body.map((item, index) => {
+        if (item.path === "example.hi") {
+          return {
+            id: index,
+            result: {
+              data: {
+                message: `Hello ${item.input?.json?.name || 'World'} from simple backend!`
+              }
+            }
+          };
+        } else if (item.path === "challenges.list") {
+          return {
+            id: index,
+            result: {
+              data: {
+                challenges: [
+                  {
+                    id: "1",
+                    title: "Test Challenge",
+                    description: "A simple test challenge",
+                    status: "active"
+                  }
+                ],
+                total: 1,
+                hasMore: false
+              }
+            }
+          };
+        } else {
+          return {
+            id: index,
+            error: {
+              message: `Procedure ${item.path} not found`,
+              code: -32601
+            }
+          };
+        }
+      });
+      
+      return c.json(responses);
+    }
+    
+    // Handle single requests
+    if (body.path === "example.hi") {
+      return c.json({
+        result: {
+          data: {
+            message: `Hello ${body.input?.json?.name || 'World'} from simple backend!`
+          }
+        }
+      });
+    } else if (body.path === "challenges.list") {
+      return c.json({
+        result: {
+          data: {
+            challenges: [
+              {
+                id: "1",
+                title: "Test Challenge",
+                description: "A simple test challenge",
+                status: "active"
+              }
+            ],
+            total: 1,
+            hasMore: false
+          }
+        }
+      });
+    }
+    
+    return c.json({
+      error: {
+        message: `Procedure ${body.path || 'unknown'} not found`,
+        code: -32601
+      }
+    }, 404);
+    
+  } catch (error) {
+    console.error("❌ Error in tRPC:", error);
+    return c.json({
+      error: {
+        message: "Internal server error",
+        code: -32603
+      }
+    }, 500);
+  }
+});
 
 // Health check endpoints
 app.get("/", (c) => {
