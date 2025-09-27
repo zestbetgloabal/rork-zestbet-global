@@ -4,7 +4,7 @@ import colors from '@/constants/colors';
 export default function AuthLayout() {
   return (
     <Stack
-      initialRouteName="start"
+      initialRouteName="welcome"
       screenOptions={{
         headerStyle: {
           backgroundColor: colors.background,
@@ -19,7 +19,7 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen 
-        name="start" 
+        name="welcome" 
         options={{ 
           title: "Welcome",
           headerShown: false,
