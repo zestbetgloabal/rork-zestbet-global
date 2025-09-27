@@ -45,26 +45,16 @@ app.get("/status", (c) => {
 });
 
 // Mount tRPC router at /trpc
-try {
-  app.use(
-    "/trpc/*",
-    trpcServer({
-      endpoint: "/api/trpc",
-      router: appRouter,
-      createContext,
-    })
-  );
-  console.log('✅ tRPC server mounted successfully');
-} catch (error) {
-  console.error('❌ Failed to mount tRPC server:', error);
-  // Fallback endpoint
-  app.get('/trpc/*', (c) => {
-    return c.json({ 
-      error: 'tRPC server failed to initialize', 
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  });
-}
+app.use(
+  "/trpc/*",
+  trpcServer({
+    endpoint: "/api/trpc",
+    router: appRouter,
+    createContext,
+  })
+);
+
+console.log('✅ tRPC server mounted successfully at /api/trpc');
 
 // Stateless logout endpoint to clear auth cookies (if any)
 app.post("/auth/logout", (c) => {

@@ -1,29 +1,23 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink, splitLink, wsLink, createWSClient } from "@trpc/client";
+import { createTRPCProxyClient, httpBatchLink, splitLink, wsLink, createWSClient } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import { Platform } from "react-native";
-import { debugApiCall } from "@/utils/crashPrevention";
+
 
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
-  // Production URL - direkt hardcoded da env vars nicht laden
+  // Production URL - hardcoded fallback
   const productionUrl = 'https://zestapp.online/api/trpc';
   
-  // Log environment variables for debugging
-  console.log('🔍 Environment check:');
-  console.log('EXPO_PUBLIC_TRPC_URL:', process.env.EXPO_PUBLIC_TRPC_URL);
-  console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
-  console.log('EXPO_PUBLIC_BASE_URL:', process.env.EXPO_PUBLIC_BASE_URL);
-  
-  // For AWS Amplify web, use the current domain with /api/trpc
+  // For web environments, use current domain
   if (typeof window !== "undefined" && window.location?.origin) {
-    // Check if we're on the production domain
+    // Check if we're on production domains
     if (window.location.origin.includes('zestapp.online') || 
         window.location.origin.includes('amplifyapp.com')) {
       const amplifyUrl = `${window.location.origin}/api/trpc`;
-      console.log('🔗 Using Amplify URL:', amplifyUrl);
+      console.log('🔗 Using production URL:', amplifyUrl);
       return amplifyUrl;
     }
     // For localhost development
@@ -100,21 +94,24 @@ const createHttpLink = () => {
       return headers;
     },
     fetch: async (input, init) => {
-      console.log('🌐 tRPC fetch request:', input, init?.method || 'GET');
-      
       try {
-        const response = await fetch(input, init);
-        console.log('📥 tRPC response status:', response.status, response.statusText);
+        const response = await fetch(input, {
+          ...init,
+          headers: {
+            'Content-Type': 'application/json',
+            ...init?.headers,
+          },
+        });
         
-        // Log response headers for debugging
-        const contentType = response.headers.get('content-type');
-        console.log('📄 Response content-type:', contentType);
-        
-        // If we get HTML instead of JSON, log it
-        if (!contentType?.includes('application/json') && !response.ok) {
-          const text = await response.clone().text();
-          console.error('❌ Received HTML instead of JSON:', text.substring(0, 200));
-          console.error('This usually means the API endpoint is not working properly');
+        // Check if response is ok
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (contentType?.includes('text/html')) {
+            const text = await response.clone().text();
+            console.error('❌ Received HTML instead of JSON. API endpoint may not be working.');
+            console.error('Response:', text.substring(0, 300));
+            throw new Error(`API returned HTML instead of JSON. Status: ${response.status}`);
+          }
         }
         
         return response;
@@ -127,6 +124,22 @@ const createHttpLink = () => {
 };
 
 export const trpcClient = trpc.createClient({
+  links: [
+    wsClient ? splitLink({
+      condition(op) {
+        return op.type === 'subscription';
+      },
+      true: wsLink({
+        client: wsClient,
+        transformer: superjson,
+      }),
+      false: createHttpLink(),
+    }) : createHttpLink(),
+  ],
+});
+
+// Create a vanilla client for direct usage (non-React)
+export const vanillaTrpcClient = createTRPCProxyClient<AppRouter>({
   links: [
     wsClient ? splitLink({
       condition(op) {
