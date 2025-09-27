@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { AlertTriangle } from 'lucide-react-native';
+import colors from '@/constants/colors';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -35,12 +37,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     if (this.state.hasError) {
       return (
         <View style={styles.container} testID="errorBoundary">
-          <Text style={styles.title}>Etwas ist schiefgelaufen</Text>
+          <AlertTriangle size={48} color={colors.error} style={styles.icon} />
+          <Text style={styles.title}>Something went wrong</Text>
           <Text style={styles.message}>
-            {this.state.errorMessage ?? 'Unerwarteter Fehler. Bitte versuchen Sie es erneut.'}
+            {this.state.errorMessage ?? 'An unexpected error occurred. The app will continue with mock data.'}
           </Text>
           <TouchableOpacity onPress={this.handleReset} style={styles.button} testID="errorBoundary-reset">
-            <Text style={styles.buttonText}>Erneut versuchen</Text>
+            <Text style={styles.buttonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
       );
@@ -56,30 +59,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#0B1220',
+    backgroundColor: colors.background,
+  },
+  icon: {
+    marginBottom: 16,
   },
   title: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 8,
     textAlign: 'center' as const,
   },
   message: {
     fontSize: 14,
-    color: '#B8C1CC',
+    color: colors.textSecondary,
     textAlign: 'center' as const,
-    marginBottom: 16,
+    marginBottom: 24,
+    lineHeight: 20,
   },
   button: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
   },
   buttonText: {
     color: '#FFFFFF',
     fontWeight: '600' as const,
+    fontSize: 16,
   },
 });
 

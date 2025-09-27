@@ -367,6 +367,20 @@ function RootLayoutNav() {
             presentation: "modal",
           }} 
         />
+        <Stack.Screen 
+          name="api-status" 
+          options={{ 
+            title: "API Status",
+            presentation: "modal",
+          }} 
+        />
+        <Stack.Screen 
+          name="debug-trpc" 
+          options={{ 
+            title: "tRPC Debug",
+            presentation: "modal",
+          }} 
+        />
       </Stack>
     </>
   );

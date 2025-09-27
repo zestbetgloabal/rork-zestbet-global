@@ -18,26 +18,17 @@ const getTrpcUrl = (): string => {
   if (typeof window !== "undefined" && window.location?.origin) {
     const origin = window.location.origin;
     
-    // Check if we're on production domains
-    if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
-      // Try multiple possible API endpoints for AWS Amplify
-      const possibleUrls = [
-        `${origin}/api/trpc`,
-        `${origin}/.netlify/functions/api/trpc`,
-        `${origin}/trpc`
-      ];
-      
-      const amplifyUrl = possibleUrls[0]; // Start with the most likely
-      console.log('🔗 Using production URL:', amplifyUrl);
-      console.log('🔗 Fallback URLs available:', possibleUrls.slice(1));
-      return amplifyUrl;
+    // For localhost development - use mock data mode
+    if (origin.includes('localhost')) {
+      console.log('🔗 Development mode - using mock data');
+      return 'mock://localhost'; // Special mock URL
     }
     
-    // For localhost development
-    if (origin.includes('localhost')) {
-      const localUrl = `${origin}/api/trpc`;
-      console.log('🔗 Using local URL:', localUrl);
-      return localUrl;
+    // Check if we're on production domains
+    if (origin.includes('zestapp.online') || origin.includes('amplifyapp.com')) {
+      const amplifyUrl = `${origin}/api/trpc`;
+      console.log('🔗 Using production URL:', amplifyUrl);
+      return amplifyUrl;
     }
   }
 
@@ -93,10 +84,24 @@ const getTrpcUrlSafe = () => {
   }
 };
 
-// HTTP link with better error handling
+// HTTP link with better error handling and mock support
 const createHttpLink = () => {
   const url = getTrpcUrlSafe();
   console.log('🔗 Creating tRPC HTTP link with URL:', url);
+  
+  // If using mock URL, return a mock link that always fails gracefully
+  if (url.startsWith('mock://')) {
+    console.log('🎭 Using mock tRPC link - all queries will use fallback data');
+    return httpBatchLink({
+      url: 'http://localhost:3000/mock-trpc', // This will fail and trigger fallbacks
+      transformer: superjson,
+      headers: () => ({}),
+      fetch: async () => {
+        // Always throw to trigger fallback behavior
+        throw new Error('Mock mode - using fallback data');
+      },
+    });
+  }
   
   return httpBatchLink({
     url,

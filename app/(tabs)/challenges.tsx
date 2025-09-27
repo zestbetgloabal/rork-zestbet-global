@@ -53,7 +53,7 @@ export default function ChallengesScreen() {
   };
   
   const handleDebug = () => {
-    router.push('/debug-trpc');
+    router.push('/api-status');
   };
   
   // Use filtered challenges hook
