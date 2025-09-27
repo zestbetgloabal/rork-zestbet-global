@@ -8,12 +8,6 @@ import { Platform } from "react-native";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getTrpcUrl = (): string => {
-  // Always use mock mode for now to prevent fetch errors
-  console.log('🎭 Using mock mode - API connection disabled');
-  return 'mock://localhost';
-  
-  // TODO: Re-enable API connection once backend is properly deployed
-  /*
   // Check environment variables first
   if (process.env.EXPO_PUBLIC_TRPC_URL) {
     console.log('🔗 Using env TRPC URL:', process.env.EXPO_PUBLIC_TRPC_URL);
@@ -24,10 +18,10 @@ const getTrpcUrl = (): string => {
   if (typeof window !== "undefined" && window.location?.origin) {
     const origin = window.location.origin;
     
-    // For localhost development - use mock data mode
+    // For localhost development - try API first, fallback to mock if needed
     if (origin.includes('localhost')) {
-      console.log('🔗 Development mode - using mock data');
-      return 'mock://localhost'; // Special mock URL
+      console.log('🔗 Development mode - trying API connection first');
+      return 'https://zestapp.online/api/trpc'; // Try production API even in dev
     }
     
     // Check if we're on production domains
@@ -42,7 +36,6 @@ const getTrpcUrl = (): string => {
   const productionUrl = 'https://zestapp.online/api/trpc';
   console.log('📱 Using production URL for mobile:', productionUrl);
   return productionUrl;
-  */
 };
 
 const getWsUrl = (): string => {
@@ -91,24 +84,10 @@ const getTrpcUrlSafe = () => {
   }
 };
 
-// HTTP link with better error handling and mock support
+// HTTP link with better error handling and graceful fallback
 const createHttpLink = () => {
   const url = getTrpcUrlSafe();
   console.log('🔗 Creating tRPC HTTP link with URL:', url);
-  
-  // If using mock URL, return a mock link that always fails gracefully
-  if (url.startsWith('mock://')) {
-    console.log('🎭 Using mock tRPC link - all queries will use fallback data');
-    return httpBatchLink({
-      url: 'http://localhost:3000/mock-trpc', // This will fail and trigger fallbacks
-      transformer: superjson,
-      headers: () => ({}),
-      fetch: async () => {
-        // Always throw to trigger fallback behavior
-        throw new Error('Mock mode - using fallback data');
-      },
-    });
-  }
   
   return httpBatchLink({
     url,
@@ -131,6 +110,7 @@ const createHttpLink = () => {
           ...init,
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
             ...init?.headers,
           },
         });
