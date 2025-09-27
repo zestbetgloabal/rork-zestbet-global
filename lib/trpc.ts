@@ -114,10 +114,13 @@ const getTrpcUrl = (): string => {
     return envUrl;
   }
   
+  // Production fallback - replace with your Amplify URL
+  const prodUrl = "https://main.d1234567890.amplifyapp.com/api/trpc";
+  
   // Development fallback
   const devUrl = Platform.select({
-    web: "http://localhost:3001/api/trpc",
-    default: "http://localhost:3001/api/trpc"
+    web: __DEV__ ? "http://localhost:3001/api/trpc" : prodUrl,
+    default: __DEV__ ? "http://localhost:3001/api/trpc" : prodUrl
   });
   
   console.log("🔗 Using development TRPC URL:", devUrl);
