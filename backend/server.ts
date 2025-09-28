@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server';
 import app from './hono';
 
 const port = parseInt(process.env.PORT || '8080');
-const host = process.env.HOST || '0.0.0.0';
+const host = '0.0.0.0'; // Änderung: Host explizit auf 0.0.0.0 gesetzt
 
 console.log(`🚀 Starting ZestBet API server on ${host}:${port}`);
 console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
