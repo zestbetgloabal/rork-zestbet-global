@@ -1,5 +1,5 @@
+// backend/services/email.ts
 import nodemailer from 'nodemailer';
-import config from '../config/environment';
 
 interface EmailOptions {
   to: string;
@@ -12,13 +12,13 @@ class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    this.transporter = nodemailer.createTransporter({
-      host: config.email.smtp.host,
-      port: config.email.smtp.port,
-      secure: config.email.smtp.secure,
+    this.transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: false,
       auth: {
-        user: config.email.smtp.auth.user,
-        pass: config.email.smtp.auth.pass,
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
       tls: {
         rejectUnauthorized: false,
@@ -29,16 +29,14 @@ class EmailService {
   async sendEmail({ to, subject, html, text }: EmailOptions) {
     try {
       const mailOptions = {
-        from: `${config.email.fromName || 'ZestBet'} <${config.email.from}>`,
+        from: `${process.env.EMAIL_FROM_NAME || 'ZestBet'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
         to,
         subject,
         html,
         text,
       };
-
       const result = await this.transporter.sendMail(mailOptions);
       console.log('Email sent successfully:', result.messageId);
-      
       return {
         success: true,
         messageId: result.messageId,
@@ -117,23 +115,23 @@ class EmailService {
         <div class="header">
           <div class="logo">ZestBet</div>
         </div>
-        
+       
         <div class="content">
           <h1>Hallo ${name}!</h1>
-          
+         
           <p>Willkommen bei ZestBet! Um deine Registrierung abzuschließen, bestätige bitte deine Email-Adresse mit dem folgenden Code:</p>
-          
+         
           <div class="verification-code">
             <div class="code">${verificationCode}</div>
           </div>
-          
+         
           <p>Gib diesen 4-stelligen Code in der App ein, um deine Email-Adresse zu bestätigen.</p>
-          
+         
           <p><strong>Wichtig:</strong> Dieser Code ist nur 15 Minuten gültig.</p>
-          
+         
           <p>Falls du dich nicht bei ZestBet registriert hast, kannst du diese Email ignorieren.</p>
         </div>
-        
+       
         <div class="footer">
           <p>© 2024 ZestBet. Alle Rechte vorbehalten.</p>
           <p>Diese Email wurde automatisch generiert. Bitte antworte nicht auf diese Email.</p>
@@ -141,23 +139,22 @@ class EmailService {
       </body>
       </html>
     `;
-    
+   
     const text = `
       Hallo ${name}!
-      
+     
       Willkommen bei ZestBet! Um deine Registrierung abzuschließen, bestätige bitte deine Email-Adresse mit dem folgenden Code:
-      
+     
       Verifikationscode: ${verificationCode}
-      
+     
       Gib diesen 4-stelligen Code in der App ein, um deine Email-Adresse zu bestätigen.
-      
+     
       Wichtig: Dieser Code ist nur 15 Minuten gültig.
-      
+     
       Falls du dich nicht bei ZestBet registriert hast, kannst du diese Email ignorieren.
-      
+     
       © 2024 ZestBet. Alle Rechte vorbehalten.
     `;
-
     return this.sendEmail({
       to: email,
       subject,
@@ -223,18 +220,18 @@ class EmailService {
         <div class="header">
           <div class="logo">ZestBet</div>
         </div>
-        
+       
         <div class="content">
           <h1>Willkommen bei ZestBet, ${name}! 🎉</h1>
-          
+         
           <p>Deine Email-Adresse wurde erfolgreich bestätigt! Du bist jetzt Teil der ZestBet Community.</p>
-          
+         
           <div class="welcome-bonus">
             <h2>🎁 Willkommensbonus</h2>
             <div class="bonus-amount">1.000 ZEST Coins</div>
             <p>wurden deinem Konto gutgeschrieben!</p>
           </div>
-          
+         
           <h3>Was kannst du jetzt tun?</h3>
           <ul>
             <li>🎯 Erstelle deine ersten Wetten</li>
@@ -242,39 +239,38 @@ class EmailService {
             <li>🏆 Nimm an Live-Events teil</li>
             <li>💰 Sammle ZEST Coins und tausche sie ein</li>
           </ul>
-          
+         
           <p>Viel Spaß beim Wetten und möge das Glück mit dir sein!</p>
-          
+         
           <p>Dein ZestBet Team</p>
         </div>
-        
+       
         <div class="footer">
           <p>© 2024 ZestBet. Alle Rechte vorbehalten.</p>
         </div>
       </body>
       </html>
     `;
-    
+   
     const text = `
       Willkommen bei ZestBet, ${name}!
-      
+     
       Deine Email-Adresse wurde erfolgreich bestätigt! Du bist jetzt Teil der ZestBet Community.
-      
+     
       🎁 Willkommensbonus: 1.000 ZEST Coins wurden deinem Konto gutgeschrieben!
-      
+     
       Was kannst du jetzt tun?
       - Erstelle deine ersten Wetten
       - Lade Freunde ein und erhalte Boni
       - Nimm an Live-Events teil
       - Sammle ZEST Coins und tausche sie ein
-      
+     
       Viel Spaß beim Wetten und möge das Glück mit dir sein!
-      
+     
       Dein ZestBet Team
-      
+     
       © 2024 ZestBet. Alle Rechte vorbehalten.
     `;
-
     return this.sendEmail({
       to: email,
       subject,
@@ -342,25 +338,25 @@ class EmailService {
         <div class="header">
           <div class="logo">ZestBet</div>
         </div>
-        
+       
         <div class="content">
           <h1>Passwort zurücksetzen</h1>
-          
+         
           <p>Hallo ${name},</p>
-          
+         
           <p>du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt. Verwende den folgenden Code:</p>
-          
+         
           <div class="reset-code">
             <div class="code">${resetCode}</div>
           </div>
-          
+         
           <p>Gib diesen 4-stelligen Code in der App ein, um ein neues Passwort zu erstellen.</p>
-          
+         
           <p><strong>Wichtig:</strong> Dieser Code ist nur 15 Minuten gültig.</p>
-          
+         
           <p>Falls du diese Anfrage nicht gestellt hast, kannst du diese Email ignorieren. Dein Passwort bleibt unverändert.</p>
         </div>
-        
+       
         <div class="footer">
           <p>© 2024 ZestBet. Alle Rechte vorbehalten.</p>
           <p>Diese Email wurde automatisch generiert. Bitte antworte nicht auf diese Email.</p>
@@ -368,25 +364,24 @@ class EmailService {
       </body>
       </html>
     `;
-    
+   
     const text = `
       Passwort zurücksetzen
-      
+     
       Hallo ${name},
-      
+     
       du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt. Verwende den folgenden Code:
-      
+     
       Reset-Code: ${resetCode}
-      
+     
       Gib diesen 4-stelligen Code in der App ein, um ein neues Passwort zu erstellen.
-      
+     
       Wichtig: Dieser Code ist nur 15 Minuten gültig.
-      
+     
       Falls du diese Anfrage nicht gestellt hast, kannst du diese Email ignorieren. Dein Passwort bleibt unverändert.
-      
+     
       © 2024 ZestBet. Alle Rechte vorbehalten.
     `;
-
     return this.sendEmail({
       to: email,
       subject,
@@ -395,5 +390,4 @@ class EmailService {
     });
   }
 }
-
 export default new EmailService();
