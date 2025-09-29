@@ -1,32 +1,76 @@
 import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
+import helmet from "helmet";
+import { cors } from "hono/cors";
 
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
-// import WebRTCService from "./services/webrtc";
+import { MonitoringService } from "./services/monitoring";
+import { initializeDatabase } from "./config/supabase";
 import { loggerMiddleware, errorLoggerMiddleware } from "./middleware/logger";
 import { generalRateLimit, authRateLimit } from "./middleware/rate-limit";
-import { corsMiddleware } from "./middleware/cors";
 
 // Extend global type for WebRTC service
 // declare global {
 //   var webrtcService: WebRTCService | undefined;
 // }
 
+// Initialize monitoring
+MonitoringService.initialize();
+
+// Initialize database
+initializeDatabase().catch(error => {
+  console.error('❌ Database initialization failed:', error);
+  MonitoringService.captureException(error);
+});
+
 // app will be mounted at /api
 const app = new Hono();
+
+// Security headers with Helmet
+app.use('*', async (c, next) => {
+  // Apply security headers
+  c.res.headers.set('X-Content-Type-Options', 'nosniff');
+  c.res.headers.set('X-Frame-Options', 'DENY');
+  c.res.headers.set('X-XSS-Protection', '1; mode=block');
+  c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  
+  // HSTS for HTTPS
+  if (c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https://')) {
+    c.res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  
+  await next();
+});
+
+// CORS configuration
+app.use('*', cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:8081',
+    'https://mycaredaddy.com',
+    'https://www.mycaredaddy.com',
+    'https://mycaredaddy.de',
+    'https://www.mycaredaddy.de',
+    'https://mycaredaddy.eu',
+    'https://www.mycaredaddy.eu'
+  ],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  maxAge: 86400
+}));
 
 // Simple health check endpoint for Railway (before middleware)
 app.get("/health", (c) => {
   return c.json({ 
     status: "ok", 
-    message: "ZestBet API is healthy",
-    timestamp: new Date().toISOString()
+    message: "MyCaredaddy API is healthy",
+    timestamp: new Date().toISOString(),
+    version: "2.0.0"
   });
 });
-
-// Enable CORS for all routes with proper configuration
-app.use("*", corsMiddleware);
 
 // Rate limiting middleware
 app.use("/trpc/auth.*", authRateLimit);

@@ -1,393 +1,419 @@
-// backend/services/email.ts
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
+import jwt from 'jsonwebtoken';
 
-interface EmailOptions {
-  to: string;
-  subject: string;
-  html: string;
-  text?: string;
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@mycaredaddy.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://mycaredaddy.com';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+
+if (!SENDGRID_API_KEY) {
+  console.warn('⚠️ SENDGRID_API_KEY not configured. Email functionality will be disabled.');
+} else {
+  sgMail.setApiKey(SENDGRID_API_KEY);
 }
 
-class EmailService {
-  private transporter: nodemailer.Transporter;
+export interface EmailTemplate {
+  subject: string;
+  html: string;
+  text: string;
+}
 
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
+export class EmailService {
+  private static isConfigured(): boolean {
+    return !!SENDGRID_API_KEY;
   }
 
-  async sendEmail({ to, subject, html, text }: EmailOptions) {
+  private static generateVerificationToken(userId: string, email: string): string {
+    return jwt.sign(
+      { userId, email, type: 'email_verification' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+  }
+
+  private static generatePasswordResetToken(userId: string, email: string): string {
+    return jwt.sign(
+      { userId, email, type: 'password_reset' },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+  }
+
+  static verifyToken(token: string): { userId: string; email: string; type: string } {
     try {
-      const mailOptions = {
-        from: `${process.env.EMAIL_FROM_NAME || 'ZestBet'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
-        to,
-        subject,
-        html,
-        text,
-      };
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log('Email sent successfully:', result.messageId);
-      return {
-        success: true,
-        messageId: result.messageId,
-      };
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      throw new Error('Failed to send email');
+      if (!token?.trim()) {
+        throw new Error('Token is required');
+      }
+      return jwt.verify(token.trim(), JWT_SECRET) as { userId: string; email: string; type: string };
+    } catch {
+      throw new Error('Invalid or expired token');
     }
   }
 
-  async sendVerificationEmail(email: string, name: string, verificationCode: string) {
-    const subject = 'Email-Adresse bestätigen - ZestBet';
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Email bestätigen</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 2px solid #f0f0f0;
-          }
-          .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007AFF;
-          }
-          .content {
-            padding: 30px 0;
-          }
-          .verification-code {
-            background: #f8f9fa;
-            border: 2px solid #007AFF;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-          }
-          .code {
-            font-size: 32px;
-            font-weight: bold;
-            color: #007AFF;
-            letter-spacing: 8px;
-            font-family: 'Courier New', monospace;
-          }
-          .footer {
-            text-align: center;
-            padding: 20px 0;
-            border-top: 1px solid #f0f0f0;
-            color: #666;
-            font-size: 14px;
-          }
-          .button {
-            display: inline-block;
-            background: #007AFF;
-            color: white;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 6px;
-            margin: 20px 0;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">ZestBet</div>
-        </div>
-       
-        <div class="content">
-          <h1>Hallo ${name}!</h1>
-         
-          <p>Willkommen bei ZestBet! Um deine Registrierung abzuschließen, bestätige bitte deine Email-Adresse mit dem folgenden Code:</p>
-         
-          <div class="verification-code">
-            <div class="code">${verificationCode}</div>
+  private static getEmailVerificationTemplate(verificationUrl: string, firstName?: string): EmailTemplate {
+    const name = firstName ? ` ${firstName}` : '';
+    
+    return {
+      subject: 'Bestätige deine E-Mail-Adresse - MyCaredaddy',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>E-Mail bestätigen</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; padding: 20px 0; border-bottom: 2px solid #007bff; }
+            .logo { font-size: 24px; font-weight: bold; color: #007bff; }
+            .content { padding: 30px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px 0; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">MyCaredaddy</div>
+            </div>
+            <div class="content">
+              <h2>Hallo${name}!</h2>
+              <p>Willkommen bei MyCaredaddy! Bitte bestätige deine E-Mail-Adresse, um dein Konto zu aktivieren.</p>
+              <p>Klicke auf den Button unten, um deine E-Mail-Adresse zu bestätigen:</p>
+              <a href="${verificationUrl}" class="button">E-Mail bestätigen</a>
+              <p>Oder kopiere diesen Link in deinen Browser:</p>
+              <p style="word-break: break-all; color: #007bff;">${verificationUrl}</p>
+              <p><strong>Dieser Link ist 24 Stunden gültig.</strong></p>
+              <p>Falls du dich nicht bei MyCaredaddy registriert hast, ignoriere diese E-Mail.</p>
+            </div>
+            <div class="footer">
+              <p>© 2024 MyCaredaddy. Alle Rechte vorbehalten.</p>
+              <p>Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
+            </div>
           </div>
-         
-          <p>Gib diesen 4-stelligen Code in der App ein, um deine Email-Adresse zu bestätigen.</p>
-         
-          <p><strong>Wichtig:</strong> Dieser Code ist nur 15 Minuten gültig.</p>
-         
-          <p>Falls du dich nicht bei ZestBet registriert hast, kannst du diese Email ignorieren.</p>
-        </div>
-       
-        <div class="footer">
-          <p>© 2024 ZestBet. Alle Rechte vorbehalten.</p>
-          <p>Diese Email wurde automatisch generiert. Bitte antworte nicht auf diese Email.</p>
-        </div>
-      </body>
-      </html>
-    `;
-   
-    const text = `
-      Hallo ${name}!
-     
-      Willkommen bei ZestBet! Um deine Registrierung abzuschließen, bestätige bitte deine Email-Adresse mit dem folgenden Code:
-     
-      Verifikationscode: ${verificationCode}
-     
-      Gib diesen 4-stelligen Code in der App ein, um deine Email-Adresse zu bestätigen.
-     
-      Wichtig: Dieser Code ist nur 15 Minuten gültig.
-     
-      Falls du dich nicht bei ZestBet registriert hast, kannst du diese Email ignorieren.
-     
-      © 2024 ZestBet. Alle Rechte vorbehalten.
-    `;
-    return this.sendEmail({
-      to: email,
-      subject,
-      html,
-      text,
-    });
+        </body>
+        </html>
+      `,
+      text: `
+        Hallo${name}!
+        
+        Willkommen bei MyCaredaddy! Bitte bestätige deine E-Mail-Adresse, um dein Konto zu aktivieren.
+        
+        Besuche diesen Link, um deine E-Mail-Adresse zu bestätigen:
+        ${verificationUrl}
+        
+        Dieser Link ist 24 Stunden gültig.
+        
+        Falls du dich nicht bei MyCaredaddy registriert hast, ignoriere diese E-Mail.
+        
+        © 2024 MyCaredaddy. Alle Rechte vorbehalten.
+      `
+    };
   }
 
-  async sendWelcomeEmail(email: string, name: string) {
-    const subject = 'Willkommen bei ZestBet! 🎉';
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Willkommen bei ZestBet</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 2px solid #f0f0f0;
-          }
-          .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007AFF;
-          }
-          .content {
-            padding: 30px 0;
-          }
-          .welcome-bonus {
-            background: linear-gradient(135deg, #007AFF, #00C7BE);
-            color: white;
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-            margin: 20px 0;
-          }
-          .bonus-amount {
-            font-size: 36px;
-            font-weight: bold;
-            margin: 10px 0;
-          }
-          .footer {
-            text-align: center;
-            padding: 20px 0;
-            border-top: 1px solid #f0f0f0;
-            color: #666;
-            font-size: 14px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">ZestBet</div>
-        </div>
-       
-        <div class="content">
-          <h1>Willkommen bei ZestBet, ${name}! 🎉</h1>
-         
-          <p>Deine Email-Adresse wurde erfolgreich bestätigt! Du bist jetzt Teil der ZestBet Community.</p>
-         
-          <div class="welcome-bonus">
-            <h2>🎁 Willkommensbonus</h2>
-            <div class="bonus-amount">1.000 ZEST Coins</div>
-            <p>wurden deinem Konto gutgeschrieben!</p>
+  private static getPasswordResetTemplate(resetUrl: string, firstName?: string): EmailTemplate {
+    const name = firstName ? ` ${firstName}` : '';
+    
+    return {
+      subject: 'Passwort zurücksetzen - MyCaredaddy',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Passwort zurücksetzen</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; padding: 20px 0; border-bottom: 2px solid #007bff; }
+            .logo { font-size: 24px; font-weight: bold; color: #007bff; }
+            .content { padding: 30px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #dc3545; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px 0; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">MyCaredaddy</div>
+            </div>
+            <div class="content">
+              <h2>Hallo${name}!</h2>
+              <p>Du hast eine Passwort-Zurücksetzung für dein MyCaredaddy-Konto angefordert.</p>
+              <p>Klicke auf den Button unten, um ein neues Passwort zu erstellen:</p>
+              <a href="${resetUrl}" class="button">Passwort zurücksetzen</a>
+              <p>Oder kopiere diesen Link in deinen Browser:</p>
+              <p style="word-break: break-all; color: #007bff;">${resetUrl}</p>
+              <p><strong>Dieser Link ist 1 Stunde gültig.</strong></p>
+              <p>Falls du keine Passwort-Zurücksetzung angefordert hast, ignoriere diese E-Mail. Dein Passwort bleibt unverändert.</p>
+            </div>
+            <div class="footer">
+              <p>© 2024 MyCaredaddy. Alle Rechte vorbehalten.</p>
+              <p>Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
+            </div>
           </div>
-         
-          <h3>Was kannst du jetzt tun?</h3>
-          <ul>
-            <li>🎯 Erstelle deine ersten Wetten</li>
-            <li>👥 Lade Freunde ein und erhalte Boni</li>
-            <li>🏆 Nimm an Live-Events teil</li>
-            <li>💰 Sammle ZEST Coins und tausche sie ein</li>
-          </ul>
-         
-          <p>Viel Spaß beim Wetten und möge das Glück mit dir sein!</p>
-         
-          <p>Dein ZestBet Team</p>
-        </div>
-       
-        <div class="footer">
-          <p>© 2024 ZestBet. Alle Rechte vorbehalten.</p>
-        </div>
-      </body>
-      </html>
-    `;
-   
-    const text = `
-      Willkommen bei ZestBet, ${name}!
-     
-      Deine Email-Adresse wurde erfolgreich bestätigt! Du bist jetzt Teil der ZestBet Community.
-     
-      🎁 Willkommensbonus: 1.000 ZEST Coins wurden deinem Konto gutgeschrieben!
-     
-      Was kannst du jetzt tun?
-      - Erstelle deine ersten Wetten
-      - Lade Freunde ein und erhalte Boni
-      - Nimm an Live-Events teil
-      - Sammle ZEST Coins und tausche sie ein
-     
-      Viel Spaß beim Wetten und möge das Glück mit dir sein!
-     
-      Dein ZestBet Team
-     
-      © 2024 ZestBet. Alle Rechte vorbehalten.
-    `;
-    return this.sendEmail({
-      to: email,
-      subject,
-      html,
-      text,
-    });
+        </body>
+        </html>
+      `,
+      text: `
+        Hallo${name}!
+        
+        Du hast eine Passwort-Zurücksetzung für dein MyCaredaddy-Konto angefordert.
+        
+        Besuche diesen Link, um ein neues Passwort zu erstellen:
+        ${resetUrl}
+        
+        Dieser Link ist 1 Stunde gültig.
+        
+        Falls du keine Passwort-Zurücksetzung angefordert hast, ignoriere diese E-Mail. Dein Passwort bleibt unverändert.
+        
+        © 2024 MyCaredaddy. Alle Rechte vorbehalten.
+      `
+    };
   }
 
-  async sendPasswordResetEmail(email: string, name: string, resetCode: string) {
-    const subject = 'Passwort zurücksetzen - ZestBet';
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Passwort zurücksetzen</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 2px solid #f0f0f0;
-          }
-          .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007AFF;
-          }
-          .content {
-            padding: 30px 0;
-          }
-          .reset-code {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-          }
-          .code {
-            font-size: 32px;
-            font-weight: bold;
-            color: #856404;
-            letter-spacing: 8px;
-            font-family: 'Courier New', monospace;
-          }
-          .footer {
-            text-align: center;
-            padding: 20px 0;
-            border-top: 1px solid #f0f0f0;
-            color: #666;
-            font-size: 14px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">ZestBet</div>
-        </div>
-       
-        <div class="content">
-          <h1>Passwort zurücksetzen</h1>
-         
-          <p>Hallo ${name},</p>
-         
-          <p>du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt. Verwende den folgenden Code:</p>
-         
-          <div class="reset-code">
-            <div class="code">${resetCode}</div>
+  private static getWelcomeTemplate(firstName?: string): EmailTemplate {
+    const name = firstName ? ` ${firstName}` : '';
+    
+    return {
+      subject: 'Willkommen bei MyCaredaddy! 🎉',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Willkommen bei MyCaredaddy</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; padding: 20px 0; border-bottom: 2px solid #007bff; }
+            .logo { font-size: 24px; font-weight: bold; color: #007bff; }
+            .content { padding: 30px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .feature { padding: 15px; margin: 10px 0; background: #f8f9fa; border-radius: 5px; }
+            .footer { text-align: center; padding: 20px 0; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">MyCaredaddy</div>
+            </div>
+            <div class="content">
+              <h2>Willkommen${name}! 🎉</h2>
+              <p>Schön, dass du Teil der MyCaredaddy-Community geworden bist!</p>
+              
+              <h3>Was du jetzt tun kannst:</h3>
+              
+              <div class="feature">
+                <h4>👤 Profil vervollständigen</h4>
+                <p>Füge ein Foto hinzu und erzähle etwas über dich, um bessere Matches zu finden.</p>
+              </div>
+              
+              <div class="feature">
+                <h4>🚨 Care-Signale senden</h4>
+                <p>Teile mit, wenn du Hilfe brauchst - unsere Community ist für dich da.</p>
+              </div>
+              
+              <div class="feature">
+                <h4>🤝 Anderen helfen</h4>
+                <p>Reagiere auf Care-Signale in deiner Nähe und baue echte Verbindungen auf.</p>
+              </div>
+              
+              <a href="${FRONTEND_URL}/profile" class="button">Profil vervollständigen</a>
+              
+              <p>Bei Fragen sind wir jederzeit für dich da. Schreib uns einfach!</p>
+            </div>
+            <div class="footer">
+              <p>© 2024 MyCaredaddy. Alle Rechte vorbehalten.</p>
+              <p>Du erhältst diese E-Mail, weil du dich bei MyCaredaddy registriert hast.</p>
+            </div>
           </div>
-         
-          <p>Gib diesen 4-stelligen Code in der App ein, um ein neues Passwort zu erstellen.</p>
-         
-          <p><strong>Wichtig:</strong> Dieser Code ist nur 15 Minuten gültig.</p>
-         
-          <p>Falls du diese Anfrage nicht gestellt hast, kannst du diese Email ignorieren. Dein Passwort bleibt unverändert.</p>
-        </div>
-       
-        <div class="footer">
-          <p>© 2024 ZestBet. Alle Rechte vorbehalten.</p>
-          <p>Diese Email wurde automatisch generiert. Bitte antworte nicht auf diese Email.</p>
-        </div>
-      </body>
-      </html>
-    `;
-   
-    const text = `
-      Passwort zurücksetzen
-     
-      Hallo ${name},
-     
-      du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt. Verwende den folgenden Code:
-     
-      Reset-Code: ${resetCode}
-     
-      Gib diesen 4-stelligen Code in der App ein, um ein neues Passwort zu erstellen.
-     
-      Wichtig: Dieser Code ist nur 15 Minuten gültig.
-     
-      Falls du diese Anfrage nicht gestellt hast, kannst du diese Email ignorieren. Dein Passwort bleibt unverändert.
-     
-      © 2024 ZestBet. Alle Rechte vorbehalten.
-    `;
-    return this.sendEmail({
-      to: email,
-      subject,
-      html,
-      text,
-    });
+        </body>
+        </html>
+      `,
+      text: `
+        Willkommen${name}! 🎉
+        
+        Schön, dass du Teil der MyCaredaddy-Community geworden bist!
+        
+        Was du jetzt tun kannst:
+        
+        👤 Profil vervollständigen
+        Füge ein Foto hinzu und erzähle etwas über dich, um bessere Matches zu finden.
+        
+        🚨 Care-Signale senden
+        Teile mit, wenn du Hilfe brauchst - unsere Community ist für dich da.
+        
+        🤝 Anderen helfen
+        Reagiere auf Care-Signale in deiner Nähe und baue echte Verbindungen auf.
+        
+        Vervollständige dein Profil: ${FRONTEND_URL}/profile
+        
+        Bei Fragen sind wir jederzeit für dich da. Schreib uns einfach!
+        
+        © 2024 MyCaredaddy. Alle Rechte vorbehalten.
+      `
+    };
+  }
+
+  static async sendEmailVerification(
+    email: string, 
+    userId: string, 
+    firstName?: string
+  ): Promise<boolean> {
+    if (!this.isConfigured()) {
+      console.log('📧 Email verification skipped - SendGrid not configured');
+      return true; // Return true in development to not block the flow
+    }
+
+    try {
+      if (!email?.trim() || !userId?.trim()) {
+        throw new Error('Email and userId are required');
+      }
+
+      const token = this.generateVerificationToken(userId, email);
+      const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
+      const template = this.getEmailVerificationTemplate(verificationUrl, firstName);
+
+      const msg = {
+        to: email.trim(),
+        from: FROM_EMAIL,
+        subject: template.subject,
+        text: template.text,
+        html: template.html,
+      };
+
+      await sgMail.send(msg);
+      console.log(`📧 Email verification sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send email verification:', error);
+      return false;
+    }
+  }
+
+  static async sendPasswordReset(
+    email: string, 
+    userId: string, 
+    firstName?: string
+  ): Promise<boolean> {
+    if (!this.isConfigured()) {
+      console.log('📧 Password reset email skipped - SendGrid not configured');
+      return true;
+    }
+
+    try {
+      if (!email?.trim() || !userId?.trim()) {
+        throw new Error('Email and userId are required');
+      }
+
+      const token = this.generatePasswordResetToken(userId, email);
+      const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`;
+      const template = this.getPasswordResetTemplate(resetUrl, firstName);
+
+      const msg = {
+        to: email.trim(),
+        from: FROM_EMAIL,
+        subject: template.subject,
+        text: template.text,
+        html: template.html,
+      };
+
+      await sgMail.send(msg);
+      console.log(`📧 Password reset email sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send password reset email:', error);
+      return false;
+    }
+  }
+
+  static async sendWelcomeEmail(email: string, firstName?: string): Promise<boolean> {
+    if (!this.isConfigured()) {
+      console.log('📧 Welcome email skipped - SendGrid not configured');
+      return true;
+    }
+
+    try {
+      if (!email?.trim()) {
+        throw new Error('Email is required');
+      }
+
+      const template = this.getWelcomeTemplate(firstName);
+
+      const msg = {
+        to: email.trim(),
+        from: FROM_EMAIL,
+        subject: template.subject,
+        text: template.text,
+        html: template.html,
+      };
+
+      await sgMail.send(msg);
+      console.log(`📧 Welcome email sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send welcome email:', error);
+      return false;
+    }
+  }
+
+  static async sendCareSignalNotification(
+    email: string,
+    signalTitle: string,
+    signalCategory: string,
+    location?: string,
+    firstName?: string
+  ): Promise<boolean> {
+    if (!this.isConfigured()) {
+      console.log('📧 Care signal notification skipped - SendGrid not configured');
+      return true;
+    }
+
+    try {
+      if (!email?.trim() || !signalTitle?.trim()) {
+        throw new Error('Email and signal title are required');
+      }
+
+      const name = firstName ? ` ${firstName}` : '';
+      const locationText = location ? ` in ${location}` : '';
+
+      const msg = {
+        to: email.trim(),
+        from: FROM_EMAIL,
+        subject: `Neues Care-Signal: ${signalTitle}`,
+        html: `
+          <h2>Hallo${name}!</h2>
+          <p>Ein neues Care-Signal wurde in deiner Nähe gesendet:</p>
+          <h3>${signalTitle}</h3>
+          <p><strong>Kategorie:</strong> ${signalCategory}</p>
+          ${location ? `<p><strong>Ort:</strong> ${location}</p>` : ''}
+          <p>Öffne die App, um zu helfen!</p>
+          <a href="${FRONTEND_URL}/care-signals" style="display: inline-block; padding: 12px 30px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Care-Signale ansehen</a>
+        `,
+        text: `
+          Hallo${name}!
+          
+          Ein neues Care-Signal wurde${locationText} gesendet:
+          
+          ${signalTitle}
+          Kategorie: ${signalCategory}
+          ${location ? `Ort: ${location}` : ''}
+          
+          Öffne die App, um zu helfen: ${FRONTEND_URL}/care-signals
+        `,
+      };
+
+      await sgMail.send(msg);
+      console.log(`📧 Care signal notification sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send care signal notification:', error);
+      return false;
+    }
   }
 }
-export default new EmailService();
