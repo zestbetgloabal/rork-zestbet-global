@@ -14,7 +14,7 @@ export const createCareSignalProcedure = protectedProcedure
   .input(createSchema)
   .mutation(async ({ input, ctx }) => {
     try {
-      const userId = ctx.user.userId;
+      const userId = ctx.user.id;
       
       const { data: signal, error } = await supabaseAdmin
         .from('care_signals')
