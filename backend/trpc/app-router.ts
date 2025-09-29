@@ -45,6 +45,9 @@ import createLiveBetRoute from "./routes/live-bets/create/route";
 import liveBetsSubscribeRoute from "./routes/live-bets/subscribe/route";
 import settleLiveBetRoute from "./routes/live-bets/settle/route";
 
+// Care signals routes
+import { createCareSignalProcedure } from "./routes/care-signals/create/route";
+
 export const appRouter = createTRPCRouter({
   // Example routes (keep for testing)
   example: createTRPCRouter({
@@ -105,6 +108,11 @@ export const appRouter = createTRPCRouter({
     create: createLiveBetRoute,
     subscribe: liveBetsSubscribeRoute,
     settle: settleLiveBetRoute,
+  }),
+
+  // Care signals
+  careSignals: createTRPCRouter({
+    create: createCareSignalProcedure,
   }),
 });
 
