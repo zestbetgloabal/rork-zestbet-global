@@ -1,1 +1,53 @@
-import { z } from 'zod';\nimport { protectedProcedure } from '../../../create-context';\nimport { supabaseAdmin } from '../../../../config/supabase';\n\nconst createSchema = z.object({\n  category: z.enum(['emergency', 'health', 'emotional', 'practical', 'social']),\n  title: z.string().min(3).max(100),\n  description: z.string().min(10).max(1000),\n  urgency: z.enum(['low', 'medium', 'high', 'critical']),\n  location: z.string().optional(),\n});\n\nexport default protectedProcedure\n  .input(createSchema)\n  .mutation(async ({ input, ctx }) => {\n    try {\n      const userId = ctx.user.userId;\n      \n      const { data: signal, error } = await supabaseAdmin\n        .from('care_signals')\n        .insert({\n          user_id: userId,\n          category: input.category,\n          title: input.title,\n          description: input.description,\n          urgency: input.urgency,\n          location: input.location,\n          is_active: true,\n        })\n        .select()\n        .single();\n\n      if (error) {\n        throw new Error('Failed to create care signal');\n      }\n\n      return {\n        success: true,\n        signal: {\n          id: signal.id,\n          category: signal.category,\n          title: signal.title,\n          description: signal.description,\n          urgency: signal.urgency,\n          location: signal.location,\n          createdAt: signal.created_at,\n        },\n      };\n    } catch (error) {\n      console.error('Error creating care signal:', error);\n      throw error;\n    }\n  });
+import { z } from 'zod';
+import { protectedProcedure } from '../../../create-context';
+import { supabaseAdmin } from '../../../../config/supabase';
+
+const createSchema = z.object({
+  category: z.enum(['emergency', 'health', 'emotional', 'practical', 'social']),
+  title: z.string().min(3).max(100),
+  description: z.string().min(10).max(1000),
+  urgency: z.enum(['low', 'medium', 'high', 'critical']),
+  location: z.string().optional(),
+});
+
+export const createCareSignalProcedure = protectedProcedure
+  .input(createSchema)
+  .mutation(async ({ input, ctx }) => {
+    try {
+      const userId = ctx.user.userId;
+      
+      const { data: signal, error } = await supabaseAdmin
+        .from('care_signals')
+        .insert({
+          user_id: userId,
+          category: input.category,
+          title: input.title,
+          description: input.description,
+          urgency: input.urgency,
+          location: input.location,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error('Failed to create care signal');
+      }
+
+      return {
+        success: true,
+        signal: {
+          id: signal.id,
+          category: signal.category,
+          title: signal.title,
+          description: signal.description,
+          urgency: signal.urgency,
+          location: signal.location,
+          createdAt: signal.created_at,
+        },
+      };
+    } catch (error) {
+      console.error('Error creating care signal:', error);
+      throw error;
+    }
+  });

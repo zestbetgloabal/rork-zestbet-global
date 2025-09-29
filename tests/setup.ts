@@ -1,1 +1,63 @@
-import { beforeAll, afterAll, beforeEach } from '@jest/globals';\nimport { MonitoringService } from '../backend/services/monitoring';\n\n// Mock environment variables for testing\nprocess.env.NODE_ENV = 'test';\nprocess.env.JWT_SECRET = 'test-jwt-secret';\nprocess.env.SUPABASE_URL = 'https://test.supabase.co';\nprocess.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';\n\n// Disable monitoring in tests\nMonitoringService.initialize({ enabled: false });\n\n// Global test setup\nbeforeAll(async () => {\n  console.log('🧪 Starting test suite...');\n});\n\nafterAll(async () => {\n  console.log('✅ Test suite completed');\n});\n\nbeforeEach(() => {\n  // Reset any mocks or state before each test\n  jest.clearAllMocks();\n});\n\n// Mock Supabase client\njest.mock('../backend/config/supabase', () => ({\n  supabaseAdmin: {\n    from: jest.fn(() => ({\n      select: jest.fn().mockReturnThis(),\n      insert: jest.fn().mockReturnThis(),\n      update: jest.fn().mockReturnThis(),\n      delete: jest.fn().mockReturnThis(),\n      eq: jest.fn().mockReturnThis(),\n      single: jest.fn().mockResolvedValue({ data: null, error: null }),\n    })),\n  },\n  initializeDatabase: jest.fn().mockResolvedValue(true),\n}));\n\n// Mock external services\njest.mock('../backend/services/email', () => ({\n  EmailService: {\n    sendEmailVerification: jest.fn().mockResolvedValue(true),\n    sendPasswordReset: jest.fn().mockResolvedValue(true),\n    sendWelcomeEmail: jest.fn().mockResolvedValue(true),\n  },\n}));\n\njest.mock('../backend/services/sms', () => ({\n  SMSService: {\n    sendVerificationCode: jest.fn().mockResolvedValue({ success: true }),\n    verifyCode: jest.fn().mockResolvedValue({ success: true }),\n  },\n}));\n\njest.mock('../backend/services/payment', () => ({\n  PaymentService: {\n    createCheckoutSession: jest.fn().mockResolvedValue({ sessionId: 'test', url: 'test' }),\n    handleWebhook: jest.fn().mockResolvedValue(true),\n  },\n}));
+import { beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { MonitoringService } from '../backend/services/monitoring';
+
+// Mock environment variables for testing
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test-jwt-secret';
+process.env.SUPABASE_URL = 'https://test.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+
+// Disable monitoring in tests
+MonitoringService.initialize({ enabled: false });
+
+// Global test setup
+beforeAll(async () => {
+  console.log('🧪 Starting test suite...');
+});
+
+afterAll(async () => {
+  console.log('✅ Test suite completed');
+});
+
+beforeEach(() => {
+  // Reset any mocks or state before each test
+  jest.clearAllMocks();
+});
+
+// Mock Supabase client
+jest.mock('../backend/config/supabase', () => ({
+  supabaseAdmin: {
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
+    })),
+  },
+  initializeDatabase: jest.fn().mockResolvedValue(true),
+}));
+
+// Mock external services
+jest.mock('../backend/services/email', () => ({
+  EmailService: {
+    sendEmailVerification: jest.fn().mockResolvedValue(true),
+    sendPasswordReset: jest.fn().mockResolvedValue(true),
+    sendWelcomeEmail: jest.fn().mockResolvedValue(true),
+  },
+}));
+
+jest.mock('../backend/services/sms', () => ({
+  SMSService: {
+    sendVerificationCode: jest.fn().mockResolvedValue({ success: true }),
+    verifyCode: jest.fn().mockResolvedValue({ success: true }),
+  },
+}));
+
+jest.mock('../backend/services/payment', () => ({
+  PaymentService: {
+    createCheckoutSession: jest.fn().mockResolvedValue({ sessionId: 'test', url: 'test' }),
+    handleWebhook: jest.fn().mockResolvedValue(true),
+  },
+}));
