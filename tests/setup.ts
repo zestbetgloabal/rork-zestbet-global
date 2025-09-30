@@ -2,7 +2,9 @@ import { beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { MonitoringService } from '../backend/services/monitoring';
 
 // Mock environment variables for testing
-process.env.NODE_ENV = 'test';
+if (!process.env.NODE_ENV) {
+  (process.env as any).NODE_ENV = 'test';
+}
 process.env.JWT_SECRET = 'test-jwt-secret';
 process.env.SUPABASE_URL = 'https://test.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';

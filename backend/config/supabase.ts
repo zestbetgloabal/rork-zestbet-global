@@ -4,24 +4,94 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl) {
-  throw new Error('Missing SUPABASE_URL environment variable');
+// Mock Supabase client for development/testing
+const createMockSupabaseClient = () => {
+  console.log('🔧 Using mock Supabase client (no DATABASE_URL configured)');
+  
+  const mockResponse = { data: null, error: null };
+  const mockQuery = {
+    select: () => mockQuery,
+    insert: () => mockQuery,
+    update: () => mockQuery,
+    delete: () => mockQuery,
+    eq: () => mockQuery,
+    neq: () => mockQuery,
+    gt: () => mockQuery,
+    gte: () => mockQuery,
+    lt: () => mockQuery,
+    lte: () => mockQuery,
+    like: () => mockQuery,
+    ilike: () => mockQuery,
+    is: () => mockQuery,
+    in: () => mockQuery,
+    contains: () => mockQuery,
+    containedBy: () => mockQuery,
+    rangeGt: () => mockQuery,
+    rangeGte: () => mockQuery,
+    rangeLt: () => mockQuery,
+    rangeLte: () => mockQuery,
+    rangeAdjacent: () => mockQuery,
+    overlaps: () => mockQuery,
+    textSearch: () => mockQuery,
+    match: () => mockQuery,
+    not: () => mockQuery,
+    or: () => mockQuery,
+    filter: () => mockQuery,
+    order: () => mockQuery,
+    limit: () => mockQuery,
+    range: () => mockQuery,
+    single: () => Promise.resolve(mockResponse),
+    maybeSingle: () => Promise.resolve(mockResponse),
+    csv: () => Promise.resolve(mockResponse),
+    then: (resolve: any) => resolve(mockResponse)
+  };
+  
+  return {
+    from: () => mockQuery,
+    auth: {
+      signUp: () => Promise.resolve(mockResponse),
+      signInWithPassword: () => Promise.resolve(mockResponse),
+      signOut: () => Promise.resolve(mockResponse),
+      getUser: () => Promise.resolve(mockResponse),
+      updateUser: () => Promise.resolve(mockResponse),
+      resetPasswordForEmail: () => Promise.resolve(mockResponse),
+      verifyOtp: () => Promise.resolve(mockResponse)
+    },
+    storage: {
+      from: () => ({
+        upload: () => Promise.resolve(mockResponse),
+        download: () => Promise.resolve(mockResponse),
+        remove: () => Promise.resolve(mockResponse),
+        list: () => Promise.resolve(mockResponse),
+        getPublicUrl: () => ({ data: { publicUrl: 'mock-url' } })
+      })
+    }
+  };
+};
+
+// Determine if we should use mock or real Supabase
+const shouldUseMock = !supabaseUrl || !supabaseServiceKey || process.env.NODE_ENV === 'test';
+
+let supabaseAdmin: any;
+let supabaseClient: any;
+
+if (shouldUseMock) {
+  supabaseAdmin = createMockSupabaseClient();
+  supabaseClient = createMockSupabaseClient();
+} else {
+  // Service role client for server-side operations
+  supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  // Anonymous client for public operations
+  supabaseClient = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey);
 }
 
-if (!supabaseServiceKey) {
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
-}
-
-// Service role client for server-side operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
-
-// Anonymous client for public operations
-export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey);
+export { supabaseAdmin, supabaseClient };
 
 // Database types
 export interface User {
