@@ -23,7 +23,7 @@ interface ButtonProps {
   style?: ViewStyle;
 }
 
-export default function AuthWelcomeScreen() {
+export default function WelcomeScreen() {
   const router = useRouter();
   const { height } = useWindowDimensions();
   const { isLoading } = useAuthStore();

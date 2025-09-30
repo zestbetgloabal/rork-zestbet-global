@@ -1,4 +1,5 @@
-import sgMail from '@sendgrid/mail';
+import * as sgMail from '@sendgrid/mail';
+
 import jwt from 'jsonwebtoken';
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
@@ -6,11 +7,21 @@ const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@mycaredaddy.com';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://mycaredaddy.com';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
+// Configure email providers
 if (!SENDGRID_API_KEY) {
-  console.warn('⚠️ SENDGRID_API_KEY not configured. Email functionality will be disabled.');
+  console.warn('⚠️ SENDGRID_API_KEY not configured. Email functionality will use mock mode.');
 } else {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
+
+// Mock email function for development
+const mockSendEmail = async (msg: any): Promise<void> => {
+  console.log('📧 Mock email sent:');
+  console.log(`  To: ${msg.to}`);
+  console.log(`  Subject: ${msg.subject}`);
+  console.log(`  Content: ${msg.text?.substring(0, 100)}...`);
+  return Promise.resolve();
+};
 
 export interface EmailTemplate {
   subject: string;
@@ -287,7 +298,11 @@ export class EmailService {
         html: template.html,
       };
 
-      await sgMail.send(msg);
+      if (this.isConfigured()) {
+        await sgMail.send(msg);
+      } else {
+        await mockSendEmail(msg);
+      }
       console.log(`📧 Email verification sent to ${email}`);
       return true;
     } catch (error) {
@@ -323,7 +338,11 @@ export class EmailService {
         html: template.html,
       };
 
-      await sgMail.send(msg);
+      if (this.isConfigured()) {
+        await sgMail.send(msg);
+      } else {
+        await mockSendEmail(msg);
+      }
       console.log(`📧 Password reset email sent to ${email}`);
       return true;
     } catch (error) {
@@ -353,7 +372,11 @@ export class EmailService {
         html: template.html,
       };
 
-      await sgMail.send(msg);
+      if (this.isConfigured()) {
+        await sgMail.send(msg);
+      } else {
+        await mockSendEmail(msg);
+      }
       console.log(`📧 Welcome email sent to ${email}`);
       return true;
     } catch (error) {
@@ -408,7 +431,11 @@ export class EmailService {
         `,
       };
 
-      await sgMail.send(msg);
+      if (this.isConfigured()) {
+        await sgMail.send(msg);
+      } else {
+        await mockSendEmail(msg);
+      }
       console.log(`📧 Care signal notification sent to ${email}`);
       return true;
     } catch (error) {
