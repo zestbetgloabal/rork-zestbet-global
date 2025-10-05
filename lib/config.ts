@@ -72,10 +72,10 @@ export const getAppConfig = (): AppConfig => {
   const isDevelopment = __DEV__;
   const platform = Platform.OS;
 
-  // Production URLs (Railway deployment)
-  const prodApiUrl = 'https://rork-zestbet-global-production.up.railway.app/api';
-  const prodTrpcUrl = 'https://rork-zestbet-global-production.up.railway.app/api/trpc';
-  const prodBaseUrl = 'https://rork-zestbet-global-production.up.railway.app';
+  // Production URLs (Vercel deployment)
+  const prodApiUrl = 'https://zestapp.vercel.app/api';
+  const prodTrpcUrl = 'https://zestapp.vercel.app/api/trpc';
+  const prodBaseUrl = 'https://zestapp.vercel.app';
 
   // Development URLs
   const devApiUrl = 'http://localhost:3001/api';

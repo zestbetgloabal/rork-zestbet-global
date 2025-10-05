@@ -1,72 +1,135 @@
 import { Hono } from "hono";
-import { handle } from "hono/aws-lambda";
 import { trpcServer } from "@hono/trpc-server";
 import { cors } from "hono/cors";
 import { appRouter } from "../backend/trpc/app-router";
 import { createContext } from "../backend/trpc/create-context";
+import { MonitoringService } from "../backend/services/monitoring";
+import { initializeDatabase } from "../backend/config/supabase";
+import { loggerMiddleware, errorLoggerMiddleware } from "../backend/middleware/logger";
+import { generalRateLimit, authRateLimit } from "../backend/middleware/rate-limit";
 
-// Create Hono app for AWS Amplify
+// Initialize monitoring
+MonitoringService.initialize();
+
+// Initialize database
+initializeDatabase().catch(error => {
+  console.error('❌ Database initialization failed:', error);
+  MonitoringService.captureException(error);
+});
+
+// Create Hono app for Vercel
 const app = new Hono();
 
-// Enable CORS for all routes
-app.use("*", cors({
+// Security headers
+app.use('*', async (c, next) => {
+  c.res.headers.set('X-Content-Type-Options', 'nosniff');
+  c.res.headers.set('X-Frame-Options', 'DENY');
+  c.res.headers.set('X-XSS-Protection', '1; mode=block');
+  c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  
+  if (c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https://')) {
+    c.res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  
+  await next();
+});
+
+// CORS configuration
+app.use('*', cors({
   origin: [
-    "https://zestapp.online",
-    "https://main.ddk0z2esbs19wf.amplifyapp.com",
-    "http://localhost:3000",
-    "http://localhost:8081"
+    'http://localhost:3000',
+    'http://localhost:8081',
+    'https://mycaredaddy.com',
+    'https://www.mycaredaddy.com',
+    'https://mycaredaddy.de',
+    'https://www.mycaredaddy.de',
+    'https://mycaredaddy.eu',
+    'https://www.mycaredaddy.eu',
+    'https://zestapp.online',
+    'https://www.zestapp.online'
   ],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
+  maxAge: 86400
 }));
 
-// Simple health check endpoint
-app.get("/", (c) => {
+// Health check endpoint
+app.get("/health", (c) => {
   return c.json({ 
     status: "ok", 
-    message: "ZestBet API is running on AWS Amplify",
-    version: "1.0.0",
-    environment: process.env.NODE_ENV || 'production',
-    timestamp: new Date().toISOString()
+    message: "MyCaredaddy API is healthy",
+    timestamp: new Date().toISOString(),
+    version: "2.0.0",
+    platform: "vercel"
   });
 });
 
-// Status endpoint with more details
-app.get("/status", (c) => {
-  return c.json({
-    status: "healthy",
-    platform: "aws-amplify",
-    services: {
-      database: "connected",
-      email: "configured",
-      auth: "active"
-    },
-    timestamp: new Date().toISOString()
-  });
+// Rate limiting middleware
+app.use("/trpc/auth.*", authRateLimit);
+app.use("*", generalRateLimit);
+
+// Logging middleware
+app.use("*", async (c, next) => loggerMiddleware(c, next));
+app.use("*", async (c, next) => errorLoggerMiddleware(c, next));
+
+// Cache-control headers
+app.use("*", async (c, next) => {
+  await next();
+  const url = new URL(c.req.url);
+  const path = url.pathname.replace(/^\/api/, "");
+  const isAuthPath = path.startsWith("/auth") || path.startsWith("/trpc/auth");
+  if (isAuthPath) {
+    c.res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    c.res.headers.set("Pragma", "no-cache");
+    c.res.headers.set("Expires", "0");
+  }
 });
 
-// Mount tRPC router at /api/trpc
-app.use(
-  "/api/trpc/*",
-  trpcServer({
-    endpoint: "/api/trpc",
-    router: appRouter,
-    createContext,
-  })
-);
-
-// Also mount at /trpc for compatibility
+// Mount tRPC router
 app.use(
   "/trpc/*",
   trpcServer({
-    endpoint: "/trpc",
     router: appRouter,
     createContext,
   })
 );
 
-console.log('✅ tRPC server mounted successfully at /api/trpc');
+// Root endpoint
+app.get("/", (c) => {
+  return c.json({ 
+    status: "ok", 
+    message: "MyCaredaddy API is running on Vercel",
+    version: "2.0.0",
+    environment: process.env.NODE_ENV || 'production',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      trpc: "/api/trpc",
+      health: "/api/health",
+      status: "/api/status"
+    }
+  });
+});
 
-// Stateless logout endpoint to clear auth cookies (if any)
+// Status endpoint
+app.get("/status", (c) => {
+  return c.json({
+    status: "healthy",
+    platform: "vercel",
+    services: {
+      database: "connected",
+      email: "configured",
+      auth: "active",
+      trpc: "active"
+    },
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Logout endpoint
 app.post("/auth/logout", (c) => {
   const cookieAttrs = [
     "Path=/",
@@ -93,8 +156,6 @@ app.post("/auth/logout", (c) => {
   });
 });
 
-// Export for AWS Amplify
-export default app;
+console.log('✅ MyCaredaddy API initialized on Vercel');
 
-// Export Lambda handler for AWS Amplify
-export const handler = handle(app);
+export default app;
