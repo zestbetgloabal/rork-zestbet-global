@@ -181,18 +181,34 @@ function RootLayoutComponent() {
 }
 
 function RootLayoutNav() {
-  const { isAuthenticated, token, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, token, _hasHydrated, setHasHydrated } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [hydrationTimeout, setHydrationTimeout] = useState(false);
   
   // Safe segment access to prevent crashes
   const isInAuthGroup = hermesGuard(() => segments?.[0] === '(auth)', false, 'auth group check');
   const isInLegalGroup = hermesGuard(() => segments?.[0] === 'legal', false, 'legal group check');
   
+  // Add hydration timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!_hasHydrated) {
+        if (__DEV__) {
+          console.warn('Hydration timeout - forcing app to continue');
+        }
+        setHydrationTimeout(true);
+        setHasHydrated(true);
+      }
+    }, 3000); // 3 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [_hasHydrated, setHasHydrated]);
+  
   // Simplified navigation logic - only redirect authenticated users from auth pages
   useEffect(() => {
-    if (!_hasHydrated) return; // Don't navigate until hydrated
+    if (!_hasHydrated && !hydrationTimeout) return; // Don't navigate until hydrated or timeout
     if (isNavigating) return; // Prevent multiple navigations
     
     const handleNavigation = async () => {
@@ -243,10 +259,10 @@ function RootLayoutNav() {
       }, undefined, 'navigation timer');
     }, 2000); // Longer delay to allow user interaction
     return () => clearTimeout(timer);
-  }, [isAuthenticated, token, isInAuthGroup, router, isNavigating, _hasHydrated, segments]);
+  }, [isAuthenticated, token, isInAuthGroup, router, isNavigating, _hasHydrated, hydrationTimeout, segments]);
   
-  // Show loading screen until hydration is complete
-  if (!_hasHydrated) {
+  // Show loading screen until hydration is complete or timeout
+  if (!_hasHydrated && !hydrationTimeout) {
     return (
       <View style={errorStyles.container}>
         <Text style={errorStyles.title}>Loading...</Text>
