@@ -3,33 +3,9 @@ node_modules
 .expo-shared
 dist
 .git
-.github
 *.log
 .DS_Store
 .env.local
-.env.*.local
-coverage
-*.tsbuildinfo
-
-# Railway specific
-railway.json
-nixpacks.toml
-
-# Django
-django_server
-
-# Lambda
-lambda
-
-# Build scripts
-*.sh
-
-# Documentation
-*.md
-!README.md
-
-# Test files
-tests
-*.test.ts
-*.spec.ts
-jest.config.js
+.env
+ios
+android
