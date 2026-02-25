@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Share } from 'react-native';
 import { Stack } from 'expo-router';
 import { Copy, Share2, MessageCircle, Link2, Users, Gift } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -26,7 +26,6 @@ export default function InviteScreen() {
       return;
     }
     try {
-      const { Share } = require('react-native');
       await Share.share({
         message: `Hey! Komm zu ZestBet und wette mit mir! 🎯\n\nMein Einladungscode: ${inviteCode}\n\n${inviteLink}`,
       });
