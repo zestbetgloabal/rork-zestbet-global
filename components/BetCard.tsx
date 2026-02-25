@@ -1,169 +1,258 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Heart, Lock, Globe } from 'lucide-react-native';
-import { Bet } from '@/types';
-import ZestCurrency from './ZestCurrency';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Clock, Users, Coins } from 'lucide-react-native';
 import colors from '@/constants/colors';
+import { Bet } from '@/types';
+import { getCategoryEmoji, getStatusLabel, getStatusColor, formatTimeRemaining } from '@/utils/helpers';
 
 interface BetCardProps {
   bet: Bet;
-  onLike?: () => void;
+  onPress: () => void;
+  compact?: boolean;
 }
 
-export default function BetCard({ bet, onLike }: BetCardProps) {
-  const router = useRouter();
-  
-  const handlePress = () => {
-    router.push(`/bet/${bet.id}`);
-  };
-  
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-  
-  return (
-    <Pressable style={styles.card} onPress={handlePress}>
-      {bet.image && (
-        <Image 
-          source={{ uri: bet.image }} 
-          style={styles.image}
-          resizeMode="cover"
-        />
-      )}
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.categoryContainer}>
-            <Text style={styles.category}>{bet.category.toUpperCase()}</Text>
-            {bet.visibility === 'private' ? (
-              <View style={styles.visibilityBadge}>
-                <Lock size={12} color={colors.textSecondary} />
-                <Text style={styles.visibilityText}>Private</Text>
-              </View>
-            ) : (
-              <View style={styles.visibilityBadge}>
-                <Globe size={12} color={colors.textSecondary} />
-                <Text style={styles.visibilityText}>Public</Text>
-              </View>
-            )}
+const BetCard = React.memo(({ bet, onPress, compact }: BetCardProps) => {
+  const statusColor = getStatusColor(bet.status);
+
+  if (compact) {
+    return (
+      <TouchableOpacity style={styles.compactCard} onPress={onPress} activeOpacity={0.7} testID={`bet-card-${bet.id}`}>
+        <View style={styles.compactLeft}>
+          <Text style={styles.compactEmoji}>{getCategoryEmoji(bet.category)}</Text>
+          <View style={styles.compactInfo}>
+            <Text style={styles.compactTitle} numberOfLines={1}>{bet.title}</Text>
+            <Text style={styles.compactSub}>{bet.creatorName} {bet.opponentName ? `vs ${bet.opponentName}` : '• Offen'}</Text>
           </View>
-          <Pressable style={styles.likeButton} onPress={onLike}>
-            <Heart size={18} color={colors.textSecondary} />
-            <Text style={styles.likeCount}>{bet.likes}</Text>
-          </Pressable>
         </View>
-        
-        <Text style={styles.title}>{bet.title}</Text>
-        <Text style={styles.description} numberOfLines={2}>{bet.description}</Text>
-        
-        <View style={styles.footer}>
-          <View style={styles.footerItem}>
-            <Text style={styles.footerLabel}>Pool</Text>
-            <ZestCurrency amount={bet.totalPool} size="small" />
-          </View>
-          
-          <View style={styles.footerItem}>
-            <Text style={styles.footerLabel}>Participants</Text>
-            <Text style={styles.footerValue}>{bet.participants}</Text>
-          </View>
-          
-          <View style={styles.footerItem}>
-            <Text style={styles.footerLabel}>Ends</Text>
-            <Text style={styles.footerValue}>{formatDate(bet.endDate)}</Text>
-          </View>
+        <View style={styles.compactRight}>
+          <Text style={styles.compactAmount}>{bet.amount} 🪙</Text>
+          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} testID={`bet-card-${bet.id}`}>
+      <View style={styles.header}>
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryEmoji}>{getCategoryEmoji(bet.category)}</Text>
+          <Text style={styles.categoryText}>{bet.category}</Text>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+          <View style={[styles.statusIndicator, { backgroundColor: statusColor }]} />
+          <Text style={[styles.statusText, { color: statusColor }]}>{getStatusLabel(bet.status)}</Text>
         </View>
       </View>
-    </Pressable>
+
+      <Text style={styles.title} numberOfLines={2}>{bet.title}</Text>
+      <Text style={styles.description} numberOfLines={2}>{bet.description}</Text>
+
+      <View style={styles.players}>
+        <View style={styles.player}>
+          <Image source={{ uri: bet.creatorAvatar }} style={styles.avatar} />
+          <Text style={styles.playerName} numberOfLines={1}>{bet.creatorName}</Text>
+        </View>
+        <View style={styles.vsContainer}>
+          <Text style={styles.vsText}>VS</Text>
+        </View>
+        {bet.opponentId ? (
+          <View style={styles.player}>
+            <Image source={{ uri: bet.opponentAvatar ?? '' }} style={styles.avatar} />
+            <Text style={styles.playerName} numberOfLines={1}>{bet.opponentName}</Text>
+          </View>
+        ) : (
+          <View style={styles.player}>
+            <View style={[styles.avatar, styles.emptyAvatar]}>
+              <Users size={16} color={colors.textMuted} />
+            </View>
+            <Text style={[styles.playerName, { color: colors.primary }]}>Beitreten</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.footer}>
+        <View style={styles.footerItem}>
+          <Coins size={14} color={colors.zest} />
+          <Text style={styles.footerText}>{bet.amount} Coins</Text>
+        </View>
+        <View style={styles.footerItem}>
+          <Clock size={14} color={colors.textSecondary} />
+          <Text style={styles.footerText}>{formatTimeRemaining(bet.expiresAt)}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
-}
+});
+
+BetCard.displayName = 'BetCard';
+
+export default BetCard;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  image: {
-    width: '100%',
-    height: 140,
-  },
-  content: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
     padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  categoryContainer: {
+  categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  category: {
+  categoryEmoji: {
+    fontSize: 16,
+  },
+  categoryText: {
+    color: colors.textSecondary,
     fontSize: 12,
-    color: colors.primary,
-    fontWeight: '600',
-    marginRight: 8,
+    textTransform: 'capitalize' as const,
   },
-  visibilityBadge: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.border,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
   },
-  visibilityText: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    marginLeft: 2,
+  statusIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  likeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  likeCount: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: colors.textSecondary,
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
     color: colors.text,
+    fontSize: 17,
+    fontWeight: '700' as const,
+    marginBottom: 4,
+    lineHeight: 22,
   },
   description: {
-    fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 16,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  players: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    gap: 12,
+  },
+  player: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceLight,
+  },
+  emptyAvatar: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  playerName: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '500' as const,
+    textAlign: 'center' as const,
+  },
+  vsContainer: {
+    backgroundColor: colors.primary + '20',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vsText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '800' as const,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 12,
   },
   footerItem: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  footerLabel: {
-    fontSize: 12,
+  footerText: {
     color: colors.textSecondary,
-    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: '500' as const,
   },
-  footerValue: {
-    fontSize: 14,
-    fontWeight: '600',
+  compactCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  compactLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  compactEmoji: {
+    fontSize: 24,
+  },
+  compactInfo: {
+    flex: 1,
+  },
+  compactTitle: {
     color: colors.text,
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  compactSub: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  compactRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  compactAmount: {
+    color: colors.zest,
+    fontSize: 14,
+    fontWeight: '700' as const,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });

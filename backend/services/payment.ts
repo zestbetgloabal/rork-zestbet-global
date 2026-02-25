@@ -10,7 +10,7 @@ if (!STRIPE_SECRET_KEY) {
 }
 
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-08-27.basil' as Stripe.LatestApiVersion,
 }) : null;
 
 export interface SubscriptionPlan {
@@ -335,7 +335,7 @@ export class PaymentService {
   }
 
   private static async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionId = invoice.subscription as string;
+    const subscriptionId = (invoice as any).subscription as string;
     
     if (!subscriptionId) {
       return;
@@ -349,7 +349,6 @@ export class PaymentService {
         return;
       }
 
-      // Ensure user is marked as premium
       await supabaseAdmin
         .from('users')
         .update({
@@ -365,7 +364,7 @@ export class PaymentService {
   }
 
   private static async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionId = invoice.subscription as string;
+    const subscriptionId = (invoice as any).subscription as string;
     
     if (!subscriptionId) {
       return;
@@ -427,7 +426,7 @@ export class PaymentService {
       return {
         isPremium: user.is_premium,
         status: subscription.status,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
       };
     } catch (error) {

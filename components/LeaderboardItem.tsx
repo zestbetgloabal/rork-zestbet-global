@@ -1,88 +1,125 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { Trophy } from 'lucide-react-native';
-import { LeaderboardEntry } from '@/types';
+import { Trophy, Heart } from 'lucide-react-native';
 import colors from '@/constants/colors';
+import { LeaderboardEntry } from '@/types';
 
 interface LeaderboardItemProps {
   entry: LeaderboardEntry;
-  rank: number;
+  isCurrentUser?: boolean;
 }
 
-export default function LeaderboardItem({ entry, rank }: LeaderboardItemProps) {
-  const getTrophyColor = () => {
-    if (rank === 1) return '#FFD700'; // Gold
-    if (rank === 2) return '#C0C0C0'; // Silver
-    if (rank === 3) return '#CD7F32'; // Bronze
-    return colors.textSecondary;
-  };
-  
+const getRankDecoration = (rank: number): { emoji: string; color: string } => {
+  if (rank === 1) return { emoji: '🥇', color: '#FFD700' };
+  if (rank === 2) return { emoji: '🥈', color: '#C0C0C0' };
+  if (rank === 3) return { emoji: '🥉', color: '#CD7F32' };
+  return { emoji: '', color: colors.textSecondary };
+};
+
+const LeaderboardItem = React.memo(({ entry, isCurrentUser }: LeaderboardItemProps) => {
+  const { emoji, color } = getRankDecoration(entry.rank);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isCurrentUser && styles.currentUser]} testID={`leaderboard-item-${entry.rank}`}>
       <View style={styles.rankContainer}>
-        {rank <= 3 ? (
-          <Trophy size={20} color={getTrophyColor()} />
+        {emoji ? (
+          <Text style={styles.rankEmoji}>{emoji}</Text>
         ) : (
-          <Text style={styles.rankText}>{rank}</Text>
+          <Text style={[styles.rankNumber, { color }]}>#{entry.rank}</Text>
         )}
       </View>
-      
-      {entry.avatar ? (
-        <Image 
-          source={{ uri: entry.avatar }} 
-          style={styles.avatar}
-        />
-      ) : (
-        <View style={styles.avatarPlaceholder} />
-      )}
-      
-      <Text style={styles.username}>{entry.username}</Text>
-      
-      <Text style={styles.points}>{entry.points.toLocaleString()} pts</Text>
+
+      <Image source={{ uri: entry.avatar }} style={styles.avatar} />
+
+      <View style={styles.info}>
+        <Text style={styles.username} numberOfLines={1}>{entry.username}</Text>
+        <View style={styles.statsRow}>
+          <Trophy size={12} color={colors.success} />
+          <Text style={styles.statText}>{entry.wins}W / {entry.totalBets}G</Text>
+          <Text style={styles.winRate}>{entry.winRate.toFixed(0)}%</Text>
+        </View>
+      </View>
+
+      <View style={styles.charityContainer}>
+        <Heart size={12} color={colors.charity} />
+        <Text style={styles.charityText}>{entry.charityContributed}</Text>
+      </View>
     </View>
   );
-}
+});
+
+LeaderboardItem.displayName = 'LeaderboardItem';
+
+export default LeaderboardItem;
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 12,
+  },
+  currentUser: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '10',
   },
   rankContainer: {
-    width: 30,
+    width: 36,
     alignItems: 'center',
   },
-  rankText: {
+  rankEmoji: {
+    fontSize: 22,
+  },
+  rankNumber: {
     fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    fontWeight: '700' as const,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.surfaceLight,
   },
-  avatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.border,
-    marginRight: 12,
+  info: {
+    flex: 1,
   },
   username: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
     color: colors.text,
+    fontSize: 15,
+    fontWeight: '600' as const,
+    marginBottom: 3,
   },
-  points: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  statText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  winRate: {
+    color: colors.success,
+    fontSize: 12,
+    fontWeight: '700' as const,
+  },
+  charityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.charity + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  charityText: {
+    color: colors.charity,
+    fontSize: 12,
+    fontWeight: '600' as const,
   },
 });

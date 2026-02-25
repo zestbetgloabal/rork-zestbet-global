@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
 import Database from "../../../../utils/database";
-import EmailService from "../../../../services/email";
+import { EmailService } from "../../../../services/email";
 
 const verifyEmailSchema = z.object({
   email: z.string().email(),

@@ -1,336 +1,114 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Pressable, 
-  TextInput,
-  Alert,
-  Share,
-  Platform,
-  Linking,
-  ActivityIndicator
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { Copy, X, Share2, Mail, MessageSquare, Users } from 'lucide-react-native';
-import { useUserStore } from '@/store/userStore';
-import Button from '@/components/Button';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Stack } from 'expo-router';
+import { Copy, Share2, MessageCircle, Link2, Users, Gift } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import colors from '@/constants/colors';
+import Button from '@/components/Button';
+import { useUserStore } from '@/store/userStore';
 
 export default function InviteScreen() {
-  const router = useRouter();
   const { user } = useUserStore();
-  const [copied, setCopied] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [showContactForm, setShowContactForm] = useState(false);
-  
-  const inviteCode = user?.inviteCode || 'ZEST123';
-  
-  // Create app store links based on platform
-  const appStoreLink = 'https://apps.apple.com/app/zestbet/id1234567890';
-  const playStoreLink = 'https://play.google.com/store/apps/details?id=com.zestbet.app';
-  
-  // Create invite link with app store redirect
-  const getStoreLink = () => {
-    if (Platform.OS === 'ios') {
-      return appStoreLink;
-    } else if (Platform.OS === 'android') {
-      return playStoreLink;
-    } else {
-      // For web or unknown platforms, use a universal link
-      return 'https://zestbet.com/download';
+  const inviteCode = user?.inviteCode ?? 'ZEST-XXXXX';
+  const inviteLink = `https://zestbet.app/join/${inviteCode}`;
+
+  const handleCopy = useCallback(async (text: string) => {
+    await Clipboard.setStringAsync(text);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Kopiert! ✅', 'In die Zwischenablage kopiert.');
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      await Clipboard.setStringAsync(inviteLink);
+      Alert.alert('Link kopiert!', 'Teile ihn mit deinen Freunden.');
+      return;
     }
-  };
-  
-  const getInviteLink = () => {
-    const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://zestbet.app';
-    return `${baseUrl}/invite/${inviteCode}?redirect=${encodeURIComponent(getStoreLink())}`;
-  };
-  
-  const inviteLink = getInviteLink();
-  const inviteMessage = `🎯 Join me on ZestBet and get Ƶ50 bonus!\n\n💰 Use my invite code: ${inviteCode}\n🔗 Or click here: ${inviteLink}\n\n📱 Download the app and start winning!`;
-  
-  const handleCopy = async () => {
     try {
-      if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(inviteLink);
-      } else {
-        // For mobile platforms, we'll simulate clipboard functionality
-        console.log('Copying invite link:', inviteLink);
-      }
-      
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      Alert.alert('Link Copied!', `Invite link copied:\n\n${inviteLink}`);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-      Alert.alert('Invite Link', `Copy this link to share:\n\n${inviteLink}`);
-    }
-  };
-  
-  const handleShare = async () => {
-    try {
+      const { Share } = require('react-native');
       await Share.share({
-        message: inviteMessage,
+        message: `Hey! Komm zu ZestBet und wette mit mir! 🎯\n\nMein Einladungscode: ${inviteCode}\n\n${inviteLink}`,
       });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to share invite');
+    } catch (e) {
+      console.warn('Share failed:', e);
     }
-  };
-  
-  const handleSendSMS = async () => {
-    if (showContactForm && contactPhone.trim() === '') {
-      Alert.alert('Error', 'Please enter a phone number');
-      return;
-    }
-    
-    const phoneNumber = showContactForm ? contactPhone : '';
-    const smsUrl = Platform.OS === 'ios' 
-      ? `sms:${phoneNumber}&body=${encodeURIComponent(inviteMessage)}`
-      : `sms:${phoneNumber}?body=${encodeURIComponent(inviteMessage)}`;
-    
-    try {
-      if (showContactForm) {
-        setIsSending(true);
-        // Simulate sending SMS via API
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsSending(false);
-        setContactPhone('');
-        setShowContactForm(false);
-        Alert.alert('Success', 'Invitation SMS sent successfully!');
-        return;
-      }
-      
-      const canOpen = await Linking.canOpenURL(smsUrl);
-      if (canOpen) {
-        await Linking.openURL(smsUrl);
-      } else {
-        setShowContactForm(true);
-      }
-    } catch (error) {
-      setIsSending(false);
-      Alert.alert('Error', 'Failed to send SMS. Please try again.');
-    }
-  };
-  
-  const handleSendEmail = async () => {
-    if (showContactForm && contactEmail.trim() === '') {
-      Alert.alert('Error', 'Please enter an email address');
-      return;
-    }
-    
-    try {
-      if (showContactForm) {
-        setIsSending(true);
-        // Simulate sending email via API
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsSending(false);
-        setContactEmail('');
-        setShowContactForm(false);
-        Alert.alert('Success', 'Invitation email sent successfully!');
-        return;
-      }
-      
-      const emailUrl = `mailto:?subject=${encodeURIComponent('Join me on ZestBet!')}&body=${encodeURIComponent(inviteMessage)}`;
-      const canOpen = await Linking.canOpenURL(emailUrl);
-      if (canOpen) {
-        await Linking.openURL(emailUrl);
-      } else {
-        setShowContactForm(true);
-      }
-    } catch (error) {
-      setIsSending(false);
-      Alert.alert('Error', 'Failed to send email. Please try again.');
-    }
-  };
-  
-  const handleSendToContacts = () => {
-    setShowContactForm(true);
-  };
-  
-  const handleCancelContactForm = () => {
-    setShowContactForm(false);
-    setContactEmail('');
-    setContactPhone('');
-  };
-  
-  const handleClose = () => {
-    router.back();
-  };
-  
-  // Direct send invite code function
-  const handleDirectSend = async () => {
-    if (!contactEmail && !contactPhone) {
-      Alert.alert('Error', 'Please enter an email address or phone number');
-      return;
-    }
-    
-    setIsSending(true);
-    
-    try {
-      // In a real app, this would make an API call to send the invite
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      let message = 'Invitation sent successfully!';
-      if (contactEmail && contactPhone) {
-        message = 'Invitation sent via email and SMS!';
-      } else if (contactEmail) {
-        message = 'Invitation sent via email!';
-      } else if (contactPhone) {
-        message = 'Invitation sent via SMS!';
-      }
-      
-      Alert.alert('Success', message);
-      setContactEmail('');
-      setContactPhone('');
-      setShowContactForm(false);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send invitation. Please try again.');
-    } finally {
-      setIsSending(false);
-    }
-  };
-  
+  }, [inviteCode, inviteLink]);
+
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Invite Friends',
-          headerRight: () => (
-            <Pressable onPress={handleClose} style={styles.closeButton}>
-              <X size={24} color={colors.text} />
-            </Pressable>
-          ),
-        }} 
-      />
-      
-      {showContactForm ? (
-        <View style={styles.contactFormContainer}>
-          <Text style={styles.contactFormTitle}>Send Invitation</Text>
-          
-          <Text style={styles.contactFormLabel}>Email Address</Text>
-          <TextInput
-            style={styles.contactInput}
-            value={contactEmail}
-            onChangeText={setContactEmail}
-            placeholder="Enter email address"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          
-          <Text style={styles.contactFormLabel}>Phone Number</Text>
-          <TextInput
-            style={styles.contactInput}
-            value={contactPhone}
-            onChangeText={setContactPhone}
-            placeholder="Enter phone number"
-            keyboardType="phone-pad"
-          />
-          
-          <Text style={styles.contactFormHelp}>
-            Enter at least one contact method to send the invitation
+      <Stack.Screen options={{ title: 'Freunde einladen' }} />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroSection}>
+          <Text style={styles.heroEmoji}>🤝</Text>
+          <Text style={styles.heroTitle}>Freunde einladen</Text>
+          <Text style={styles.heroSub}>
+            Lade deine Freunde ein und ihr bekommt beide{'\n'}
+            <Text style={styles.bonusHighlight}>50 Bonus Zest-Coins! 🪙</Text>
           </Text>
-          
-          <View style={styles.contactFormActions}>
-            <Button
-              title="Cancel"
-              onPress={handleCancelContactForm}
-              variant="outline"
-              style={styles.contactFormCancelButton}
-            />
-            <Button
-              title="Send Invitation"
-              onPress={handleDirectSend}
-              loading={isSending}
-              style={styles.contactFormSendButton}
-              disabled={!contactEmail && !contactPhone}
-            />
+        </View>
+
+        <View style={styles.codeCard}>
+          <Text style={styles.codeLabel}>Dein Einladungscode</Text>
+          <View style={styles.codeRow}>
+            <Text style={styles.codeText}>{inviteCode}</Text>
+            <TouchableOpacity style={styles.copyButton} onPress={() => handleCopy(inviteCode)}>
+              <Copy size={18} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
-      ) : (
-        <View style={styles.content}>
-          <View style={styles.rewardCard}>
-            <Text style={styles.rewardTitle}>Invite Friends, Get Rewards</Text>
-            <Text style={styles.rewardDescription}>
-              For each friend who joins using your invite code, you both get Ƶ50!
-            </Text>
-          </View>
-          
-          <Text style={styles.sectionTitle}>Your Invite Code</Text>
-          
-          <View style={styles.codeContainer}>
-            <TextInput
-              style={styles.codeInput}
-              value={inviteCode}
-              editable={false}
-            />
-            <Pressable style={styles.copyButton} onPress={handleCopy}>
-              <Copy size={20} color={colors.primary} />
-            </Pressable>
-          </View>
-          
-          <Text style={styles.sectionTitle}>Invite Link</Text>
-          
-          <View style={styles.linkContainer}>
-            <Text style={styles.linkTitle}>Invite Link</Text>
-            <Text style={styles.link} numberOfLines={2}>{inviteLink}</Text>
-            <Pressable style={styles.copyLinkButton} onPress={handleCopy}>
-              <Copy size={16} color={colors.primary} />
-              <Text style={styles.copyLinkText}>{copied ? 'Copied!' : 'Copy Link'}</Text>
-            </Pressable>
-          </View>
-          
-          <Text style={styles.linkDescription}>
-            This link will direct your friends to download the app from the App Store or Google Play
-          </Text>
-          
-          <Text style={styles.sectionTitle}>Share Invite</Text>
-          
-          <View style={styles.shareOptions}>
-            <Pressable style={styles.shareOption} onPress={handleShare}>
-              <View style={[styles.shareIconContainer, { backgroundColor: colors.primary }]}>
-                <Share2 size={24} color="white" />
-              </View>
-              <Text style={styles.shareOptionText}>Share</Text>
-            </Pressable>
-            
-            <Pressable style={styles.shareOption} onPress={handleSendSMS}>
-              <View style={[styles.shareIconContainer, { backgroundColor: colors.success }]}>
-                <MessageSquare size={24} color="white" />
-              </View>
-              <Text style={styles.shareOptionText}>SMS</Text>
-            </Pressable>
-            
-            <Pressable style={styles.shareOption} onPress={handleSendEmail}>
-              <View style={[styles.shareIconContainer, { backgroundColor: colors.secondary }]}>
-                <Mail size={24} color="white" />
-              </View>
-              <Text style={styles.shareOptionText}>Email</Text>
-            </Pressable>
-            
-            <Pressable style={styles.shareOption} onPress={handleSendToContacts}>
-              <View style={[styles.shareIconContainer, { backgroundColor: colors.primary }]}>
-                <Users size={24} color="white" />
-              </View>
-              <Text style={styles.shareOptionText}>Contacts</Text>
-            </Pressable>
-          </View>
-          
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Friends Invited</Text>
-            </View>
-            
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>Ƶ0</Text>
-              <Text style={styles.statLabel}>Rewards Earned</Text>
-            </View>
+
+        <View style={styles.linkCard}>
+          <Text style={styles.codeLabel}>Einladungslink</Text>
+          <View style={styles.codeRow}>
+            <Text style={styles.linkText} numberOfLines={1}>{inviteLink}</Text>
+            <TouchableOpacity style={styles.copyButton} onPress={() => handleCopy(inviteLink)}>
+              <Copy size={18} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
-      )}
+
+        <Button
+          title="Link teilen"
+          onPress={handleShare}
+          size="large"
+          icon={<Share2 size={18} color="#000" />}
+        />
+
+        <View style={styles.methodsSection}>
+          <Text style={styles.methodsTitle}>Einladungsmethoden</Text>
+          <View style={styles.methodsGrid}>
+            <TouchableOpacity style={styles.methodCard} onPress={handleShare}>
+              <MessageCircle size={22} color={colors.accent} />
+              <Text style={styles.methodLabel}>WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.methodCard} onPress={handleShare}>
+              <Link2 size={22} color={colors.primary} />
+              <Text style={styles.methodLabel}>Link</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.methodCard} onPress={handleShare}>
+              <Users size={22} color={colors.charity} />
+              <Text style={styles.methodLabel}>Kontakte</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.howItWorks}>
+          <Text style={styles.howTitle}>So funktioniert's</Text>
+          <View style={styles.step}>
+            <Text style={styles.stepNumber}>1</Text>
+            <Text style={styles.stepText}>Teile deinen Code oder Link mit Freunden</Text>
+          </View>
+          <View style={styles.step}>
+            <Text style={styles.stepNumber}>2</Text>
+            <Text style={styles.stepText}>Dein Freund registriert sich mit dem Code</Text>
+          </View>
+          <View style={styles.step}>
+            <Text style={styles.stepNumber}>3</Text>
+            <Text style={styles.stepText}>Ihr bekommt beide 50 Bonus Zest-Coins! 🎉</Text>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -340,179 +118,143 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  closeButton: {
-    padding: 8,
+  scroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+    gap: 16,
   },
-  content: {
-    padding: 16,
+  heroSection: {
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 8,
   },
-  rewardCard: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  heroEmoji: {
+    fontSize: 56,
   },
-  rewardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 8,
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '900' as const,
+    color: colors.text,
   },
-  rewardDescription: {
+  heroSub: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.textSecondary,
+    textAlign: 'center' as const,
     lineHeight: 20,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
+  bonusHighlight: {
+    color: colors.zest,
+    fontWeight: '700' as const,
   },
-  codeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  codeInput: {
-    flex: 1,
+  codeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    fontWeight: '600',
-    backgroundColor: colors.card,
+    gap: 10,
+  },
+  linkCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+  },
+  codeLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  codeText: {
+    fontSize: 24,
+    fontWeight: '900' as const,
+    color: colors.primary,
+    letterSpacing: 2,
+  },
+  linkText: {
+    fontSize: 14,
+    color: colors.text,
+    flex: 1,
+    marginRight: 10,
   },
   copyButton: {
-    padding: 12,
-    marginLeft: 8,
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  linkTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  copyLinkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    marginTop: 12,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  copyLinkText: {
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  linkContainer: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    backgroundColor: colors.card,
-  },
-  link: {
-    fontSize: 14,
-    color: colors.primary,
-  },
-  linkDescription: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 24,
-  },
-  shareOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  shareOption: {
-    alignItems: 'center',
-    width: '22%',
-  },
-  shareIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  shareOptionText: {
-    fontSize: 14,
-    color: colors.text,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: colors.card,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-  },
-  statItem: {
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 4,
+  methodsSection: {
+    gap: 12,
+    marginTop: 8,
   },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  contactFormContainer: {
-    padding: 16,
-  },
-  contactFormTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 16,
-  },
-  contactFormLabel: {
+  methodsTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700' as const,
     color: colors.text,
-    marginBottom: 8,
   },
-  contactInput: {
+  methodsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  methodCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 18,
+    alignItems: 'center',
+    gap: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: colors.card,
   },
-  contactFormHelp: {
-    fontSize: 12,
+  methodLabel: {
     color: colors.textSecondary,
-    marginBottom: 24,
+    fontSize: 12,
+    fontWeight: '600' as const,
   },
-  contactFormActions: {
+  howItWorks: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 18,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  howTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: colors.text,
+  },
+  step: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 14,
   },
-  contactFormCancelButton: {
+  stepNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary + '20',
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '800' as const,
+    textAlign: 'center' as const,
+    lineHeight: 28,
+  },
+  stepText: {
+    color: colors.textSecondary,
+    fontSize: 14,
     flex: 1,
-    marginRight: 8,
-  },
-  contactFormSendButton: {
-    flex: 2,
-    marginLeft: 8,
   },
 });

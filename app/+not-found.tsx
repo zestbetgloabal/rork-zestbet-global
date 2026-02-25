@@ -1,38 +1,43 @@
-import { Link, Stack } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import colors from '@/constants/colors';
+import Button from '@/components/Button';
 
 export default function NotFoundScreen() {
-  return (
-    <>
-      <Stack.Screen options={{ title: "Oops!" }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>This screen doesn't exist.</Text>
+  const router = useRouter();
 
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
-        </Link>
-      </View>
-    </>
+  return (
+    <View style={styles.container}>
+      <Stack.Screen options={{ title: 'Nicht gefunden' }} />
+      <Text style={styles.emoji}>🔍</Text>
+      <Text style={styles.title}>Seite nicht gefunden</Text>
+      <Text style={styles.sub}>Diese Seite existiert nicht.</Text>
+      <Button title="Zurück zur Startseite" onPress={() => router.replace('/')} variant="outline" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    padding: 24,
+    gap: 12,
+  },
+  emoji: {
+    fontSize: 48,
   },
   title: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: '700' as const,
+    color: colors.text,
   },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-  linkText: {
+  sub: {
     fontSize: 14,
-    color: "#2e78b7",
+    color: colors.textSecondary,
+    marginBottom: 16,
   },
 });

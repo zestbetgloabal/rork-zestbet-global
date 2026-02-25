@@ -1,173 +1,108 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Image, Pressable } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useUserStore } from '@/store/userStore';
-import Button from '@/components/Button';
-import colors from '@/constants/colors';
-import { Brain, Camera, ChevronRight } from 'lucide-react-native';
+import { Camera } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import colors from '@/constants/colors';
+import Button from '@/components/Button';
+import { useUserStore } from '@/store/userStore';
 
 export default function ProfileEditScreen() {
   const router = useRouter();
-  const { user, updateUserProfile } = useUserStore();
-  
-  const [avatar, setAvatar] = useState(user?.avatar || '');
-  const [username, setUsername] = useState(user?.username || '');
-  const [biography, setBiography] = useState(user?.biography || '');
-  const [instagram, setInstagram] = useState(user?.socialMedia?.instagram || '');
-  const [twitter, setTwitter] = useState(user?.socialMedia?.twitter || '');
-  const [tiktok, setTiktok] = useState(user?.socialMedia?.tiktok || '');
-  
-  const handleSave = () => {
-    updateUserProfile({
-      username,
-      biography,
-      avatar,
-      socialMedia: {
-        ...user?.socialMedia,
-        instagram,
-        twitter,
-        tiktok
-      }
-    });
-    
-    router.back();
-  };
-  
-  const pickImage = async () => {
+  const { user, updateUser } = useUserStore();
+
+  const [username, setUsername] = useState(user?.username ?? '');
+  const [bio, setBio] = useState(user?.bio ?? '');
+  const [avatar, setAvatar] = useState(user?.avatar ?? '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handlePickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.7,
     });
-    
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+
+    if (!result.canceled && result.assets[0]) {
       setAvatar(result.assets[0].uri);
     }
-  };
-  
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!username.trim()) {
+      Alert.alert('Fehler', 'Bitte gib einen Benutzernamen ein.');
+      return;
+    }
+
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    updateUser({
+      username: username.trim(),
+      bio: bio.trim(),
+      avatar,
+    });
+
+    setIsSaving(false);
+    Alert.alert('Gespeichert! ✅', 'Dein Profil wurde aktualisiert.', [
+      { text: 'OK', onPress: () => router.back() },
+    ]);
+  }, [username, bio, avatar, updateUser, router]);
+
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          title: 'Edit Profile',
-          headerRight: () => (
+      <Stack.Screen options={{ title: 'Profil bearbeiten' }} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage} activeOpacity={0.7}>
+            <Image source={{ uri: avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop' }} style={styles.avatar} />
+            <View style={styles.cameraOverlay}>
+              <Camera size={20} color="#fff" />
+            </View>
+          </TouchableOpacity>
+
+          <Text style={styles.label}>Benutzername</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Dein Benutzername"
+            placeholderTextColor={colors.textMuted}
+            value={username}
+            onChangeText={setUsername}
+            maxLength={30}
+            testID="edit-username"
+          />
+
+          <Text style={styles.label}>Über mich</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Erzähl etwas über dich..."
+            placeholderTextColor={colors.textMuted}
+            value={bio}
+            onChangeText={setBio}
+            multiline
+            numberOfLines={4}
+            maxLength={200}
+            testID="edit-bio"
+          />
+          <Text style={styles.charCount}>{bio.length}/200</Text>
+
+          <View style={styles.actions}>
             <Button
-              title="Save"
+              title="Speichern"
               onPress={handleSave}
-              variant="outline"
+              loading={isSaving}
+              size="large"
+              testID="edit-save"
             />
-          )
-        }}
-      />
-      
-      <ScrollView style={styles.scrollView}>
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <Pressable style={styles.avatarContainer} onPress={pickImage}>
-            {avatar ? (
-              <Image source={{ uri: avatar }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitial}>
-                  {username.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={styles.cameraButton}>
-              <Camera size={16} color="white" />
-            </View>
-          </Pressable>
-        </View>
-        
-        {/* Profile Form */}
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Username</Text>
-            <TextInput
-              style={styles.input}
-              value={username}
-              onChangeText={setUsername}
-              placeholder="Your username"
-              placeholderTextColor={colors.textSecondary}
+            <Button
+              title="Abbrechen"
+              onPress={() => router.back()}
+              variant="ghost"
             />
           </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Biography</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={biography}
-              onChangeText={setBiography}
-              placeholder="Tell us about yourself"
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
-          
-          <Text style={styles.sectionTitle}>Social Media</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Instagram</Text>
-            <TextInput
-              style={styles.input}
-              value={instagram}
-              onChangeText={setInstagram}
-              placeholder="Your Instagram username"
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Twitter</Text>
-            <TextInput
-              style={styles.input}
-              value={twitter}
-              onChangeText={setTwitter}
-              placeholder="Your Twitter username"
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>TikTok</Text>
-            <TextInput
-              style={styles.input}
-              value={tiktok}
-              onChangeText={setTiktok}
-              placeholder="Your TikTok username"
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
-        </View>
-        
-        {/* AI Preferences Link */}
-        <Pressable 
-          style={styles.aiPreferencesLink}
-          onPress={() => router.push('/user-preferences')}
-        >
-          <View style={styles.aiPreferencesContent}>
-            <Brain size={20} color={colors.primary} />
-            <View style={styles.aiPreferencesTextContainer}>
-              <Text style={styles.aiPreferencesTitle}>AI Preferences</Text>
-              <Text style={styles.aiPreferencesDescription}>
-                Customize your AI recommendations
-              </Text>
-            </View>
-          </View>
-          <ChevronRight size={20} color={colors.textSecondary} />
-        </Pressable>
-        
-        <Button
-          title="Save Profile"
-          onPress={handleSave}
-          variant="primary"
-          style={styles.saveButton}
-        />
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -177,106 +112,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollView: {
+  flex: {
     flex: 1,
   },
-  avatarSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
+  scroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 24,
   },
   avatarContainer: {
-    position: 'relative',
+    alignSelf: 'center',
+    marginBottom: 32,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
+    backgroundColor: colors.surface,
+    borderWidth: 3,
+    borderColor: colors.primary,
   },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  cameraButton: {
+  cameraOverlay: {
     position: 'absolute',
     bottom: 0,
     right: 0,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: colors.primary,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.card,
-  },
-  formContainer: {
-    padding: 16,
-  },
-  inputGroup: {
-    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: colors.background,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
+    fontWeight: '700' as const,
+    color: colors.textSecondary,
     marginBottom: 8,
+    marginTop: 16,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
     color: colors.text,
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   textArea: {
     minHeight: 100,
+    textAlignVertical: 'top' as const,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginTop: 8,
-    marginBottom: 16,
+  charCount: {
+    textAlign: 'right' as const,
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 4,
   },
-  aiPreferencesLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.card,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-  },
-  aiPreferencesContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  aiPreferencesTextContainer: {
-    marginLeft: 12,
-  },
-  aiPreferencesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  aiPreferencesDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  saveButton: {
-    margin: 16,
-    marginTop: 24,
+  actions: {
+    marginTop: 32,
+    gap: 12,
   },
 });

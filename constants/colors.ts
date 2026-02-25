@@ -1,15 +1,18 @@
-// App color scheme
 export default {
-  primary: "#6366f1", // Indigo
-  secondary: "#f97316", // Orange
-  background: "#ffffff",
-  card: "#f9fafb",
-  text: "#1f2937",
-  textSecondary: "#6b7280",
-  border: "#e5e7eb",
-  success: "#10b981",
-  error: "#ef4444",
-  warning: "#f59e0b",
-  info: "#3b82f6", // Added info color (blue)
-  zest: "#f97316", // Zest currency color
+  background: '#0F1117',
+  surface: '#1A1D27',
+  surfaceLight: '#242836',
+  card: '#1E2230',
+  primary: '#F5A623',
+  primaryDark: '#D4891A',
+  accent: '#4ECDC4',
+  text: '#FFFFFF',
+  textSecondary: '#8E92A4',
+  textMuted: '#5A5E6E',
+  border: '#2A2E3D',
+  success: '#34D399',
+  error: '#EF4444',
+  warning: '#FBBF24',
+  charity: '#A78BFA',
+  zest: '#F5A623',
 };

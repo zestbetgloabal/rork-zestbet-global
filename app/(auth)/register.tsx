@@ -1,364 +1,150 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  Pressable, 
-  ScrollView,
-  Alert,
-  Platform
-} from 'react-native';
-import { useRouter, Link } from 'expo-router';
-import { Eye, EyeOff, Check, Square } from 'lucide-react-native';
-import { useAuthStore } from '@/store/authStore';
-import Button from '@/components/Button';
-import AppleSignInButton from '@/components/AppleSignInButton';
-import FacebookSignInButton from '@/components/FacebookSignInButton';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter, Href } from 'expo-router';
+import { Mail, Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
+import Button from '@/components/Button';
+import { useAuthStore } from '@/store/authStore';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register, isLoading, error, clearError, loginWithGoogle, loginWithApple, loginWithFacebook, pendingVerification, _hasHydrated } = useAuthStore();
-  
+  const insets = useSafeAreaInsets();
+  const { register, isLoading, error, clearError } = useAuthStore();
+
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [agbConsent, setAgbConsent] = useState(false);
-  const [privacyConsent, setPrivacyConsent] = useState(false);
-  
-  // Show loading until hydrated
-  if (!_hasHydrated) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Loading...</Text>
-      </View>
-    );
-  }
-  
-  const handleRegister = async () => {
-    if (!username.trim()) {
-      Alert.alert('Error', 'Please enter a username');
-      return;
-    }
-    
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
-      return;
-    }
-    
-    if (!password.trim()) {
-      Alert.alert('Error', 'Please enter a password');
-      return;
-    }
-    
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const handleRegister = useCallback(async () => {
+    clearError();
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      useAuthStore.setState({ error: 'Passwörter stimmen nicht überein.' });
       return;
     }
-    
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+    if (!acceptedTerms) {
+      useAuthStore.setState({ error: 'Bitte akzeptiere die AGB und Datenschutzerklärung.' });
       return;
     }
-    
-    if (!agbConsent) {
-      Alert.alert('Error', 'You must accept the Terms and Conditions');
-      return;
+    const success = await register(email, password, username);
+    if (success) {
+      router.push('/email-verification' as Href);
     }
-    
-    if (!privacyConsent) {
-      Alert.alert('Error', 'You must accept the Privacy Policy');
-      return;
-    }
-    
-    console.log('Starting registration process...');
-    
-    // Attempt registration
-    const result = await register({
-      email: email.trim(),
-      password,
-      username: username.trim(),
-      phone: phone.trim() || undefined,
-    });
-    
-    if (result) {
-      console.log('Registration successful:', result);
-      // Show success message and navigate to verification
-      Alert.alert(
-        'Registration Successful!', 
-        result.message + '\n\nFor testing purposes, the verification code will be displayed in the console.',
-        [{
-          text: 'Continue to Verification',
-          onPress: () => {
-            if (result.requiresEmailVerification) {
-              router.push('/email-verification');
-            }
-          }
-        }]
-      );
-    } else {
-      console.log('Registration failed - no result returned');
-    }
-  };
-  
-  const handleLogin = () => {
-    router.push('/login');
-  };
-  
-  const handleGoogleLogin = async () => {
-    try {
-      const success = await loginWithGoogle();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      Alert.alert('Google Login Error', 'Failed to login with Google');
-    }
-  };
-  
-  const handleAppleLogin = async () => {
-    try {
-      const success = await loginWithApple();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      Alert.alert('Apple Login Error', 'Failed to login with Apple');
-    }
-  };
-  
-  const handleFacebookLogin = async () => {
-    try {
-      const success = await loginWithFacebook();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      Alert.alert('Facebook Login Error', 'Failed to login with Facebook');
-    }
-  };
-  
-  const toggleAgbConsent = () => {
-    setAgbConsent(!agbConsent);
-  };
-  
-  const togglePrivacyConsent = () => {
-    setPrivacyConsent(!privacyConsent);
-  };
-  
+  }, [email, password, confirmPassword, username, acceptedTerms, register, clearError, router]);
+
   return (
-    <ScrollView 
-      style={styles.container} 
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Join ZestBet and start making predictions!</Text>
-      
-      <View style={styles.noticeContainer}>
-        <Text style={styles.noticeText}>✅ Account registration is available! Create your account with a valid email from recognized providers (Gmail, Yahoo, Outlook, etc.). You'll need to verify your email to complete registration.</Text>
-        <Pressable 
-          style={styles.debugButton} 
-          onPress={() => router.push('/debug-api')}
-        >
-          <Text style={styles.debugButtonText}>🔧 Debug API Connection</Text>
-        </Pressable>
-      </View>
-      
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={clearError}>
-            <Text style={styles.dismissText}>Dismiss</Text>
-          </Pressable>
-        </View>
-      )}
-      
-      {/* Social Login Options */}
-      <View style={styles.socialLoginContainer}>
-        <Text style={styles.socialLoginText}>Sign up with</Text>
-        
-        <View style={styles.socialButtonsRow}>
-          <GoogleSignInButton
-            onPress={handleGoogleLogin}
-            loading={isLoading}
-            disabled={isLoading}
-          />
-          
-          <FacebookSignInButton
-            onPress={handleFacebookLogin}
-            loading={isLoading}
-            disabled={isLoading}
-          />
-        </View>
-        
-        {Platform.OS === 'ios' && (
-          <AppleSignInButton
-            onPress={handleAppleLogin}
-            loading={isLoading}
-            style={styles.appleButton}
-          />
-        )}
-        
-        <View style={styles.dividerContainer}>
-          <View style={styles.divider} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.divider} />
-        </View>
-      </View>
-      
-      <View style={styles.form}>
-        <Text style={styles.label}>Username</Text>
-        <TextInput
-          style={styles.input}
-          value={username}
-          onChangeText={setUsername}
-          placeholder="Choose a username"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        
-        <Text style={styles.label}>Email Address *</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Enter your email address"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        
-        <Text style={styles.label}>Phone Number (Optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="Enter your phone number (optional)"
-          keyboardType="phone-pad"
-        />
-        
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Create a password"
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Pressable 
-            style={styles.eyeButton}
-            onPress={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? (
-              <EyeOff size={20} color={colors.textSecondary} />
-            ) : (
-              <Eye size={20} color={colors.textSecondary} />
-            )}
-          </Pressable>
-        </View>
-        
-        <Text style={styles.label}>Confirm Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm your password"
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-        
-        <Text style={styles.passwordRequirements}>
-          Password must be at least 8 characters long.
-        </Text>
-        
-        {/* Consent Checkboxes */}
-        <View style={styles.consentContainer}>
-          <Pressable 
-            style={styles.checkboxContainer} 
-            onPress={toggleAgbConsent}
-          >
-            <View style={styles.checkbox}>
-              {agbConsent ? (
-                <Check size={16} color={colors.primary} />
-              ) : (
-                <Square size={16} color={colors.border} />
-              )}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <View style={styles.header}>
+            <Text style={styles.title}>Account erstellen</Text>
+            <Text style={styles.subtitle}>Tritt ZestBet bei und wette mit Freunden!</Text>
+          </View>
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
             </View>
-            <View style={styles.checkboxTextContainer}>
-              <Text style={styles.checkboxText}>
-                I accept the 
-                <Text 
-                  style={styles.linkText}
-                  onPress={() => router.push('/legal/agb')}
-                > Terms and Conditions
+          ) : null}
+
+          <View style={styles.form}>
+            <View style={styles.inputWrapper}>
+              <User size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Benutzername"
+                placeholderTextColor={colors.textMuted}
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                testID="register-username"
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Mail size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="E-Mail"
+                placeholderTextColor={colors.textMuted}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                testID="register-email"
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Lock size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Passwort (min. 6 Zeichen)"
+                placeholderTextColor={colors.textMuted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                testID="register-password"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                {showPassword ? <EyeOff size={18} color={colors.textMuted} /> : <Eye size={18} color={colors.textMuted} />}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Lock size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Passwort bestätigen"
+                placeholderTextColor={colors.textMuted}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showPassword}
+                testID="register-confirm-password"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.termsRow}
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                {acceptedTerms ? <Text style={styles.checkmark}>✓</Text> : null}
+              </View>
+              <Text style={styles.termsText}>
+                Ich akzeptiere die{' '}
+                <Text style={styles.termsLink} onPress={() => router.push('/legal' as Href)}>
+                  AGB & Datenschutzerklärung
                 </Text>
               </Text>
+            </TouchableOpacity>
+
+            <Button
+              title="Registrieren"
+              onPress={handleRegister}
+              loading={isLoading}
+              size="large"
+              testID="register-submit"
+            />
+
+            <View style={styles.loginRow}>
+              <Text style={styles.loginText}>Schon einen Account? </Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.loginLink}>Anmelden</Text>
+              </TouchableOpacity>
             </View>
-          </Pressable>
-          
-          <Pressable 
-            style={styles.checkboxContainer} 
-            onPress={togglePrivacyConsent}
-          >
-            <View style={styles.checkbox}>
-              {privacyConsent ? (
-                <Check size={16} color={colors.primary} />
-              ) : (
-                <Square size={16} color={colors.border} />
-              )}
-            </View>
-            <View style={styles.checkboxTextContainer}>
-              <Text style={styles.checkboxText}>
-                I accept the 
-                <Text 
-                  style={styles.linkText}
-                  onPress={() => router.push('/legal/datenschutz')}
-                > Privacy Policy
-                </Text>
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-        
-        <Button
-          title="Create Account"
-          onPress={handleRegister}
-          loading={isLoading}
-          style={styles.registerButton}
-          disabled={isLoading}
-        />
-      </View>
-      
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account?</Text>
-        <Pressable onPress={handleLogin}>
-          <Text style={styles.loginText}>Log In</Text>
-        </Pressable>
-      </View>
-      
-      <Text style={styles.termsText}>
-        By creating an account, you agree to our 
-        <Link href="/legal/agb" asChild>
-          <Text style={styles.linkText}> Terms of Service </Text>
-        </Link>
-        and 
-        <Link href="/legal/datenschutz" asChild>
-          <Text style={styles.linkText}> Privacy Policy</Text>
-        </Link>
-      </Text>
-    </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -367,192 +153,114 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    padding: 24,
-    paddingTop: 40,
+  flex: {
+    flex: 1,
+  },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
     paddingBottom: 40,
+  },
+  backButton: {
+    marginTop: 12,
+    marginBottom: 8,
+    width: 40,
+  },
+  header: {
+    marginBottom: 32,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '900' as const,
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textSecondary,
-    marginBottom: 24,
   },
-  errorContainer: {
-    backgroundColor: `${colors.error}20`,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  form: {
+    gap: 14,
+  },
+  errorBox: {
+    backgroundColor: colors.error + '15',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: colors.error + '30',
   },
   errorText: {
     color: colors.error,
-    flex: 1,
+    fontSize: 13,
+    textAlign: 'center' as const,
   },
-  dismissText: {
-    color: colors.error,
-    fontWeight: '600',
-  },
-  socialLoginContainer: {
-    marginBottom: 24,
-  },
-  socialLoginText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  socialButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 16,
-  },
-  appleButton: {
-    width: '100%',
-  },
-  dividerContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
   },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  form: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
+    flex: 1,
+    color: colors.text,
     fontSize: 16,
-    marginBottom: 16,
+    paddingVertical: 16,
   },
-  orText: {
-    textAlign: 'center',
-    color: colors.textSecondary,
-    marginBottom: 16,
+  eyeIcon: {
+    padding: 8,
   },
-  passwordContainer: {
+  termsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
-  },
-  eyeButton: {
-    padding: 12,
-  },
-  passwordRequirements: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 24,
-  },
-  consentContainer: {
-    marginBottom: 24,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    gap: 10,
+    paddingVertical: 4,
   },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
     borderColor: colors.border,
-    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
-    marginTop: 2,
   },
-  checkboxTextContainer: {
-    flex: 1,
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  checkboxText: {
+  checkmark: {
+    color: '#000',
     fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
-  },
-  linkText: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  registerButton: {
-    marginTop: 8,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  footerText: {
-    color: colors.textSecondary,
-    marginRight: 4,
-  },
-  loginText: {
-    color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700' as const,
   },
   termsText: {
-    fontSize: 12,
     color: colors.textSecondary,
-    textAlign: 'center',
+    fontSize: 13,
+    flex: 1,
   },
-  noticeContainer: {
-    backgroundColor: `${colors.primary}20`,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+  termsLink: {
+    color: colors.primary,
+    textDecorationLine: 'underline' as const,
   },
-  noticeText: {
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  loginText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  loginLink: {
     color: colors.primary,
     fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  debugButton: {
-    backgroundColor: colors.textSecondary,
-    padding: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  debugButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
 });

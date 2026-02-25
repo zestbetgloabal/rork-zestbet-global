@@ -1,56 +1,46 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import colors from '@/constants/colors';
 
 interface ZestCurrencyProps {
   amount: number;
   size?: 'small' | 'medium' | 'large';
-  color?: string;
+  showLabel?: boolean;
 }
 
-export default function ZestCurrency({ amount, size = 'medium', color }: ZestCurrencyProps) {
-  const getFontSize = () => {
-    switch (size) {
-      case 'small':
-        return 14;
-      case 'medium':
-        return 16;
-      case 'large':
-        return 20;
-      default:
-        return 16;
-    }
-  };
-  
-  const getSymbolSize = () => {
-    switch (size) {
-      case 'small':
-        return 12;
-      case 'medium':
-        return 14;
-      case 'large':
-        return 18;
-      default:
-        return 14;
-    }
-  };
-  
-  const textColor = color || colors.text;
-  
+const ZestCurrency = React.memo(({ amount, size = 'medium', showLabel = false }: ZestCurrencyProps) => {
+  const fontSize = size === 'small' ? 14 : size === 'large' ? 24 : 18;
+  const emojiSize = size === 'small' ? 14 : size === 'large' ? 22 : 16;
+
   return (
-    <Text style={[styles.text, { fontSize: getFontSize(), color: textColor }]}>
-      <Text style={[styles.symbol, { fontSize: getSymbolSize(), color: textColor }]}>Ƶ</Text>
-      {amount.toLocaleString()}
-    </Text>
+    <View style={styles.container}>
+      <Text style={[styles.emoji, { fontSize: emojiSize }]}>🪙</Text>
+      <Text style={[styles.amount, { fontSize }]}>{amount.toLocaleString('de-DE')}</Text>
+      {showLabel && <Text style={styles.label}>Zest</Text>}
+    </View>
   );
-}
+});
+
+ZestCurrency.displayName = 'ZestCurrency';
+
+export default ZestCurrency;
 
 const styles = StyleSheet.create({
-  text: {
-    fontWeight: '600',
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  symbol: {
-    fontWeight: 'bold',
-    marginRight: 1,
+  emoji: {
+    fontSize: 16,
+  },
+  amount: {
+    color: colors.zest,
+    fontWeight: '800' as const,
+  },
+  label: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    marginLeft: 2,
   },
 });

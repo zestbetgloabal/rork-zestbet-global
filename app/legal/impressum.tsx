@@ -1,92 +1,59 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Linking, Pressable } from 'react-native';
-import { Mail, Phone, MapPin } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import colors from '@/constants/colors';
 
 export default function ImpressumScreen() {
-  const handleEmailPress = () => {
-    Linking.openURL('mailto:zestbetglobal@gmail.com');
-  };
-  
-  const handlePhonePress = () => {
-    Linking.openURL('tel:015164055107');
-  };
-  
-  const handleMapPress = () => {
-    Linking.openURL('https://maps.google.com/?q=Nordlicht+6,+31275+Lehrte,+Germany');
-  };
-  
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Impressum</Text>
-        <Text style={styles.subtitle}>Company Information</Text>
-        
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>Impressum</Text>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Managing Directors</Text>
-          <Text style={styles.paragraph}>
-            Erhan Berse
-          </Text>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact Information</Text>
-          
-          <Pressable style={styles.contactItem} onPress={handleMapPress}>
-            <MapPin size={20} color={colors.primary} />
-            <Text style={styles.contactText}>
-              Nordlicht 6{'\n'}
-              31275 Lehrte{'\n'}
-              Germany
-            </Text>
-          </Pressable>
-          
-          <Pressable style={styles.contactItem} onPress={handleEmailPress}>
-            <Mail size={20} color={colors.primary} />
-            <Text style={styles.contactText}>
-              zestbetglobal@gmail.com
-            </Text>
-          </Pressable>
-          
-          <Pressable style={styles.contactItem} onPress={handlePhonePress}>
-            <Phone size={20} color={colors.primary} />
-            <Text style={styles.contactText}>
-              015164055107
-            </Text>
-          </Pressable>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Responsible for Content</Text>
-          <Text style={styles.paragraph}>
-            According to § 55 Abs. 2 RStV:
-          </Text>
-          <Text style={styles.paragraph}>
-            Erhan Berse{'\n'}
-            Nordlicht 6{'\n'}
-            31275 Lehrte{'\n'}
-            Germany
-          </Text>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dispute Resolution</Text>
-          <Text style={styles.paragraph}>
-            The European Commission provides a platform for online dispute resolution (OS) which is available at https://ec.europa.eu/consumers/odr/.
-          </Text>
-          <Text style={styles.paragraph}>
-            We are not obliged and not willing to participate in dispute resolution proceedings before a consumer arbitration board.
-          </Text>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Liability for Content</Text>
-          <Text style={styles.paragraph}>
-            As a service provider, we are responsible for our own content on these pages according to § 7 Abs.1 TMG. However, according to §§ 8 to 10 TMG, we are not obliged to monitor transmitted or stored information or to investigate circumstances that indicate illegal activity.
-          </Text>
-        </View>
-      </View>
+      <Text style={styles.heading}>Angaben gemäß § 5 TMG</Text>
+      <Text style={styles.body}>
+        ZestBet UG (haftungsbeschränkt){'\n'}
+        Musterstraße 1{'\n'}
+        10115 Berlin{'\n'}
+        Deutschland
+      </Text>
+
+      <Text style={styles.heading}>Kontakt</Text>
+      <Text style={styles.body}>
+        E-Mail: kontakt@zestbet.app{'\n'}
+        Telefon: +49 (0) 30 12345678
+      </Text>
+
+      <Text style={styles.heading}>Vertreten durch</Text>
+      <Text style={styles.body}>Geschäftsführer: [Name einfügen]</Text>
+
+      <Text style={styles.heading}>Registereintrag</Text>
+      <Text style={styles.body}>
+        Registergericht: Amtsgericht Berlin-Charlottenburg{'\n'}
+        Registernummer: HRB [Nummer einfügen]
+      </Text>
+
+      <Text style={styles.heading}>Umsatzsteuer-ID</Text>
+      <Text style={styles.body}>
+        Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG:{'\n'}
+        DE [Nummer einfügen]
+      </Text>
+
+      <Text style={styles.heading}>Verantwortlich für den Inhalt</Text>
+      <Text style={styles.body}>
+        [Name einfügen]{'\n'}
+        Musterstraße 1{'\n'}
+        10115 Berlin
+      </Text>
+
+      <Text style={styles.heading}>Streitschlichtung</Text>
+      <Text style={styles.body}>
+        Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:{'\n'}
+        https://ec.europa.eu/consumers/odr{'\n\n'}
+        Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
+      </Text>
+
+      <Text style={styles.heading}>Haftung für Inhalte</Text>
+      <Text style={styles.body}>
+        Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.
+      </Text>
     </ScrollView>
   );
 }
@@ -97,43 +64,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: 24,
+    paddingHorizontal: 16,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '900' as const,
     color: colors.text,
+    marginBottom: 20,
+    marginTop: 8,
+  },
+  heading: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginTop: 20,
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
+  body: {
+    fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  paragraph: {
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: 12,
-    lineHeight: 24,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  contactText: {
-    fontSize: 16,
-    color: colors.text,
-    marginLeft: 12,
-    lineHeight: 24,
+    lineHeight: 22,
   },
 });

@@ -1,318 +1,226 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useBetStore } from '@/store/betStore';
-import { useMissionStore } from '@/store/missionStore';
-import { useUserStore } from '@/store/userStore';
-import { useImpactStore } from '@/store/impactStore';
-import { useAIStore } from '@/store/aiStore';
-import BetCard from '@/components/BetCard';
-import MissionCard from '@/components/MissionCard';
-import ZestCurrency from '@/components/ZestCurrency';
-import Button from '@/components/Button';
-import WeeklyCharityFeature from '@/components/WeeklyCharityFeature';
-import AIRecommendationCard from '@/components/AIRecommendationCard';
+import React, { useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated, Image } from 'react-native';
+import { useRouter, Href } from 'expo-router';
+import { Plus, Wallet, ChevronRight, Heart, Zap, Target } from 'lucide-react-native';
 import colors from '@/constants/colors';
-import { DAILY_BET_LIMIT } from '@/constants/app';
-import { Brain } from 'lucide-react-native';
-import { hermesGuard, safeArrayOperation } from '@/utils/crashPrevention';
-import DemoModeIndicator from '@/components/DemoModeIndicator';
+import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
+import { useBetStore } from '@/store/betStore';
+import BetCard from '@/components/BetCard';
+import ZestCurrency from '@/components/ZestCurrency';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { bets, fetchBets, likeBet } = useBetStore();
-  const { missions, fetchMissions } = useMissionStore();
-  const { user, getRemainingDailyLimit, resetDailyBetAmountIfNewDay } = useUserStore();
-  const { fetchProjects, weeklyFeaturedProject, getTimeUntilNextProject } = useImpactStore();
-  const { fetchRecommendations, recommendations, trackUserBehavior } = useAIStore();
-  
-  // Fetch data on component mount with crash protection
+  const { userId } = useAuthStore();
+  const { user, loadUser } = useUserStore();
+  const { bets, fetchBets, isLoading, getBetsByUser } = useBetStore();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        await Promise.all([
-          fetchBets(),
-          fetchMissions(),
-          fetchProjects(),
-          fetchRecommendations('bet', 2)
-        ]);
-        
-        // Track app opened behavior
-        trackUserBehavior('app_opened');
-        
-        // Reset daily bet amount if it's a new day
-        resetDailyBetAmountIfNewDay();
-      } catch (error) {
-        console.warn('Failed to initialize home screen data:', error);
-      }
-    };
-    
-    // Execute the initialization with crash protection
-    hermesGuard(() => {
-      initializeData();
-    }, undefined, 'execute initialization');
-    
-    // Start tracking time spent in app
-    const startTime = Date.now();
-    
-    return () => {
-      // Track time spent when component unmounts
-      hermesGuard(() => {
-        const timeSpent = (Date.now() - startTime) / 1000; // in seconds
-        trackUserBehavior('time_spent', timeSpent);
-      }, undefined, 'time tracking cleanup');
-    };
-  }, [fetchBets, fetchMissions, fetchProjects, fetchRecommendations, trackUserBehavior, resetDailyBetAmountIfNewDay]);
-  
-  // Set current user in a separate useEffect to avoid state updates during render
-  useEffect(() => {
-    hermesGuard(() => {
-      if (user?.username) {
-        // Import setCurrentUser from betStore to avoid using it during render
-        const { setCurrentUser } = useBetStore.getState();
-        setCurrentUser(user.username);
-      }
-    }, undefined, 'set current user');
-  }, [user?.username]);
-  
-  // Get public bets for the featured section with crash protection
-  const publicBets = safeArrayOperation(
-    bets,
-    (safeBets) => safeBets.filter(bet => bet?.visibility === 'public').slice(0, 2),
-    []
-  );
-  
-  // Get active missions with crash protection
-  const activeMissions = safeArrayOperation(
-    missions,
-    (safeMissions) => safeMissions.filter(mission => mission?.status === 'open').slice(0, 2),
-    []
-  );
-  
-  // Get time remaining for weekly charity project
-  const timeRemaining = hermesGuard(() => {
-    const result = getTimeUntilNextProject();
-    // Convert to expected format if needed
-    if (typeof result === 'string') {
-      return result;
+    if (userId) {
+      loadUser(userId);
     }
-    // If it's an object with days, hours, minutes, format it
-    if (result && typeof result === 'object' && 'hours' in result && 'minutes' in result) {
-      return `${result.hours}:${result.minutes.toString().padStart(2, '0')}`;
-    }
-    return '0:00';
-  }, '0:00', 'time remaining calculation');
-  
-  // Use useMemo to calculate remaining daily limit to avoid state updates during render
-  const remainingDailyLimit = useMemo(() => {
-    return hermesGuard(() => {
-      // Only call this once during initial render and when user changes
-      return getRemainingDailyLimit();
-    }, 0, 'daily limit calculation');
-  }, [user?.dailyBetAmount, user?.lastBetDate, getRemainingDailyLimit]);
-  
+    fetchBets();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, [userId, loadUser, fetchBets, fadeAnim]);
+
+  const onRefresh = useCallback(() => {
+    fetchBets();
+    if (userId) loadUser(userId);
+  }, [fetchBets, loadUser, userId]);
+
+  const myActiveBets = userId ? getBetsByUser(userId).filter(b => b.status === 'active' || b.status === 'waiting_result') : [];
+  const openBets = bets.filter(b => b.status === 'pending');
+  const totalCharity = bets.reduce((sum, b) => sum + b.charityAmount, 0);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Demo Mode Indicator */}
-      <DemoModeIndicator 
-        message="🎭 Production Demo - Experience all features with sample data" 
-        variant="info"
-      />
-      
-      {/* Welcome Section */}
-      <View style={styles.welcomeSection}>
-        <View style={styles.welcomeHeader}>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={colors.primary} />}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.headerRow}>
           <View>
-            <Text style={styles.welcomeText}>Welcome back! 🎯</Text>
-            <Text style={styles.username}>{user?.username}</Text>
+            <Text style={styles.greeting}>Hallo, {user?.username ?? 'Spieler'} 👋</Text>
+            <Text style={styles.subGreeting}>Bereit für eine Wette?</Text>
           </View>
-          <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Balance</Text>
-            <ZestCurrency amount={user?.zestBalance || 0} size="medium" />
+          <TouchableOpacity style={styles.walletButton} onPress={() => router.push('/wallet' as Href)}>
+            <ZestCurrency amount={user?.zestCoins ?? 0} size="small" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Zap size={18} color={colors.primary} />
+            <Text style={styles.statValue}>{myActiveBets.length}</Text>
+            <Text style={styles.statLabel}>Aktive Wetten</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Target size={18} color={colors.success} />
+            <Text style={styles.statValue}>{user?.totalWins ?? 0}</Text>
+            <Text style={styles.statLabel}>Gewonnen</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Heart size={18} color={colors.charity} />
+            <Text style={styles.statValue}>{totalCharity}</Text>
+            <Text style={styles.statLabel}>Charity</Text>
           </View>
         </View>
-        
-        <View style={styles.dailyLimitContainer}>
-          <Text style={styles.dailyLimitLabel}>Daily Free Zest:</Text>
-          <Text style={styles.dailyLimitValue}>
-            <ZestCurrency amount={remainingDailyLimit} size="small" /> remaining
-          </Text>
-        </View>
-        
-        <View style={styles.quickActions}>
-          <Button 
-            title="Place a Bet" 
-            onPress={() => router.push('/bets')}
-            variant="primary"
-            size="medium"
-            style={styles.primaryActionButton}
-          />
-        </View>
-      </View>
-      
-      {/* AI Recommendations Section - Simplified */}
-      {recommendations.length > 0 && (
-        <View style={styles.compactSection}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <Brain size={18} color={colors.primary} />
-              <Text style={styles.compactSectionTitle}>Recommended</Text>
+
+        <TouchableOpacity style={styles.createBetBanner} onPress={() => router.push('/propose-bet' as Href)} activeOpacity={0.8}>
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerIcon}>
+              <Plus size={24} color="#000" />
+            </View>
+            <View style={styles.bannerTextContainer}>
+              <Text style={styles.bannerTitle}>Neue Wette erstellen</Text>
+              <Text style={styles.bannerSub}>Fordere deine Freunde heraus!</Text>
             </View>
           </View>
-          
-          {safeArrayOperation(
-            recommendations,
-            (safeRecommendations) => safeRecommendations.slice(0, 1).map(recommendation => (
-              <AIRecommendationCard 
-                key={recommendation?.id || Math.random()} 
-                recommendation={recommendation} 
-              />
-            )),
-            []
-          )}
-        </View>
-      )}
-      
-      {/* Weekly Charity Feature */}
-      {weeklyFeaturedProject && (
-        <WeeklyCharityFeature 
-          project={weeklyFeaturedProject}
-          timeRemaining={{ days: 0, hours: 0, minutes: 0 }}
-        />
-      )}
-      
-      {/* Featured Bets Section - Simplified */}
-      <View style={styles.compactSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.compactSectionTitle}>Popular Bets</Text>
-          <Pressable onPress={() => router.push('/bets')}>
-            <Text style={styles.seeAllText}>View All</Text>
-          </Pressable>
-        </View>
-        
-        {safeArrayOperation(
-          publicBets,
-          (safeBets) => safeBets.slice(0, 1).map(bet => (
-            <BetCard 
-              key={bet?.id || Math.random()} 
-              bet={bet} 
-              onLike={() => hermesGuard(() => likeBet(bet?.id), undefined, 'like bet')}
-            />
-          )),
-          []
-        )}
-      </View>
-      
-      {/* Missions Section - Compact */}
-      {activeMissions.length > 0 && (
-        <View style={styles.compactSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.compactSectionTitle}>Active Mission</Text>
-            <Pressable onPress={() => router.push('/profile')}>
-              <Text style={styles.seeAllText}>View All</Text>
-            </Pressable>
+          <ChevronRight size={20} color={colors.primary} />
+        </TouchableOpacity>
+
+        {myActiveBets.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Deine aktiven Wetten</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/bets' as Href)}>
+                <Text style={styles.seeAll}>Alle →</Text>
+              </TouchableOpacity>
+            </View>
+            {myActiveBets.slice(0, 3).map((bet) => (
+              <BetCard key={bet.id} bet={bet} onPress={() => router.push(`/bet/${bet.id}` as Href)} compact />
+            ))}
           </View>
-          
-          {safeArrayOperation(
-            activeMissions,
-            (safeMissions) => safeMissions.slice(0, 1).map(mission => (
-              <MissionCard 
-                key={mission?.id || Math.random()} 
-                mission={mission}
-              />
-            )),
-            []
-          )}
-        </View>
-      )}
-      
-      {/* Quick Access to Wallet */}
-      <View style={styles.walletQuickAccess}>
-        <Text style={styles.walletAccessText}>Need more Zest?</Text>
-        <Pressable 
-          style={styles.walletAccessButton}
-          onPress={() => router.push('/wallet')}
-        >
-          <Text style={styles.walletAccessButtonText}>Go to Wallet</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+        ) : null}
+
+        {openBets.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Offene Wetten 🔥</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/bets' as Href)}>
+                <Text style={styles.seeAll}>Alle →</Text>
+              </TouchableOpacity>
+            </View>
+            {openBets.slice(0, 3).map((bet) => (
+              <BetCard key={bet.id} bet={bet} onPress={() => router.push(`/bet/${bet.id}` as Href)} />
+            ))}
+          </View>
+        ) : null}
+
+        <TouchableOpacity style={styles.inviteBanner} onPress={() => router.push('/invite' as Href)} activeOpacity={0.8}>
+          <Text style={styles.inviteEmoji}>🤝</Text>
+          <View style={styles.inviteTextContainer}>
+            <Text style={styles.inviteTitle}>Freunde einladen</Text>
+            <Text style={styles.inviteSub}>Teile deinen Code & bekomme Bonus-Coins</Text>
+          </View>
+          <ChevronRight size={18} color={colors.accent} />
+        </TouchableOpacity>
+      </ScrollView>
+    </Animated.View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    padding: 16,
-    paddingTop: 20,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
-  welcomeSection: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  welcomeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  username: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
-  balanceContainer: {
-    alignItems: 'flex-end',
-  },
-  balanceLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  dailyLimitContainer: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: `${colors.primary}10`,
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: 20,
+    paddingTop: 8,
   },
-  dailyLimitLabel: {
-    fontSize: 14,
+  greeting: {
+    fontSize: 22,
+    fontWeight: '800' as const,
     color: colors.text,
   },
-  dailyLimitValue: {
+  subGreeting: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
-  quickActions: {
+  walletButton: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 20,
   },
-  primaryActionButton: {
+  statCard: {
     flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: colors.text,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500' as const,
+  },
+  createBetBanner: {
+    backgroundColor: colors.primary + '12',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  bannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bannerTextContainer: {
+    gap: 2,
+  },
+  bannerTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: colors.text,
+  },
+  bannerSub: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   section: {
     marginBottom: 24,
-  },
-  compactSection: {
-    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -320,48 +228,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700' as const,
     color: colors.text,
-    marginLeft: 6,
   },
-  compactSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginLeft: 6,
-  },
-  seeAllText: {
+  seeAll: {
     fontSize: 14,
     color: colors.primary,
+    fontWeight: '600' as const,
   },
-  walletQuickAccess: {
+  inviteBanner: {
+    backgroundColor: colors.accent + '12',
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: `${colors.primary}08`,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.accent + '30',
   },
-  walletAccessText: {
-    fontSize: 14,
+  inviteEmoji: {
+    fontSize: 28,
+  },
+  inviteTextContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  inviteTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: colors.text,
+  },
+  inviteSub: {
+    fontSize: 12,
     color: colors.textSecondary,
-  },
-  walletAccessButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  walletAccessButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

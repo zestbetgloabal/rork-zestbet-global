@@ -1,172 +1,100 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  Pressable, 
-  Alert,
-  SafeAreaView
-} from 'react-native';
-import { useRouter, Stack } from 'expo-router';
-import { useAuthStore } from '@/store/authStore';
-import { trpc } from '@/lib/trpc';
-import Button from '@/components/Button';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { Mail, CheckCircle } from 'lucide-react-native';
 import colors from '@/constants/colors';
+import Button from '@/components/Button';
+import { useAuthStore } from '@/store/authStore';
 
 export default function EmailVerificationScreen() {
   const router = useRouter();
-  const { verifyEmail, isLoading, error, clearError, pendingVerification } = useAuthStore();
-  
+  const { verifyEmail, isLoading, error, clearError, pendingEmail } = useAuthStore();
   const [code, setCode] = useState('');
-  const [countdown, setCountdown] = useState(60);
-  const [isResending, setIsResending] = useState(false);
-  
-  const email = pendingVerification?.email;
-  
-  useEffect(() => {
-    if (!email) {
-      router.replace('/register');
-      return;
-    }
-  }, [email, router]);
-  
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-  
-  const handleVerify = async () => {
-    if (!code.trim()) {
-      Alert.alert('Error', 'Please enter the verification code');
-      return;
-    }
-    
-    if (!email) {
-      Alert.alert('Error', 'Email not found. Please try registering again.');
-      return;
-    }
-    
-    const success = await verifyEmail(email, code);
-    
+  const [verified, setVerified] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+
+  const handleVerify = useCallback(async () => {
+    clearError();
+    const success = await verifyEmail(code);
     if (success) {
-      Alert.alert(
-        'Email Verified!', 
-        pendingVerification?.requiresPhoneVerification 
-          ? 'Please verify your phone number to complete registration.'
-          : 'Your account has been successfully verified! You can now log in.',
-        [{
-          text: 'Continue',
-          onPress: () => {
-            if (pendingVerification?.requiresPhoneVerification) {
-              router.push('/phone-verification');
-            } else {
-              router.replace('/login');
-            }
-          }
-        }]
-      );
+      setVerified(true);
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 1500);
     }
-  };
-  
-  const resendMutation = trpc.auth.resendVerification.useMutation();
-  
-  const handleResendCode = async () => {
-    if (countdown > 0 || !email) return;
-    
-    setIsResending(true);
-    
-    try {
-      await resendMutation.mutateAsync({ email });
-      setCountdown(60);
-      Alert.alert('Success', 'Verification code has been resent to your email');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to resend verification code');
-    } finally {
-      setIsResending(false);
-    }
-  };
-  
-  const handleBack = () => {
-    router.back();
-  };
-  
-  if (!email) {
-    return null;
-  }
-  
-  return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: 'Email Verification' }} />
-      
-      <View style={styles.content}>
-        <Text style={styles.title}>Verify Your Email</Text>
-        <Text style={styles.subtitle}>
-          We've sent a verification code to {email}. Please enter it below.
-        </Text>
-        
-        <View style={styles.testingNotice}>
-          <Text style={styles.testingText}>
-            🧪 For testing: Check the browser console or app logs for the verification code.
-          </Text>
+  }, [code, verifyEmail, clearError, router]);
+
+  if (verified) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: 'Verifizierung', headerShown: false }} />
+        <View style={styles.successContainer}>
+          <CheckCircle size={64} color={colors.success} />
+          <Text style={styles.successTitle}>E-Mail bestätigt!</Text>
+          <Text style={styles.successSub}>Willkommen bei ZestBet 🎯</Text>
         </View>
-        
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <Pressable onPress={clearError}>
-              <Text style={styles.dismissText}>Dismiss</Text>
-            </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Stack.Screen options={{ title: 'Verifizierung', headerShown: false }} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+        <View style={styles.content}>
+          <View style={styles.iconCircle}>
+            <Mail size={32} color={colors.primary} />
           </View>
-        )}
-        
-        <View style={styles.form}>
-          <Text style={styles.label}>Verification Code</Text>
+
+          <Text style={styles.title}>E-Mail bestätigen</Text>
+          <Text style={styles.subtitle}>
+            Wir haben einen 6-stelligen Code an{'\n'}
+            <Text style={styles.emailHighlight}>{pendingEmail ?? 'deine E-Mail'}</Text>
+            {' '}gesendet.
+          </Text>
+
+          <Text style={styles.devHint}>
+            💡 Dev-Modus: Schau in die Konsole für den Code
+          </Text>
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
           <TextInput
-            style={styles.input}
+            ref={inputRef}
+            style={styles.codeInput}
+            placeholder="000000"
+            placeholderTextColor={colors.textMuted}
             value={code}
             onChangeText={setCode}
-            placeholder="Enter 4-digit code"
             keyboardType="number-pad"
-            maxLength={4}
+            maxLength={6}
+            textAlign="center"
             autoFocus
+            testID="verify-code"
           />
-          
+
           <Button
-            title="Verify Email"
+            title="Bestätigen"
             onPress={handleVerify}
             loading={isLoading}
-            style={styles.verifyButton}
+            disabled={code.length !== 6}
+            size="large"
+            testID="verify-submit"
           />
-          
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn't receive the code?</Text>
-            <Pressable 
-              onPress={handleResendCode}
-              disabled={countdown > 0 || isResending}
-            >
-              <Text 
-                style={[
-                  styles.resendButton, 
-                  (countdown > 0 || isResending) && styles.resendButtonDisabled
-                ]}
-              >
-                {isResending ? 'Sending...' : countdown > 0 ? `Resend in ${countdown}s` : 'Resend Code'}
-              </Text>
-            </Pressable>
-          </View>
+
+          <Button
+            title="Zurück zum Login"
+            onPress={() => router.back()}
+            variant="ghost"
+            testID="verify-back"
+          />
         </View>
-        
-        <Button
-          title="Back"
-          onPress={handleBack}
-          variant="outline"
-          style={styles.backButton}
-        />
-      </View>
-    </SafeAreaView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -175,93 +103,87 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  flex: {
+    flex: 1,
+  },
   content: {
     flex: 1,
-    padding: 24,
     justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 16,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '900' as const,
     color: colors.text,
-    marginBottom: 12,
+    textAlign: 'center' as const,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 24,
-    lineHeight: 22,
+    textAlign: 'center' as const,
+    lineHeight: 20,
   },
-  errorContainer: {
-    backgroundColor: `${colors.error}20`,
+  emailHighlight: {
+    color: colors.primary,
+    fontWeight: '600' as const,
+  },
+  devHint: {
+    fontSize: 12,
+    color: colors.warning,
+    textAlign: 'center' as const,
+    backgroundColor: colors.warning + '10',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
+  },
+  errorBox: {
+    backgroundColor: colors.error + '15',
+    borderRadius: 12,
     padding: 12,
-    marginBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.error + '30',
   },
   errorText: {
     color: colors.error,
-    flex: 1,
+    fontSize: 13,
+    textAlign: 'center' as const,
   },
-  dismissText: {
-    color: colors.error,
-    fontWeight: '600',
-  },
-  form: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
+  codeInput: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 24,
-    marginBottom: 24,
-    textAlign: 'center',
-    letterSpacing: 8,
+    color: colors.text,
+    fontSize: 32,
+    fontWeight: '800' as const,
+    letterSpacing: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
   },
-  verifyButton: {
-    marginBottom: 16,
-  },
-  resendContainer: {
-    flexDirection: 'row',
+  successContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
   },
-  resendText: {
+  successTitle: {
+    fontSize: 24,
+    fontWeight: '900' as const,
+    color: colors.success,
+  },
+  successSub: {
+    fontSize: 16,
     color: colors.textSecondary,
-    marginRight: 4,
-  },
-  resendButton: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  resendButtonDisabled: {
-    color: colors.textSecondary,
-    opacity: 0.7,
-  },
-  backButton: {
-    marginTop: 'auto',
-  },
-  testingNotice: {
-    backgroundColor: `${colors.warning || colors.primary}20`,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.warning || colors.primary,
-  },
-  testingText: {
-    color: colors.warning || colors.primary,
-    fontSize: 12,
-    lineHeight: 16,
   },
 });

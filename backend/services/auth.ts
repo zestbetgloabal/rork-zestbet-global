@@ -43,16 +43,20 @@ export class AuthService {
       email: user.email,
     };
 
+    const accessOpts: jwt.SignOptions = {};
+    (accessOpts as any).expiresIn = JWT_EXPIRES_IN;
     const accessToken = jwt.sign(
       { ...payload, type: 'access' },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      accessOpts
     );
 
+    const refreshOpts: jwt.SignOptions = {};
+    (refreshOpts as any).expiresIn = REFRESH_TOKEN_EXPIRES_IN;
     const refreshToken = jwt.sign(
       { ...payload, type: 'refresh' },
       JWT_SECRET,
-      { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
+      refreshOpts
     );
 
     const { password_hash, ...userWithoutPassword } = user as User & { password_hash: string };

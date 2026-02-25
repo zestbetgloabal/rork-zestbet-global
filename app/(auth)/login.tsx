@@ -1,199 +1,115 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  Pressable, 
-  ScrollView,
-  Alert,
-  Platform
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Eye, EyeOff } from 'lucide-react-native';
-import { useAuthStore } from '@/store/authStore';
-import Button from '@/components/Button';
-import AppleSignInButton from '@/components/AppleSignInButton';
-import FacebookSignInButton from '@/components/FacebookSignInButton';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated, TouchableOpacity } from 'react-native';
+import { useRouter, Href } from 'expo-router';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
+import Button from '@/components/Button';
+import { useAuthStore } from '@/store/authStore';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoading, error, clearError, loginWithGoogle, loginWithApple, loginWithFacebook } = useAuthStore();
-  
+  const insets = useSafeAreaInsets();
+  const { login, isLoading, error, clearError } = useAuthStore();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
-  const handleLogin = async () => {
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
-    
-    if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
-      return;
-    }
-    
+
+  const logoScale = useRef(new Animated.Value(0)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.sequence([
+      Animated.spring(logoScale, { toValue: 1, useNativeDriver: true, speed: 12, bounciness: 8 }),
+      Animated.timing(formOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, [logoScale, formOpacity]);
+
+  const handleLogin = useCallback(async () => {
+    clearError();
     const success = await login(email, password);
     if (success) {
       router.replace('/(tabs)');
     }
-  };
-  
-  const handleForgotPassword = () => {
-    // In a real app, this would navigate to a forgot password screen
-    Alert.alert('Forgot Password', 'A password reset link has been sent to your email.');
-  };
-  
-  const handleCreateAccount = () => {
-    router.push('/register');
-  };
-  
-  const handleGoogleLogin = async () => {
-    try {
-      const success = await loginWithGoogle();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      Alert.alert('Google Login Error', 'Failed to login with Google');
-    }
-  };
-  
-  const handleAppleLogin = async () => {
-    try {
-      const success = await loginWithApple();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      Alert.alert('Apple Login Error', 'Failed to login with Apple');
-    }
-  };
-  
-  const handleFacebookLogin = async () => {
-    try {
-      const success = await loginWithFacebook();
-      if (success) {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      Alert.alert('Facebook Login Error', 'Failed to login with Facebook');
-    }
-  };
-  
+  }, [email, password, login, clearError, router]);
+
   return (
-    <ScrollView 
-      style={styles.container} 
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Log in with your approved account</Text>
-      
-      <View style={styles.noticeContainer}>
-        <Text style={styles.noticeText}>⚠️ Access is restricted to approved accounts only. Contact support for account creation.</Text>
-      </View>
-      
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={clearError}>
-            <Text style={styles.dismissText}>Dismiss</Text>
-          </Pressable>
-        </View>
-      )}
-      
-      {/* Social Login Options */}
-      <View style={styles.socialLoginContainer}>
-        <Text style={styles.socialLoginText}>Log in with</Text>
-        
-        <View style={styles.socialButtonsRow}>
-          <GoogleSignInButton
-            onPress={handleGoogleLogin}
-            loading={isLoading}
-            disabled={isLoading}
-          />
-          
-          <FacebookSignInButton
-            onPress={handleFacebookLogin}
-            loading={isLoading}
-            disabled={isLoading}
-          />
-        </View>
-        
-        {Platform.OS === 'ios' && (
-          <AppleSignInButton
-            onPress={handleAppleLogin}
-            loading={isLoading}
-            style={styles.appleButton}
-          />
-        )}
-        
-        <View style={styles.dividerContainer}>
-          <View style={styles.divider} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.divider} />
-        </View>
-      </View>
-      
-      <View style={styles.form}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Enter your email"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Enter your password"
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Pressable 
-            style={styles.eyeButton}
-            onPress={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? (
-              <EyeOff size={20} color={colors.textSecondary} />
-            ) : (
-              <Eye size={20} color={colors.textSecondary} />
-            )}
-          </Pressable>
-        </View>
-        
-        <Pressable onPress={handleForgotPassword}>
-          <Text style={styles.forgotPassword}>Forgot Password?</Text>
-        </Pressable>
-        
-        <Button
-          title="Log In"
-          onPress={handleLogin}
-          loading={isLoading}
-          style={styles.loginButton}
-        />
-      </View>
-      
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account?</Text>
-        <Pressable onPress={handleCreateAccount}>
-          <Text style={styles.createAccountText}>Create Account</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Animated.View style={[styles.logoContainer, { transform: [{ scale: logoScale }] }]}>
+            <Text style={styles.logoEmoji}>🎯</Text>
+            <Text style={styles.logoTitle}>ZestBet</Text>
+            <Text style={styles.logoSubtitle}>Wette mit Freunden. Gewinne zusammen.</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.form, { opacity: formOpacity }]}>
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.inputWrapper}>
+              <Mail size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="E-Mail"
+                placeholderTextColor={colors.textMuted}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                testID="login-email"
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Lock size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Passwort"
+                placeholderTextColor={colors.textMuted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                testID="login-password"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                {showPassword ? <EyeOff size={18} color={colors.textMuted} /> : <Eye size={18} color={colors.textMuted} />}
+              </TouchableOpacity>
+            </View>
+
+            <Button
+              title="Anmelden"
+              onPress={handleLogin}
+              loading={isLoading}
+              size="large"
+              testID="login-submit"
+            />
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>oder</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Button
+              title="Neuen Account erstellen"
+              onPress={() => router.push('/(auth)/register' as Href)}
+              variant="outline"
+              size="large"
+              testID="login-register"
+            />
+          </Animated.View>
+
+          <TouchableOpacity onPress={() => router.push('/legal' as Href)} style={styles.legalLink}>
+            <Text style={styles.legalText}>Impressum & Datenschutz</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -202,137 +118,92 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    padding: 24,
-    paddingTop: 40,
+  flex: {
+    flex: 1,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  logoEmoji: {
+    fontSize: 64,
     marginBottom: 12,
   },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: 32,
+  logoTitle: {
+    fontSize: 36,
+    fontWeight: '900' as const,
+    color: colors.primary,
+    letterSpacing: -1,
   },
-  errorContainer: {
-    backgroundColor: `${colors.error}20`,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  logoSubtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'center' as const,
+  },
+  form: {
+    gap: 14,
+  },
+  errorBox: {
+    backgroundColor: colors.error + '15',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.error + '30',
   },
   errorText: {
     color: colors.error,
-    flex: 1,
+    fontSize: 13,
+    textAlign: 'center' as const,
   },
-  dismissText: {
-    color: colors.error,
-    fontWeight: '600',
-  },
-  socialLoginContainer: {
-    marginBottom: 24,
-  },
-  socialLoginText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  socialButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 16,
-  },
-  appleButton: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  dividerContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+    paddingVertical: 16,
+  },
+  eyeIcon: {
+    padding: 8,
   },
   divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: colors.border,
   },
   dividerText: {
-    paddingHorizontal: 16,
-    color: colors.textSecondary,
-    fontSize: 14,
+    color: colors.textMuted,
+    fontSize: 13,
+    marginHorizontal: 16,
   },
-  form: {
-    marginBottom: 32,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
+  legalLink: {
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    marginBottom: 8,
+    marginTop: 32,
   },
-  passwordInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
-  },
-  eyeButton: {
-    padding: 12,
-  },
-  forgotPassword: {
-    color: colors.primary,
-    textAlign: 'right',
-    marginBottom: 24,
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: colors.textSecondary,
-    marginRight: 4,
-  },
-  createAccountText: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  noticeContainer: {
-    backgroundColor: `${colors.warning || '#FFA500'}20`,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.warning || '#FFA500',
-  },
-  noticeText: {
-    color: colors.warning || '#FFA500',
-    fontSize: 14,
-    lineHeight: 20,
+  legalText: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
 });

@@ -1,393 +1,276 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
-  TextInput,
-  Alert,
-  ActivityIndicator,
-  Pressable,
-  Platform
-} from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Lock, Globe, Check, X, Camera, Image as ImageIcon } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { useBetStore } from '@/store/betStore';
-import { useUserStore } from '@/store/userStore';
-import { useImpactStore } from '@/store/impactStore';
-import ZestCurrency from '@/components/ZestCurrency';
-import Button from '@/components/Button';
+import React, { useMemo, useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, Alert } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter, Href } from 'expo-router';
+import { Clock, Coins, Heart, CheckCircle, XCircle, AlertTriangle } from 'lucide-react-native';
 import colors from '@/constants/colors';
-import { Bet } from '@/types';
-import { DAILY_BET_LIMIT } from '@/constants/app';
+import Button from '@/components/Button';
+import ZestCurrency from '@/components/ZestCurrency';
+import { useBetStore } from '@/store/betStore';
+import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
+import { getCategoryEmoji, getStatusLabel, getStatusColor, formatTimeRemaining, formatDate } from '@/utils/helpers';
+import { CHARITY_PERCENTAGE } from '@/constants/app';
 
-export default function BetDetailsScreen() {
-  const { id } = useLocalSearchParams();
+export default function BetDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { bets, placeBet } = useBetStore();
-  const { user, updateZestBalance, getRemainingDailyLimit, updateDailyBetAmount } = useUserStore();
-  
-  const [bet, setBet] = useState<Bet | null>(null);
-  const [amount, setAmount] = useState('10');
-  const [prediction, setPrediction] = useState('');
-  const [selectedOption, setSelectedOption] = useState<'yes' | 'no' | null>(null);
-  const [isPlacing, setIsPlacing] = useState(false);
-  const [showCustomPrediction, setShowCustomPrediction] = useState(false);
-  const [betImage, setBetImage] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  
-  // Calculate fees
-  const betAmount = parseInt(amount) || 0;
-  const platformFee = betAmount * 0.1; // 10% platform fee
-  const netBetAmount = betAmount - platformFee;
-  
-  // Get remaining daily limit
-  const remainingDailyLimit = getRemainingDailyLimit();
-  
-  useEffect(() => {
-    if (id && bets.length > 0) {
-      const foundBet = bets.find(b => b.id === id);
-      if (foundBet) {
-        setBet(foundBet);
-      }
-    }
-  }, [id, bets]);
+  const { bets, acceptBet, submitResult, confirmResult, cancelBet } = useBetStore();
+  const { userId } = useAuthStore();
+  const { user, addCoins, removeCoins, incrementWins, incrementLosses, addCharity } = useUserStore();
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Update prediction when yes/no option is selected
-  useEffect(() => {
-    if (selectedOption === 'yes') {
-      setPrediction('Yes');
-    } else if (selectedOption === 'no') {
-      setPrediction('No');
-    }
-  }, [selectedOption]);
-  
-  const handlePlaceBet = async () => {
-    if (!bet || !user) return;
-    
-    if (isNaN(betAmount) || betAmount < bet.minBet || betAmount > bet.maxBet) {
-      Alert.alert('Invalid Amount', `Please enter an amount between Ƶ${bet.minBet} and Ƶ${bet.maxBet}`);
+  const bet = useMemo(() => bets.find(b => b.id === id), [bets, id]);
+
+  const isCreator = bet?.creatorId === userId;
+  const isOpponent = bet?.opponentId === userId;
+  const isParticipant = isCreator || isOpponent;
+
+  const handleAcceptBet = useCallback(() => {
+    if (!bet || !userId || !user) return;
+    if ((user.zestCoins ?? 0) < bet.amount) {
+      Alert.alert('Nicht genug Coins', 'Du brauchst mehr Zest-Coins um diese Wette anzunehmen.', [
+        { text: 'Wallet öffnen', onPress: () => router.push('/wallet' as Href) },
+        { text: 'OK' },
+      ]);
       return;
     }
-    
-    if (!prediction.trim()) {
-      Alert.alert('Missing Prediction', 'Please select Yes/No or enter your prediction');
-      return;
-    }
-    
-    if (user.zestBalance < betAmount) {
-      Alert.alert(
-        'Insufficient Balance', 
-        'You don\'t have enough Zest to place this bet. Purchase more Zest in the Wallet tab!'
-      );
-      return;
-    }
-    
-    // Check daily limit
-    if (betAmount > remainingDailyLimit) {
-      Alert.alert(
-        'Daily Limit Exceeded', 
-        `You can only bet Ƶ${remainingDailyLimit} more today. The daily limit is Ƶ${DAILY_BET_LIMIT}.`
-      );
-      return;
-    }
-    
-    setIsPlacing(true);
-    
-    const success = await placeBet({
-      betId: bet.id,
-      amount: betAmount,
-      prediction,
-      platformFee,
-      betImage: betImage || undefined
-    });
-    
-    if (success) {
-      // Update user's balance
-      updateZestBalance(-betAmount);
-      
-      // Update daily bet amount
-      updateDailyBetAmount(betAmount);
-      
-      Alert.alert('Bet Placed', 'Your bet has been placed successfully!');
-      router.back();
+
+    Alert.alert(
+      'Wette annehmen?',
+      `Du setzt ${bet.amount} Zest-Coins auf diese Wette.`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Annehmen',
+          onPress: () => {
+            removeCoins(bet.amount);
+            acceptBet(bet.id, userId, user.username, user.avatar);
+          },
+        },
+      ]
+    );
+  }, [bet, userId, user, removeCoins, acceptBet, router]);
+
+  const handleSubmitResult = useCallback((result: 'creator_won' | 'opponent_won') => {
+    if (!bet || !userId) return;
+    const winnerLabel = result === 'creator_won' ? bet.creatorName : bet.opponentName;
+
+    Alert.alert(
+      'Ergebnis eintragen',
+      `${winnerLabel} hat gewonnen?`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Bestätigen',
+          onPress: () => {
+            submitResult(bet.id, userId, result);
+          },
+        },
+      ]
+    );
+  }, [bet, userId, submitResult]);
+
+  const handleConfirmResult = useCallback(() => {
+    if (!bet || !userId) return;
+    setIsProcessing(true);
+
+    confirmResult(bet.id, userId);
+
+    const totalPool = bet.amount * 2;
+    const charityAmount = Math.floor(totalPool * CHARITY_PERCENTAGE);
+    const winAmount = totalPool - charityAmount;
+
+    if (bet.result === 'creator_won') {
+      if (isCreator) {
+        addCoins(winAmount);
+        incrementWins();
+      } else {
+        incrementLosses();
+      }
     } else {
-      Alert.alert('Error', 'Failed to place bet. Please try again.');
-    }
-    
-    setIsPlacing(false);
-  };
-  
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const handleSelectOption = (option: 'yes' | 'no') => {
-    setSelectedOption(option);
-    setShowCustomPrediction(false);
-  };
-
-  const handleCustomPrediction = () => {
-    setSelectedOption(null);
-    setShowCustomPrediction(true);
-    setPrediction('');
-  };
-  
-  const handlePickImage = async () => {
-    try {
-      // Request permissions
-      if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'We need camera roll permissions to upload images');
-          return;
-        }
+      if (isOpponent) {
+        addCoins(winAmount);
+        incrementWins();
+      } else {
+        incrementLosses();
       }
-      
-      setIsUploadingImage(true);
-      
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-      
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        // In a real app, this would upload the image to a server
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setBetImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to upload image. Please try again.');
-    } finally {
-      setIsUploadingImage(false);
     }
-  };
-  
-  const handleRemoveImage = () => {
-    setBetImage(null);
-  };
-  
+    addCharity(charityAmount);
+
+    setTimeout(() => {
+      setIsProcessing(false);
+      Alert.alert('Wette abgeschlossen!', `${charityAmount} Coins gingen an Charity 💜`);
+    }, 500);
+  }, [bet, userId, isCreator, isOpponent, confirmResult, addCoins, incrementWins, incrementLosses, addCharity]);
+
+  const handleCancel = useCallback(() => {
+    if (!bet) return;
+    Alert.alert('Wette stornieren?', 'Dein Einsatz wird zurückerstattet.', [
+      { text: 'Nein', style: 'cancel' },
+      {
+        text: 'Stornieren',
+        style: 'destructive',
+        onPress: () => {
+          cancelBet(bet.id);
+          addCoins(bet.amount);
+          router.back();
+        },
+      },
+    ]);
+  }, [bet, cancelBet, addCoins, router]);
+
   if (!bet) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: 'Wette' }} />
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyEmoji}>🤷</Text>
+          <Text style={styles.emptyTitle}>Wette nicht gefunden</Text>
+        </View>
       </View>
     );
   }
 
-  // Determine if this bet has a clear yes/no outcome
-  const isBinaryOutcomeBet = bet.title.toLowerCase().includes('will') || 
-                            bet.description.toLowerCase().includes('will') ||
-                            bet.description.toLowerCase().includes('yes or no');
-  
+  const statusColor = getStatusColor(bet.status);
+  const hasSubmittedResult = (isCreator && bet.creatorConfirmed) || (isOpponent && bet.opponentConfirmed);
+  const needsConfirmation = bet.status === 'waiting_result' && bet.result && !hasSubmittedResult;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen 
-        options={{ 
-          title: bet.title,
-          headerBackTitle: 'Bets'
-        }} 
-      />
-      
-      {bet.image && (
-        <Image 
-          source={{ uri: bet.image }} 
-          style={styles.image}
-          resizeMode="cover"
-        />
-      )}
-      
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <Stack.Screen options={{ title: 'Wette Details' }} />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.categoryRow}>
-          <Text style={styles.category}>{bet.category.toUpperCase()}</Text>
-          <View style={styles.visibilityBadge}>
-            {bet.visibility === 'private' ? (
-              <>
-                <Lock size={14} color={colors.textSecondary} />
-                <Text style={styles.visibilityText}>Private Bet</Text>
-              </>
-            ) : (
-              <>
-                <Globe size={14} color={colors.textSecondary} />
-                <Text style={styles.visibilityText}>Public Bet</Text>
-              </>
-            )}
+          <Text style={styles.categoryEmoji}>{getCategoryEmoji(bet.category)}</Text>
+          <Text style={styles.categoryText}>{bet.category}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusText, { color: statusColor }]}>{getStatusLabel(bet.status)}</Text>
           </View>
         </View>
+
         <Text style={styles.title}>{bet.title}</Text>
-        <Text style={styles.creator}>Created by {bet.creator}</Text>
-      </View>
-      
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Description</Text>
         <Text style={styles.description}>{bet.description}</Text>
-      </View>
-      
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}><ZestCurrency amount={bet.totalPool} size="small" /></Text>
-          <Text style={styles.statLabel}>Total Pool</Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{bet.participants}</Text>
-          <Text style={styles.statLabel}>Participants</Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatDate(bet.endDate)}</Text>
-          <Text style={styles.statLabel}>End Date</Text>
-        </View>
-      </View>
-      
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Place Your Bet</Text>
-        
-        <View style={styles.dailyLimitInfo}>
-          <Text style={styles.dailyLimitText}>
-            Daily Limit Remaining: <ZestCurrency amount={remainingDailyLimit} size="small" />
-          </Text>
-        </View>
-        
-        <Text style={styles.inputLabel}>Amount (Ƶ{bet.minBet}-Ƶ{bet.maxBet})</Text>
-        <View style={styles.amountInputContainer}>
-          <Text style={styles.amountPrefix}>Ƶ</Text>
-          <TextInput
-            style={styles.amountInput}
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="number-pad"
-            placeholder="10"
-          />
-        </View>
-        
-        {betAmount > 0 && (
-          <View style={styles.feeBreakdown}>
-            <View style={styles.feeRow}>
-              <Text style={styles.feeLabel}>Your Bet</Text>
-              <ZestCurrency amount={betAmount} size="small" />
-            </View>
-            <View style={styles.feeRow}>
-              <Text style={styles.feeLabel}>Platform Fee (10%)</Text>
-              <Text style={styles.feeValue}>-<ZestCurrency amount={platformFee} size="small" /></Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.feeRow}>
-              <Text style={styles.netLabel}>Net Bet Amount</Text>
-              <ZestCurrency amount={netBetAmount} size="small" />
-            </View>
+
+        <View style={styles.playersSection}>
+          <View style={styles.playerCard}>
+            <Image source={{ uri: bet.creatorAvatar }} style={styles.playerAvatar} />
+            <Text style={styles.playerName}>{bet.creatorName}</Text>
+            {isCreator && <Text style={styles.youBadge}>DU</Text>}
+            {bet.creatorConfirmed && <CheckCircle size={16} color={colors.success} />}
           </View>
-        )}
-        
-        <Text style={styles.inputLabel}>Your Prediction</Text>
-        
-        {isBinaryOutcomeBet && (
-          <View style={styles.yesNoContainer}>
-            <Pressable 
-              style={[
-                styles.yesNoButton, 
-                styles.yesButton,
-                selectedOption === 'yes' && styles.selectedYesButton
-              ]}
-              onPress={() => handleSelectOption('yes')}
-            >
-              <Check size={20} color={selectedOption === 'yes' ? 'white' : colors.success} />
-              <Text style={[
-                styles.yesNoText,
-                styles.yesText,
-                selectedOption === 'yes' && styles.selectedYesNoText
-              ]}>Yes</Text>
-            </Pressable>
-            
-            <Pressable 
-              style={[
-                styles.yesNoButton, 
-                styles.noButton,
-                selectedOption === 'no' && styles.selectedNoButton
-              ]}
-              onPress={() => handleSelectOption('no')}
-            >
-              <X size={20} color={selectedOption === 'no' ? 'white' : colors.error} />
-              <Text style={[
-                styles.yesNoText,
-                styles.noText,
-                selectedOption === 'no' && styles.selectedYesNoText
-              ]}>No</Text>
-            </Pressable>
+
+          <View style={styles.vsCircle}>
+            <Text style={styles.vsText}>VS</Text>
+          </View>
+
+          {bet.opponentId ? (
+            <View style={styles.playerCard}>
+              <Image source={{ uri: bet.opponentAvatar ?? '' }} style={styles.playerAvatar} />
+              <Text style={styles.playerName}>{bet.opponentName}</Text>
+              {isOpponent && <Text style={styles.youBadge}>DU</Text>}
+              {bet.opponentConfirmed && <CheckCircle size={16} color={colors.success} />}
+            </View>
+          ) : (
+            <View style={[styles.playerCard, styles.emptyPlayer]}>
+              <Text style={styles.emptyPlayerEmoji}>❓</Text>
+              <Text style={styles.emptyPlayerText}>Wartet auf Gegner</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.infoGrid}>
+          <View style={styles.infoItem}>
+            <Coins size={18} color={colors.zest} />
+            <Text style={styles.infoLabel}>Einsatz</Text>
+            <ZestCurrency amount={bet.amount} size="medium" />
+          </View>
+          <View style={styles.infoItem}>
+            <Coins size={18} color={colors.success} />
+            <Text style={styles.infoLabel}>Pool</Text>
+            <ZestCurrency amount={bet.opponentId ? bet.amount * 2 : bet.amount} size="medium" />
+          </View>
+          <View style={styles.infoItem}>
+            <Heart size={18} color={colors.charity} />
+            <Text style={styles.infoLabel}>Charity</Text>
+            <Text style={styles.infoValue}>{CHARITY_PERCENTAGE * 100}%</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Clock size={18} color={colors.textSecondary} />
+            <Text style={styles.infoLabel}>Ablauf</Text>
+            <Text style={styles.infoValue}>{formatTimeRemaining(bet.expiresAt)}</Text>
+          </View>
+        </View>
+
+        {bet.status === 'completed' && bet.winnerId && (
+          <View style={styles.resultCard}>
+            <Text style={styles.resultEmoji}>{bet.winnerId === userId ? '🏆' : '😔'}</Text>
+            <Text style={styles.resultTitle}>
+              {bet.winnerId === userId ? 'Du hast gewonnen!' : 'Leider verloren'}
+            </Text>
+            {bet.charityAmount > 0 && (
+              <Text style={styles.resultCharity}>
+                💜 {bet.charityAmount} Coins gingen an Charity
+              </Text>
+            )}
           </View>
         )}
 
-        {(isBinaryOutcomeBet && !showCustomPrediction) && (
-          <Pressable onPress={handleCustomPrediction} style={styles.customPredictionLink}>
-            <Text style={styles.customPredictionText}>
-              Need a custom prediction? Click here
-            </Text>
-          </Pressable>
-        )}
-        
-        {(!isBinaryOutcomeBet || showCustomPrediction) && (
-          <TextInput
-            style={styles.predictionInput}
-            value={prediction}
-            onChangeText={setPrediction}
-            placeholder="Enter your prediction..."
-            multiline
-          />
-        )}
-        
-        {/* Image Upload Section */}
-        <Text style={styles.inputLabel}>Add Image (Optional)</Text>
-        
-        {betImage ? (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: betImage }} style={styles.imagePreview} />
-            <Pressable style={styles.removeImageButton} onPress={handleRemoveImage}>
-              <X size={16} color="white" />
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable 
-            style={styles.imageUploadButton} 
-            onPress={handlePickImage}
-            disabled={isUploadingImage}
-          >
-            {isUploadingImage ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <>
-                <ImageIcon size={24} color={colors.primary} />
-                <Text style={styles.imageUploadText}>Upload an image for your bet</Text>
-              </>
-            )}
-          </Pressable>
-        )}
-        
-        <Text style={styles.imageHelperText}>
-          Adding an image helps document your bet and provides evidence for verification
-        </Text>
-        
-        <Button
-          title="Place Bet"
-          onPress={handlePlaceBet}
-          loading={isPlacing}
-          style={styles.placeButton}
-        />
-        
-        <Text style={styles.disclaimer}>
-          By placing this bet, you agree to the terms and conditions. 
-          10% platform fee applies to all bets.
-          Daily betting limit: Ƶ{DAILY_BET_LIMIT}.
-        </Text>
-      </View>
-    </ScrollView>
+        <View style={styles.actions}>
+          {bet.status === 'pending' && !isCreator && userId && (
+            <Button title="Wette annehmen" onPress={handleAcceptBet} size="large" />
+          )}
+
+          {bet.status === 'pending' && isCreator && (
+            <Button title="Wette stornieren" onPress={handleCancel} variant="danger" size="large" />
+          )}
+
+          {bet.status === 'active' && isParticipant && (
+            <View style={styles.resultActions}>
+              <Text style={styles.resultActionTitle}>Wer hat gewonnen?</Text>
+              <View style={styles.resultButtons}>
+                <Button
+                  title={bet.creatorName}
+                  onPress={() => handleSubmitResult('creator_won')}
+                  variant="outline"
+                  style={styles.resultButton}
+                />
+                <Button
+                  title={bet.opponentName ?? 'Gegner'}
+                  onPress={() => handleSubmitResult('opponent_won')}
+                  variant="outline"
+                  style={styles.resultButton}
+                />
+              </View>
+            </View>
+          )}
+
+          {needsConfirmation && (
+            <View style={styles.confirmSection}>
+              <AlertTriangle size={20} color={colors.warning} />
+              <Text style={styles.confirmText}>
+                Dein Gegner hat ein Ergebnis eingetragen. Bitte bestätige:
+              </Text>
+              <Text style={styles.confirmResult}>
+                Gewinner: {bet.result === 'creator_won' ? bet.creatorName : bet.opponentName}
+              </Text>
+              <View style={styles.confirmButtons}>
+                <Button title="Bestätigen" onPress={handleConfirmResult} loading={isProcessing} />
+                <Button title="Ablehnen" onPress={() => Alert.alert('Streitfall', 'Diese Funktion kommt bald!')} variant="outline" />
+              </View>
+            </View>
+          )}
+
+          {hasSubmittedResult && bet.status === 'waiting_result' && (
+            <View style={styles.waitingCard}>
+              <Clock size={20} color={colors.textSecondary} />
+              <Text style={styles.waitingText}>Warte auf Bestätigung des Gegners...</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.createdAt}>Erstellt {formatDate(bet.createdAt)}</Text>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -396,272 +279,241 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    paddingBottom: 24,
+  scroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
   },
-  loadingContainer: {
+  emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
   },
-  image: {
-    width: '100%',
-    height: 200,
+  emptyEmoji: {
+    fontSize: 48,
   },
-  header: {
-    padding: 16,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: colors.text,
   },
   categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 8,
+    paddingTop: 16,
+    marginBottom: 12,
   },
-  category: {
+  categoryEmoji: {
+    fontSize: 20,
+  },
+  categoryText: {
+    color: colors.textSecondary,
     fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-    marginRight: 8,
+    textTransform: 'capitalize' as const,
+    flex: 1,
   },
-  visibilityBadge: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    gap: 6,
   },
-  visibilityText: {
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  statusText: {
     fontSize: 12,
-    color: colors.textSecondary,
-    marginLeft: 4,
+    fontWeight: '600' as const,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '900' as const,
     color: colors.text,
     marginBottom: 8,
-  },
-  creator: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  section: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 12,
+    lineHeight: 30,
   },
   description: {
-    fontSize: 16,
-    color: colors.text,
-    lineHeight: 24,
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  statsContainer: {
+  playersSection: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  playerCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
     padding: 16,
-    backgroundColor: colors.card,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
     borderColor: colors.border,
   },
-  statItem: {
-    flex: 1,
+  playerAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.surfaceLight,
+  },
+  playerName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    textAlign: 'center' as const,
+  },
+  youBadge: {
+    fontSize: 10,
+    fontWeight: '800' as const,
+    color: colors.primary,
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  vsCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '20',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  statValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 4,
+  vsText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '900' as const,
   },
-  statLabel: {
+  emptyPlayer: {
+    borderStyle: 'dashed',
+    borderColor: colors.textMuted,
+  },
+  emptyPlayerEmoji: {
+    fontSize: 28,
+  },
+  emptyPlayerText: {
+    color: colors.textMuted,
     fontSize: 12,
-    color: colors.textSecondary,
   },
-  dailyLimitInfo: {
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  dailyLimitText: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  amountInputContainer: {
+  infoGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 24,
   },
-  amountPrefix: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginRight: 4,
-  },
-  amountInput: {
+  infoItem: {
     flex: 1,
-    fontSize: 16,
-    paddingVertical: 12,
-  },
-  feeBreakdown: {
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  feeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    minWidth: '45%' as unknown as number,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 14,
     alignItems: 'center',
-    paddingVertical: 4,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  feeLabel: {
-    fontSize: 14,
+  infoLabel: {
+    fontSize: 11,
     color: colors.textSecondary,
   },
-  feeValue: {
-    fontSize: 14,
-    color: colors.textSecondary,
+  infoValue: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700' as const,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 8,
+  resultCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  netLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+  resultEmoji: {
+    fontSize: 40,
+  },
+  resultTitle: {
+    fontSize: 20,
+    fontWeight: '800' as const,
     color: colors.text,
   },
-  yesNoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  resultCharity: {
+    fontSize: 13,
+    color: colors.charity,
   },
-  yesNoButton: {
+  actions: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  resultActions: {
+    gap: 12,
+  },
+  resultActionTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: colors.text,
+    textAlign: 'center' as const,
+  },
+  resultButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    borderWidth: 1,
+    gap: 12,
+  },
+  resultButton: {
     flex: 1,
-    marginHorizontal: 4,
   },
-  yesButton: {
-    borderColor: colors.success,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
-  noButton: {
-    borderColor: colors.error,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  },
-  selectedYesButton: {
-    backgroundColor: colors.success,
-  },
-  selectedNoButton: {
-    backgroundColor: colors.error,
-  },
-  yesNoText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  yesText: {
-    color: colors.success,
-  },
-  noText: {
-    color: colors.error,
-  },
-  selectedYesNoText: {
-    color: 'white',
-  },
-  customPredictionLink: {
+  confirmSection: {
+    backgroundColor: colors.warning + '10',
+    borderRadius: 16,
+    padding: 18,
+    gap: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
   },
-  customPredictionText: {
-    color: colors.primary,
+  confirmText: {
+    color: colors.text,
     fontSize: 14,
+    textAlign: 'center' as const,
   },
-  predictionInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
+  confirmResult: {
+    color: colors.primary,
     fontSize: 16,
-    minHeight: 100,
-    textAlignVertical: 'top',
-    marginBottom: 16,
+    fontWeight: '700' as const,
   },
-  imageUploadButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-    marginBottom: 8,
+  confirmButtons: {
     flexDirection: 'row',
-  },
-  imageUploadText: {
-    color: colors.primary,
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  imagePreviewContainer: {
-    position: 'relative',
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  imagePreview: {
+    gap: 12,
     width: '100%',
-    height: 200,
-    borderRadius: 8,
-    marginBottom: 8,
   },
-  removeImageButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: colors.error,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
+  waitingCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 18,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  imageHelperText: {
-    fontSize: 12,
+  waitingText: {
     color: colors.textSecondary,
-    marginBottom: 16,
+    fontSize: 14,
+    flex: 1,
   },
-  placeButton: {
-    marginTop: 8,
-  },
-  disclaimer: {
+  createdAt: {
+    textAlign: 'center' as const,
+    color: colors.textMuted,
     fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 16,
-    textAlign: 'center',
   },
 });

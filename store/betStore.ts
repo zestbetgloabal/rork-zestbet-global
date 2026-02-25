@@ -1,172 +1,224 @@
 import { create } from 'zustand';
-import { Bet, BetPlacement } from '@/types';
-import { mockBets } from '@/constants/mockData';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Bet, BetStatus, WalletTransaction } from '@/types';
+import { mockBets, mockTransactions } from '@/constants/mockData';
+import { CHARITY_PERCENTAGE, WINNER_BONUS_PERCENTAGE } from '@/constants/app';
 
 interface BetState {
   bets: Bet[];
-  userBets: BetPlacement[];
+  transactions: WalletTransaction[];
   isLoading: boolean;
-  error: string | null;
-  visibilityFilter: 'all' | 'public' | 'private';
-  currentUser: string | null; // Store current user to avoid dependency on userStore during render
   fetchBets: () => Promise<void>;
-  likeBet: (betId: string) => void;
-  placeBet: (betPlacement: BetPlacement) => Promise<boolean>;
-  proposeBet: (bet: Partial<Bet> & { invitedFriends?: string[], mediaFiles?: Array<{uri: string, type: 'image' | 'video', name?: string}> }) => Promise<boolean>;
-  setVisibilityFilter: (filter: 'all' | 'public' | 'private') => void;
-  setCurrentUser: (username: string | null) => void;
-  getFilteredBets: () => Bet[];
+  createBet: (bet: Omit<Bet, 'id' | 'status' | 'result' | 'creatorConfirmed' | 'opponentConfirmed' | 'winnerId' | 'charityAmount' | 'createdAt'>) => Promise<string | null>;
+  acceptBet: (betId: string, opponentId: string, opponentName: string, opponentAvatar: string) => void;
+  submitResult: (betId: string, userId: string, result: 'creator_won' | 'opponent_won') => void;
+  confirmResult: (betId: string, userId: string) => void;
+  settleBet: (betId: string) => { winnerId: string; winAmount: number; charityAmount: number } | null;
+  cancelBet: (betId: string) => void;
+  getBetsByUser: (userId: string) => Bet[];
+  getActiveBets: () => Bet[];
+  getPendingBets: () => Bet[];
+  addTransaction: (tx: Omit<WalletTransaction, 'id' | 'createdAt'>) => void;
   reset: () => void;
 }
 
-export const useBetStore = create<BetState>((set, get) => ({
-  bets: [],
-  userBets: [],
-  isLoading: false,
-  error: null,
-  visibilityFilter: 'all',
-  currentUser: null,
-  
-  fetchBets: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      // In a real app, this would be an API call
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      set({ bets: mockBets, isLoading: false });
-    } catch (error) {
-      set({ error: 'Failed to fetch bets', isLoading: false });
-    }
-  },
-  
-  likeBet: (betId: string) => {
-    set((state) => ({
-      bets: state.bets.map(bet => 
-        bet.id === betId 
-          ? { ...bet, likes: bet.likes + 1 } 
-          : bet
-      )
-    }));
-  },
-  
-  placeBet: async (betPlacement: BetPlacement) => {
-    set({ isLoading: true, error: null });
-    try {
-      // In a real app, this would be an API call
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Calculate the net amount that goes to the pool (after platform fee)
-      const netAmount = betPlacement.platformFee 
-        ? betPlacement.amount - betPlacement.platformFee 
-        : betPlacement.amount;
-      
-      set((state) => ({
-        userBets: [...state.userBets, betPlacement],
-        bets: state.bets.map(bet => 
-          bet.id === betPlacement.betId 
-            ? { 
-                ...bet, 
-                participants: bet.participants + 1,
-                totalPool: bet.totalPool + netAmount
-              } 
-            : bet
-        ),
-        isLoading: false
-      }));
-      return true;
-    } catch (error) {
-      set({ error: 'Failed to place bet', isLoading: false });
-      return false;
-    }
-  },
-  
-  proposeBet: async (bet: Partial<Bet> & { invitedFriends?: string[], mediaFiles?: Array<{uri: string, type: 'image' | 'video', name?: string}> }) => {
-    set({ isLoading: true, error: null });
-    try {
-      // In a real app, this would be an API call
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get the first image from mediaFiles to use as the main bet image
-      const mainImage = bet.mediaFiles && bet.mediaFiles.length > 0 && bet.mediaFiles[0].type === 'image' 
-        ? bet.mediaFiles[0].uri 
-        : undefined;
-      
-      const newBet: Bet = {
-        id: `${Date.now()}`,
-        title: bet.title || 'New Bet',
-        description: bet.description || 'No description provided',
-        creator: get().currentUser || 'zest_user', // Use current user if available
-        likes: 0,
-        participants: 0,
-        totalPool: 0,
-        minBet: bet.minBet || 10,
-        maxBet: bet.maxBet || 1000,
-        endDate: bet.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        category: bet.category || 'other',
-        image: mainImage,
-        mediaFiles: bet.mediaFiles,
-        visibility: bet.visibility || 'public',
-        invitedFriends: bet.invitedFriends
-      };
-      
-      // In a real app, we would also handle the friend invitations here
-      // For example, sending notifications to the invited friends
-      if (bet.invitedFriends && bet.invitedFriends.length > 0) {
-        console.log(`Inviting friends to bet: ${bet.invitedFriends.join(', ')}`);
-      }
-      
-      set((state) => ({
-        bets: [newBet, ...state.bets],
-        isLoading: false
-      }));
-      return true;
-    } catch (error) {
-      set({ error: 'Failed to propose bet', isLoading: false });
-      return false;
-    }
-  },
-  
-  setVisibilityFilter: (filter) => {
-    set({ visibilityFilter: filter });
-  },
-  
-  setCurrentUser: (username) => {
-    // Simple setter function that doesn't depend on other stores
-    set({ currentUser: username });
-  },
-  
-  getFilteredBets: () => {
-    const { bets, visibilityFilter, currentUser } = get();
-    
-    if (visibilityFilter === 'all') {
-      // For 'all', show public bets and private bets where the user is the creator or invited
-      return bets.filter(bet => 
-        bet.visibility === 'public' || 
-        bet.creator === currentUser ||
-        (bet.invitedFriends && currentUser && bet.invitedFriends.includes(currentUser))
-      );
-    } else if (visibilityFilter === 'public') {
-      return bets.filter(bet => bet.visibility === 'public');
-    } else {
-      // For 'private', only show private bets where the user is the creator or invited
-      return bets.filter(bet => 
-        bet.visibility === 'private' && 
-        (bet.creator === currentUser || 
-         (bet.invitedFriends && currentUser && bet.invitedFriends.includes(currentUser)))
-      );
-    }
-  },
-  
-  reset: () => {
-    set({
+export const useBetStore = create<BetState>()(
+  persist(
+    (set, get) => ({
       bets: [],
-      userBets: [],
+      transactions: [],
       isLoading: false,
-      error: null,
-      visibilityFilter: 'all',
-      currentUser: null
-    });
-  }
-}));
+
+      fetchBets: async () => {
+        set({ isLoading: true });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const { bets } = get();
+        if (bets.length === 0) {
+          set({ bets: mockBets, transactions: mockTransactions, isLoading: false });
+        } else {
+          set({ isLoading: false });
+        }
+      },
+
+      createBet: async (betData) => {
+        const id = `bet-${Date.now()}`;
+        const newBet: Bet = {
+          ...betData,
+          id,
+          status: betData.opponentId ? 'active' : 'pending',
+          result: null,
+          creatorConfirmed: false,
+          opponentConfirmed: false,
+          winnerId: null,
+          charityAmount: 0,
+          createdAt: new Date().toISOString(),
+        };
+
+        set((state) => ({
+          bets: [newBet, ...state.bets],
+        }));
+
+        get().addTransaction({
+          userId: betData.creatorId,
+          type: 'bet_placed',
+          amount: -betData.amount,
+          description: `Wette erstellt: ${betData.title}`,
+          relatedBetId: id,
+        });
+
+        console.log('Bet created:', id);
+        return id;
+      },
+
+      acceptBet: (betId, opponentId, opponentName, opponentAvatar) => {
+        set((state) => ({
+          bets: state.bets.map((bet) =>
+            bet.id === betId
+              ? { ...bet, opponentId, opponentName, opponentAvatar, status: 'active' as BetStatus }
+              : bet
+          ),
+        }));
+
+        const acceptedBet = get().bets.find(b => b.id === betId);
+        if (acceptedBet) {
+          get().addTransaction({
+            userId: opponentId,
+            type: 'bet_placed',
+            amount: -acceptedBet.amount,
+            description: `Wette angenommen: ${acceptedBet.title}`,
+            relatedBetId: betId,
+          });
+        }
+      },
+
+      submitResult: (betId, userId, result) => {
+        set((state) => ({
+          bets: state.bets.map((bet) => {
+            if (bet.id !== betId) return bet;
+            const isCreator = bet.creatorId === userId;
+            return {
+              ...bet,
+              result,
+              status: 'waiting_result' as BetStatus,
+              creatorConfirmed: isCreator ? true : bet.creatorConfirmed,
+              opponentConfirmed: !isCreator ? true : bet.opponentConfirmed,
+            };
+          }),
+        }));
+      },
+
+      confirmResult: (betId, userId) => {
+        const bet = get().bets.find(b => b.id === betId);
+        if (!bet || !bet.result) return;
+
+        const isCreator = bet.creatorId === userId;
+        const updatedBet = {
+          ...bet,
+          creatorConfirmed: isCreator ? true : bet.creatorConfirmed,
+          opponentConfirmed: !isCreator ? true : bet.opponentConfirmed,
+        };
+
+        if (updatedBet.creatorConfirmed && updatedBet.opponentConfirmed) {
+          set((state) => ({
+            bets: state.bets.map(b => b.id === betId ? updatedBet : b),
+          }));
+          get().settleBet(betId);
+        } else {
+          set((state) => ({
+            bets: state.bets.map(b => b.id === betId ? updatedBet : b),
+          }));
+        }
+      },
+
+      settleBet: (betId) => {
+        const bet = get().bets.find(b => b.id === betId);
+        if (!bet || !bet.result) return null;
+
+        const totalPool = bet.amount * 2;
+        const charityAmount = Math.floor(totalPool * CHARITY_PERCENTAGE);
+        const winnerBonus = Math.floor(totalPool * WINNER_BONUS_PERCENTAGE);
+        const winAmount = totalPool - charityAmount;
+
+        const winnerId = bet.result === 'creator_won' ? bet.creatorId : (bet.opponentId ?? '');
+
+        set((state) => ({
+          bets: state.bets.map(b =>
+            b.id === betId
+              ? { ...b, status: 'completed' as BetStatus, winnerId, charityAmount }
+              : b
+          ),
+        }));
+
+        get().addTransaction({
+          userId: winnerId,
+          type: 'bet_won',
+          amount: winAmount,
+          description: `Gewonnen: ${bet.title}`,
+          relatedBetId: betId,
+        });
+
+        get().addTransaction({
+          userId: winnerId,
+          type: 'charity',
+          amount: -charityAmount,
+          description: `Charity-Beitrag (${CHARITY_PERCENTAGE * 100}%)`,
+          relatedBetId: betId,
+        });
+
+        return { winnerId, winAmount, charityAmount };
+      },
+
+      cancelBet: (betId) => {
+        const bet = get().bets.find(b => b.id === betId);
+        if (!bet) return;
+
+        set((state) => ({
+          bets: state.bets.map(b =>
+            b.id === betId ? { ...b, status: 'cancelled' as BetStatus } : b
+          ),
+        }));
+
+        get().addTransaction({
+          userId: bet.creatorId,
+          type: 'refund',
+          amount: bet.amount,
+          description: `Wette storniert: ${bet.title}`,
+          relatedBetId: betId,
+        });
+      },
+
+      getBetsByUser: (userId) => {
+        return get().bets.filter(b => b.creatorId === userId || b.opponentId === userId);
+      },
+
+      getActiveBets: () => {
+        return get().bets.filter(b => b.status === 'active' || b.status === 'waiting_result');
+      },
+
+      getPendingBets: () => {
+        return get().bets.filter(b => b.status === 'pending');
+      },
+
+      addTransaction: (tx) => {
+        const newTx: WalletTransaction = {
+          ...tx,
+          id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          createdAt: new Date().toISOString(),
+        };
+        set((state) => ({
+          transactions: [newTx, ...state.transactions],
+        }));
+      },
+
+      reset: () => {
+        set({ bets: [], transactions: [], isLoading: false });
+      },
+    }),
+    {
+      name: 'bet-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ bets: state.bets, transactions: state.transactions }),
+    }
+  )
+);

@@ -1,3 +1,3 @@
-export const DAILY_BET_LIMIT = 100;
-export const ZEST_EXCHANGE_RATE = 100;
-export const ENABLE_SOCIAL_LOGINS = false;
+export const APP_NAME = 'ZestBet';
+export const CHARITY_PERCENTAGE = 0.10;
+export const WINNER_BONUS_PERCENTAGE = 0.10;

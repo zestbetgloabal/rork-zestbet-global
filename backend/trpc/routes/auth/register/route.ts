@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
 import Database from "../../../../utils/database";
-import EmailService from "../../../../services/email";
+import { EmailService } from "../../../../services/email";
 import { hashPassword } from "../../../../utils/auth";
 
 const registerSchema = z.object({
@@ -40,7 +40,7 @@ function generateVerificationCode(): string {
 // Function to send verification email using AWS SES
 async function sendVerificationEmail(email: string, name: string, code: string): Promise<void> {
   try {
-    await EmailService.sendVerificationEmail(email, name, code);
+    await EmailService.sendEmailVerification(email, name, code);
     console.log(`Verification email sent to ${email}`);
   } catch (error) {
     console.error('Failed to send verification email:', error);

@@ -1,125 +1,23 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, Href } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import colors from "@/constants/colors";
 import { useAuthStore } from "@/store/authStore";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { trpc, trpcClient } from "@/lib/trpc";
-import { ChallengeProvider } from "@/store/challengeStoreProvider";
-import { initializeCrashPrevention, hermesGuard, initializeIpadCrashPrevention, safeNavigate, safeAsync } from "@/utils/crashPrevention";
-
-// Initialize comprehensive crash prevention with iPad optimizations
-try {
-  initializeCrashPrevention();
-  initializeIpadCrashPrevention();
-  if (__DEV__) {
-    console.log('Crash prevention initialized successfully (iPad optimized)');
-  }
-} catch (error) {
-  if (__DEV__) {
-    console.warn('Failed to initialize crash prevention:', error);
-  }
-}
-
-// Simple error handler for development
-if (Platform.OS === 'web') {
-  // Prevent hydration mismatches on web
-  if (typeof window !== 'undefined') {
-    window.addEventListener('unhandledrejection', (event) => {
-      if (__DEV__) {
-        console.warn('Unhandled promise rejection:', event.reason);
-      }
-      event.preventDefault();
-    });
-  }
-}
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export const unstable_settings = {
   initialRouteName: "(auth)",
 };
 
-// Create a client with error handling
-const queryClient = hermesGuard(
-  () => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: (failureCount, error) => {
-          // Don't retry on Hermes crashes
-          const errorMessage = error?.message || String(error);
-          if (errorMessage.includes('hermes::vm::') || errorMessage.includes('JSObject::')) {
-            return false;
-          }
-          return failureCount < 3;
-        },
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000, // 10 minutes
-      },
-      mutations: {
-        retry: false, // Don't retry mutations to prevent crashes
-      },
-    },
-  }),
-  new QueryClient(),
-  'QueryClient creation'
-);
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync();
 }
 
-// Simple Error Boundary
-class AppErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error?: Error }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    if (__DEV__) {
-      console.log('Error Boundary caught error:', error.message);
-    }
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    if (__DEV__) {
-      console.error('React Error Boundary caught error:', error.message);
-    }
-  }
-
-  handleRetry = () => {
-    this.setState({ hasError: false, error: undefined });
-  };
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={errorStyles.container}>
-          <Text style={errorStyles.title}>Something went wrong</Text>
-          <Text style={errorStyles.message}>
-            The app encountered an error. Please try again.
-          </Text>
-          <Text style={errorStyles.button} onPress={this.handleRetry}>
-            Tap to Retry
-          </Text>
-        </View>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
 function RootLayoutComponent() {
-  const [isReady, setIsReady] = useState(false);
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
   });
@@ -131,315 +29,112 @@ function RootLayoutComponent() {
   }, [error]);
 
   useEffect(() => {
-    const prepare = async () => {
-      try {
-        // Add longer delay for iPad compatibility
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        if (loaded || error) {
-          if (Platform.OS !== 'web') {
-            await SplashScreen.hideAsync();
-          }
-          // Add additional delay to prevent hydration issues on iPad
-          await new Promise(resolve => setTimeout(resolve, 200));
-          setIsReady(true);
-        }
-      } catch (e) {
-        if (__DEV__) {
-          console.warn('Error preparing app:', e);
-        }
-        // Force ready state after delay even on error
-        setTimeout(() => setIsReady(true), 500);
+    if (loaded || error) {
+      if (Platform.OS !== 'web') {
+        SplashScreen.hideAsync();
       }
-    };
-
-    hermesGuard(() => {
-      prepare();
-    }, undefined, 'app preparation');
+    }
   }, [loaded, error]);
 
-  // Show loading screen until ready
-  if (!isReady) {
+  if (!loaded && !error) {
     return (
-      <View style={errorStyles.container}>
-        <Text style={errorStyles.title}>Loading...</Text>
+      <View style={styles.loading}>
+        <Text style={styles.loadingEmoji}>🎯</Text>
+        <Text style={styles.loadingText}>ZestBet</Text>
       </View>
     );
   }
 
   return (
-    <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <ChallengeProvider>
-            <RootLayoutNav />
-          </ChallengeProvider>
-        </trpc.Provider>
-      </QueryClientProvider>
-    </AppErrorBoundary>
+    <ErrorBoundary>
+      <RootLayoutNav />
+    </ErrorBoundary>
   );
 }
 
 function RootLayoutNav() {
-  const { isAuthenticated, token, _hasHydrated, setHasHydrated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, setHasHydrated } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-  const [isNavigating, setIsNavigating] = useState(false);
   const [hydrationTimeout, setHydrationTimeout] = useState(false);
-  
-  // Safe segment access to prevent crashes
-  const isInAuthGroup = hermesGuard(() => segments?.[0] === '(auth)', false, 'auth group check');
-  const isInLegalGroup = hermesGuard(() => segments?.[0] === 'legal', false, 'legal group check');
-  
-  // Add hydration timeout to prevent infinite loading
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!_hasHydrated) {
-        if (__DEV__) {
-          console.warn('Hydration timeout - forcing app to continue');
-        }
+        console.warn('Hydration timeout - forcing continue');
         setHydrationTimeout(true);
         setHasHydrated(true);
       }
-    }, 3000); // 3 second timeout
-    
+    }, 3000);
     return () => clearTimeout(timeout);
   }, [_hasHydrated, setHasHydrated]);
-  
-  // Simplified navigation logic - only redirect authenticated users from auth pages
-  useEffect(() => {
-    if (!_hasHydrated && !hydrationTimeout) return; // Don't navigate until hydrated or timeout
-    if (isNavigating) return; // Prevent multiple navigations
-    
-    const handleNavigation = async () => {
-      try {
-        setIsNavigating(true);
-        
-        if (__DEV__) {
-          console.log('Navigation check:', {
-            isAuthenticated,
-            hasToken: !!token,
-            isInAuthGroup,
-            currentSegments: segments
-          });
-        }
-        
-        // Only redirect authenticated users who are in auth group to tabs
-        if (isAuthenticated && token && isInAuthGroup) {
-          if (__DEV__) {
-            console.log('RootLayout: Redirecting authenticated user to tabs');
-          }
-          await safeAsync(
-            async () => {
-              await router.replace('/(tabs)');
-            },
-            undefined,
-            'redirect to tabs'
-          );
-        }
-      } catch (error) {
-        if (__DEV__) {
-          console.warn('Navigation error:', error);
-        }
-      } finally {
-        setIsNavigating(false);
-      }
-    };
 
-    // Only run navigation check after a delay to allow user interaction
-    const timer = setTimeout(() => {
-      hermesGuard(() => {
-        safeAsync(
-          async () => {
-            await handleNavigation();
-          },
-          undefined,
-          'navigation handling'
-        );
-      }, undefined, 'navigation timer');
-    }, 2000); // Longer delay to allow user interaction
-    return () => clearTimeout(timer);
-  }, [isAuthenticated, token, isInAuthGroup, router, isNavigating, _hasHydrated, hydrationTimeout, segments]);
-  
-  // Show loading screen until hydration is complete or timeout
+  useEffect(() => {
+    if (!_hasHydrated && !hydrationTimeout) return;
+
+    const isInAuthGroup = segments?.[0] === '(auth)' as string;
+
+    const currentSegment = segments?.[0] as string | undefined;
+
+    if (isAuthenticated && isInAuthGroup) {
+      console.log('Redirecting authenticated user to tabs');
+      router.replace('/(tabs)' as Href);
+    } else if (!isAuthenticated && !isInAuthGroup && currentSegment !== 'legal' && currentSegment !== 'email-verification' && segments.length > 0) {
+      console.log('Redirecting unauthenticated user to login');
+      router.replace('/(auth)/login' as Href);
+    }
+  }, [isAuthenticated, _hasHydrated, hydrationTimeout, segments, router]);
+
   if (!_hasHydrated && !hydrationTimeout) {
     return (
-      <View style={errorStyles.container}>
-        <Text style={errorStyles.title}>Loading...</Text>
+      <View style={styles.loading}>
+        <Text style={styles.loadingEmoji}>🎯</Text>
+        <Text style={styles.loadingText}>ZestBet</Text>
       </View>
     );
   }
-  
+
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
+          headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-          contentStyle: {
-            backgroundColor: colors.background,
-          },
+          headerTitleStyle: { fontWeight: '700' as const },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="bet/[id]" 
-          options={{ 
-            title: "Bet Details",
-            presentation: "card",
-          }} 
-        />
-        <Stack.Screen 
-          name="propose-bet" 
-          options={{ 
-            title: "Propose a Bet",
-            presentation: "modal",
-          }} 
-        />
-        <Stack.Screen 
-          name="invite" 
-          options={{ 
-            title: "Invite Friends",
-            presentation: "modal",
-          }} 
-        />
-        <Stack.Screen 
-          name="wallet" 
-          options={{ 
-            title: "Wallet",
-          }} 
-        />
-        <Stack.Screen 
-          name="suggestion" 
-          options={{ 
-            title: "Suggest Improvement",
-            presentation: "modal",
-          }} 
-        />
-        <Stack.Screen 
-          name="legal" 
-          options={{ 
-            headerShown: false 
-          }} 
-        />
-        <Stack.Screen 
-          name="profile-edit" 
-          options={{ 
-            title: "Edit Profile",
-          }} 
-        />
-        <Stack.Screen 
-          name="ai-recommendations" 
-          options={{ 
-            title: "AI Recommendations",
-          }} 
-        />
-        <Stack.Screen 
-          name="user-preferences" 
-          options={{ 
-            title: "User Preferences",
-          }} 
-        />
-        <Stack.Screen 
-          name="profile" 
-          options={{ 
-            title: "Profile",
-          }} 
-        />
-        <Stack.Screen 
-          name="account-settings" 
-          options={{ 
-            title: "Account",
-            presentation: "modal",
-          }} 
-        />
-
-
-        <Stack.Screen 
-          name="email-verification" 
-          options={{ 
-            title: "Email Verification",
-            presentation: "card",
-          }} 
-        />
-        <Stack.Screen 
-          name="test-crash-prevention" 
-          options={{ 
-            title: "Crash Prevention Tests",
-            presentation: "modal",
-          }} 
-        />
-        <Stack.Screen 
-          name="test-env" 
-          options={{ 
-            title: "Environment Test",
-            presentation: "modal",
-          }} 
-        />
-        <Stack.Screen 
-          name="api-status" 
-          options={{ 
-            title: "API Status",
-            presentation: "modal",
-          }} 
-        />
-        <Stack.Screen 
-          name="debug-trpc" 
-          options={{ 
-            title: "tRPC Debug",
-            presentation: "modal",
-          }} 
-        />
+        <Stack.Screen name="bet/[id]" options={{ title: "Wette" }} />
+        <Stack.Screen name="propose-bet" options={{ title: "Neue Wette", presentation: "modal" }} />
+        <Stack.Screen name="invite" options={{ title: "Einladen", presentation: "modal" }} />
+        <Stack.Screen name="wallet" options={{ title: "Wallet" }} />
+        <Stack.Screen name="profile-edit" options={{ title: "Profil bearbeiten" }} />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
+        <Stack.Screen name="legal" options={{ headerShown: false }} />
+        <Stack.Screen name="email-verification" options={{ title: "Verifizierung", headerShown: false }} />
       </Stack>
     </>
   );
 }
 
-const errorStyles = StyleSheet.create({
-  container: {
+const styles = StyleSheet.create({
+  loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
     backgroundColor: colors.background,
+    gap: 12,
   },
-  title: {
+  loadingEmoji: {
+    fontSize: 48,
+  },
+  loadingText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  message: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  button: {
-    fontSize: 16,
+    fontWeight: '900' as const,
     color: colors.primary,
-    fontWeight: '600',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    textAlign: 'center',
-  },
-  retryText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 16,
-    fontStyle: 'italic',
   },
 });
 

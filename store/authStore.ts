@@ -1,563 +1,181 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { hermesGuard } from '@/utils/crashPrevention';
-
-interface RegisterParams {
-  email: string;
-  password: string;
-  username: string;
-  phone?: string;
-  biography?: string;
-  avatar?: string;
-  socialMedia?: {
-    instagram?: string;
-    twitter?: string;
-    facebook?: string;
-    linkedin?: string;
-    tiktok?: string;
-    youtube?: string;
-    pinterest?: string;
-    snapchat?: string;
-    website?: string;
-  };
-}
-
-interface AuthResponse {
-  success: boolean;
-  token: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    avatar?: string | null;
-    status?: string;
-  };
-  isNewUser?: boolean;
-}
-
-interface RegisterResponse {
-  success: boolean;
-  message: string;
-  userId: string;
-  requiresEmailVerification: boolean;
-  requiresPhoneVerification: boolean;
-}
 
 interface AuthState {
   token: string | null;
+  userId: string | null;
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
   _hasHydrated: boolean;
-  pendingVerification: {
-    userId?: string;
-    email?: string;
-    phone?: string;
-    requiresEmailVerification?: boolean;
-    requiresPhoneVerification?: boolean;
-  } | null;
+  pendingEmail: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (params: RegisterParams) => Promise<RegisterResponse | null>;
-  verifyEmail: (email: string, code: string) => Promise<boolean>;
-  verifyPhone: (phone: string, code: string) => Promise<boolean>;
-  phoneLogin: (phone: string, code: string) => Promise<boolean>;
+  register: (email: string, password: string, username: string) => Promise<boolean>;
+  verifyEmail: (code: string) => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
-  clearPendingVerification: () => void;
-  loginWithGoogle: () => Promise<boolean>;
-  loginWithApple: () => Promise<boolean>;
-  loginWithFacebook: () => Promise<boolean>;
-  loginWithBiometrics: () => Promise<boolean>;
   setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       token: null,
+      userId: null,
       isLoading: false,
       error: null,
       isAuthenticated: false,
       _hasHydrated: false,
-      pendingVerification: null,
-      
+      pendingEmail: null,
+
       login: async (email: string, password: string) => {
-        return hermesGuard(async () => {
-          set({ isLoading: true, error: null });
-          try {
-            // Use tRPC to authenticate with backend
-            const { trpcClient } = await import('@/lib/trpc');
-            const result = await trpcClient.auth.login.mutate({ email, password });
-            
-            if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
-              set({ token: result.token, isLoading: false, isAuthenticated: true });
-              
-              // Set user data
-              const { useUserStore } = await import('./userStore');
-              const { setUser } = useUserStore.getState();
-              const userData = {
-                id: result.user.id,
-                username: result.user.name || 'ZestBet User',
-                zestBalance: 100,
-                points: 0,
-                inviteCode: 'ZEST' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-                avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-                biography: 'Verified user on ZestBet. Ready to make predictions!',
-                socialMedia: {
-                  instagram: '',
-                  twitter: '',
-                  facebook: '',
-                  linkedin: '',
-                  tiktok: '',
-                  youtube: '',
-                  pinterest: '',
-                  snapchat: '',
-                  website: ''
-                },
-                dailyBetAmount: 0,
-                lastBetDate: new Date().toISOString().split('T')[0],
-                agbConsent: true,
-                privacyConsent: true,
-                consentDate: new Date().toISOString()
-              };
-              
-              if (__DEV__) {
-                console.log('AuthStore: Setting user data after login', userData);
-              }
-              setUser(userData);
-              
-              return true;
-            }
-            
-            return false;
-          } catch (error: any) {
-            const errorMessage = error?.message || 'Failed to login. Please check your credentials.';
-            set({ error: errorMessage, isLoading: false });
+        set({ isLoading: true, error: null });
+        try {
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          if (!email || !password) {
+            set({ error: 'Bitte E-Mail und Passwort eingeben.', isLoading: false });
             return false;
           }
-        }, Promise.resolve(false), 'auth login');
-      },
-      
-      register: async (params: RegisterParams) => {
-        set({ isLoading: true, error: null });
-        try {
-          const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.register.mutate({
-            email: params.email,
-            password: params.password,
-            name: params.username,
-            phone: params.phone,
-          });
-          
-          // Store pending verification info
-          set({ 
-            pendingVerification: {
-              userId: result.userId,
-              email: params.email,
-              phone: params.phone,
-              requiresEmailVerification: result.requiresEmailVerification,
-              requiresPhoneVerification: result.requiresPhoneVerification,
-            },
-            isLoading: false 
-          });
-          
-          return result;
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Registration failed. Please try again.';
-          set({ error: errorMessage, isLoading: false });
-          return null;
-        }
-      },
-      
-      phoneLogin: async (phone: string, code: string) => {
-        set({ isLoading: true, error: null });
-        try {
-          // Phone login is restricted - only allow existing accounts
-          throw new Error('Phone login is only available for existing accounts. Please contact support to create an account.');
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Phone login is only available for existing accounts.';
-          set({ error: errorMessage, isLoading: false });
-          return false;
-        }
-      },
-      
-      verifyEmail: async (email: string, code: string) => {
-        set({ isLoading: true, error: null });
-        try {
-          const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.verifyEmail.mutate({ email, code });
-          
-          set({ isLoading: false });
-          
-          // If fully verified, clear pending verification
-          if (result.isFullyVerified) {
-            set({ pendingVerification: null });
+
+          const storedUsers = await AsyncStorage.getItem('zest-users');
+          const users = storedUsers ? JSON.parse(storedUsers) : [];
+          const user = users.find((u: { email: string; password: string }) => u.email === email.toLowerCase().trim());
+
+          if (!user) {
+            set({ error: 'Kein Account mit dieser E-Mail gefunden.', isLoading: false });
+            return false;
           }
-          
+
+          if (user.password !== password) {
+            set({ error: 'Falsches Passwort.', isLoading: false });
+            return false;
+          }
+
+          if (!user.verified) {
+            set({ error: 'Bitte bestätige zuerst deine E-Mail.', isLoading: false, pendingEmail: email });
+            return false;
+          }
+
+          const token = `tok_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          set({ token, userId: user.id, isAuthenticated: true, isLoading: false, pendingEmail: null });
+          console.log('Login successful for:', email);
           return true;
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Failed to verify email. Please try again.';
-          set({ error: errorMessage, isLoading: false });
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : 'Login fehlgeschlagen.';
+          set({ error: msg, isLoading: false });
           return false;
         }
       },
-      
-      verifyPhone: async (phone: string, code: string) => {
+
+      register: async (email: string, password: string, username: string) => {
         set({ isLoading: true, error: null });
         try {
-          const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.verifyPhone.mutate({ phone, code });
-          
-          set({ isLoading: false });
-          
-          // If fully verified, clear pending verification
-          if (result.isFullyVerified) {
-            set({ pendingVerification: null });
+          await new Promise(resolve => setTimeout(resolve, 800));
+
+          if (!email || !password || !username) {
+            set({ error: 'Bitte alle Felder ausfüllen.', isLoading: false });
+            return false;
           }
-          
+
+          if (password.length < 6) {
+            set({ error: 'Passwort muss mindestens 6 Zeichen lang sein.', isLoading: false });
+            return false;
+          }
+
+          const storedUsers = await AsyncStorage.getItem('zest-users');
+          const users = storedUsers ? JSON.parse(storedUsers) : [];
+
+          if (users.find((u: { email: string }) => u.email === email.toLowerCase().trim())) {
+            set({ error: 'Diese E-Mail ist bereits registriert.', isLoading: false });
+            return false;
+          }
+
+          const newUser = {
+            id: `user-${Date.now()}`,
+            email: email.toLowerCase().trim(),
+            password,
+            username: username.trim(),
+            verified: false,
+            verificationCode: String(Math.floor(100000 + Math.random() * 900000)),
+            createdAt: new Date().toISOString(),
+          };
+
+          users.push(newUser);
+          await AsyncStorage.setItem('zest-users', JSON.stringify(users));
+
+          console.log('Registration successful. Verification code:', newUser.verificationCode);
+          set({ isLoading: false, pendingEmail: email.toLowerCase().trim() });
           return true;
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Failed to verify phone. Please try again.';
-          set({ error: errorMessage, isLoading: false });
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : 'Registrierung fehlgeschlagen.';
+          set({ error: msg, isLoading: false });
           return false;
         }
       },
-      
-      loginWithGoogle: async () => {
+
+      verifyEmail: async (code: string) => {
         set({ isLoading: true, error: null });
         try {
-          // In production, this would integrate with real Google SDK
-          // For now, we reject all Google login attempts to force manual account creation
-          throw new Error('Google login is only available for existing accounts. Please contact support to create an account.');
-          
-          /*
-          // This code would be used when Google SDK is properly integrated:
-          const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.socialLogin.mutate({
-            provider: 'google',
-            token: googleToken, // Real token from Google SDK
-            email: googleEmail, // Real email from Google
-            name: googleName,   // Real name from Google
-          });
-          
-          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
-            set({ token: result.token, isLoading: false, isAuthenticated: true });
-            
-            const { useUserStore } = await import('./userStore');
-            const { setUser } = useUserStore.getState();
-            setUser({
-              id: result.user.id,
-              username: result.user.name,
-              zestBalance: 100,
-              points: 0,
-              inviteCode: 'ZEST123',
-              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-              biography: 'Verified Google user on ZestBet. Ready to make predictions!',
-              socialMedia: {
-                instagram: '',
-                twitter: '',
-                facebook: '',
-                linkedin: '',
-                tiktok: '',
-                youtube: '',
-                snapchat: '',
-                website: ''
-              },
-              dailyBetAmount: 0,
-              lastBetDate: new Date().toISOString(),
-              agbConsent: true,
-              privacyConsent: true,
-              consentDate: new Date().toISOString()
-            });
-            
-            return true;
+          const { pendingEmail } = useAuthStore.getState();
+          if (!pendingEmail) {
+            set({ error: 'Keine E-Mail zur Verifizierung.', isLoading: false });
+            return false;
           }
-          
-          return false;
-          */
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Google login is only available for existing accounts.';
-          set({ error: errorMessage, isLoading: false });
-          return false;
-        }
-      },
-      
-      loginWithApple: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          // In production, this would integrate with real Apple SDK
-          // For now, we reject all Apple login attempts to force manual account creation
-          throw new Error('Apple login is only available for existing accounts. Please contact support to create an account.');
-          
-          /*
-          // This code would be used when Apple SDK is properly integrated:
-          const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.socialLogin.mutate({
-            provider: 'apple',
-            token: appleToken, // Real token from Apple SDK
-            email: appleEmail, // Real email from Apple
-            name: appleName,   // Real name from Apple
-          });
-          
-          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
-            set({ token: result.token, isLoading: false, isAuthenticated: true });
-            
-            const { useUserStore } = await import('./userStore');
-            const { setUser } = useUserStore.getState();
-            setUser({
-              id: result.user.id,
-              username: result.user.name,
-              zestBalance: 100,
-              points: 0,
-              inviteCode: 'ZEST123',
-              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-              biography: 'Verified Apple user on ZestBet. Ready to make predictions!',
-              socialMedia: {
-                instagram: '',
-                twitter: '',
-                facebook: '',
-                linkedin: '',
-                tiktok: '',
-                youtube: '',
-                snapchat: '',
-                website: ''
-              },
-              dailyBetAmount: 0,
-              lastBetDate: new Date().toISOString(),
-              agbConsent: true,
-              privacyConsent: true,
-              consentDate: new Date().toISOString()
-            });
-            
-            return true;
+
+          const storedUsers = await AsyncStorage.getItem('zest-users');
+          const users = storedUsers ? JSON.parse(storedUsers) : [];
+          const userIndex = users.findIndex((u: { email: string }) => u.email === pendingEmail);
+
+          if (userIndex === -1) {
+            set({ error: 'Benutzer nicht gefunden.', isLoading: false });
+            return false;
           }
-          
-          return false;
-          */
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Apple login is only available for existing accounts.';
-          set({ error: errorMessage, isLoading: false });
-          return false;
-        }
-      },
-      
-      loginWithFacebook: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          // In production, this would integrate with real Facebook SDK
-          // For now, we reject all Facebook login attempts to force manual account creation
-          throw new Error('Facebook login is only available for existing accounts. Please contact support to create an account.');
-          
-          /*
-          // This code would be used when Facebook SDK is properly integrated:
-          const { trpcClient } = await import('@/lib/trpc');
-          const result = await trpcClient.auth.socialLogin.mutate({
-            provider: 'facebook',
-            token: facebookToken, // Real token from Facebook SDK
-            email: facebookEmail, // Real email from Facebook
-            name: facebookName,   // Real name from Facebook
-          });
-          
-          if (result && 'success' in result && result.success && 'token' in result && 'user' in result) {
-            set({ token: result.token, isLoading: false, isAuthenticated: true });
-            
-            const { useUserStore } = await import('./userStore');
-            const { setUser } = useUserStore.getState();
-            setUser({
-              id: result.user.id,
-              username: result.user.name,
-              zestBalance: 100,
-              points: 0,
-              inviteCode: 'ZEST123',
-              avatar: result.user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXZhdGFyfGVufDB8fDB8fHww',
-              biography: 'Verified Facebook user on ZestBet. Ready to make predictions!',
-              socialMedia: {
-                instagram: '',
-                twitter: '',
-                facebook: '',
-                linkedin: '',
-                tiktok: '',
-                youtube: '',
-                snapchat: '',
-                website: ''
-              },
-              dailyBetAmount: 0,
-              lastBetDate: new Date().toISOString(),
-              agbConsent: true,
-              privacyConsent: true,
-              consentDate: new Date().toISOString()
-            });
-            
-            return true;
+
+          if (users[userIndex].verificationCode !== code.trim()) {
+            set({ error: 'Ungültiger Code.', isLoading: false });
+            return false;
           }
-          
-          return false;
-          */
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Facebook login is only available for existing accounts.';
-          set({ error: errorMessage, isLoading: false });
-          return false;
-        }
-      },
-      
-      loginWithBiometrics: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          // Biometric login is restricted - only allow existing accounts
-          throw new Error('Biometric login is only available for existing accounts. Please contact support to create an account.');
-        } catch (error: any) {
-          const errorMessage = error?.message || 'Biometric login is only available for existing accounts.';
-          set({ error: errorMessage, isLoading: false });
-          return false;
-        }
-      },
-      
-      logout: async () => {
-        return hermesGuard(async () => {
-          if (__DEV__) {
-            console.log('=== LOGOUT STARTED ===');
-          }
-          
-          // Clear user state FIRST
-          try {
-            const { useUserStore } = await import('./userStore');
-            const { logout: userLogout } = useUserStore.getState();
-            userLogout();
-            if (__DEV__) {
-              console.log('User state cleared first');
-            }
-          } catch (userErr) {
-            if (__DEV__) {
-              console.warn('User state cleanup failed', userErr);
-            }
-          }
-          
-          // Clear auth state SECOND to immediately update UI
-          set({ 
-            token: null, 
-            isAuthenticated: false, 
-            error: null, 
+
+          users[userIndex].verified = true;
+          await AsyncStorage.setItem('zest-users', JSON.stringify(users));
+
+          const token = `tok_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          set({
+            token,
+            userId: users[userIndex].id,
+            isAuthenticated: true,
             isLoading: false,
-            pendingVerification: null
+            pendingEmail: null,
           });
-          if (__DEV__) {
-            console.log('Auth state cleared immediately');
-          }
-          
-          try {
-            // Clear all possible storage keys
-            const storageKeys = [
-              'auth-storage', 
-              'user-storage',
-              'bet-storage',
-              'social-storage',
-              'ai-storage',
-              'badge-storage',
-              'impact-storage',
-              'leaderboard-storage',
-              'live-event-storage',
-              'mission-storage',
-              'chat-storage'
-            ];
-            
-            // Clear AsyncStorage
-            try {
-              await AsyncStorage.multiRemove(storageKeys);
-              if (__DEV__) {
-                console.log('AsyncStorage cleared');
-              }
-            } catch (e) {
-              if (__DEV__) {
-                console.warn('AsyncStorage.multiRemove failed, trying individual removal', e);
-              }
-              for (const key of storageKeys) {
-                try {
-                  await AsyncStorage.removeItem(key);
-                } catch (e2) {
-                  if (__DEV__) {
-                    console.warn(`Failed to remove ${key}`, e2);
-                  }
-                }
-              }
-            }
-            
-            // Clear localStorage for web - more aggressive approach
-            if (typeof window !== 'undefined') {
-              try {
-                // Clear specific keys first
-                storageKeys.forEach(key => {
-                  window.localStorage?.removeItem(key);
-                  window.sessionStorage?.removeItem(key);
-                });
-                
-                // Clear all storage as backup
-                window.localStorage?.clear();
-                window.sessionStorage?.clear();
-                
-                // Clear all cookies
-                document.cookie.split(";").forEach(function(c) { 
-                  document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-                });
-                
-                if (__DEV__) {
-                  console.log('Web storage and cookies cleared');
-                }
-              } catch (lsErr) {
-                if (__DEV__) {
-                  console.warn('Web storage cleanup failed', lsErr);
-                }
-              }
-            }
-            
-            // Clear user state
-            try {
-              const { useUserStore } = await import('./userStore');
-              const { logout: userLogout } = useUserStore.getState();
-              userLogout();
-              if (__DEV__) {
-                console.log('User state cleared');
-              }
-            } catch (userErr) {
-              if (__DEV__) {
-                console.warn('User state cleanup failed', userErr);
-              }
-            }
-            
-            // Try backend logout (best-effort, don't block on failure)
-            try {
-              const { trpcClient } = await import('@/lib/trpc');
-              await trpcClient.auth.logout.mutate();
-              if (__DEV__) {
-                console.log('Backend session revoked');
-              }
-            } catch (apiErr) {
-              if (__DEV__) {
-                console.warn('Backend logout failed or not necessary', apiErr);
-              }
-            }
-            
-          } catch (error) {
-            if (__DEV__) {
-              console.error('Error during logout cleanup:', error);
-            }
-          }
-          
-          if (__DEV__) {
-            console.log('=== LOGOUT COMPLETE ===');
-          }
-        }, undefined, 'auth logout');
+
+          console.log('Email verified and logged in for:', pendingEmail);
+          return true;
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : 'Verifizierung fehlgeschlagen.';
+          set({ error: msg, isLoading: false });
+          return false;
+        }
       },
-      
+
+      logout: async () => {
+        set({ token: null, userId: null, isAuthenticated: false, error: null, pendingEmail: null });
+        try {
+          await AsyncStorage.multiRemove(['auth-storage', 'user-storage', 'bet-storage']);
+        } catch (e) {
+          console.warn('Cleanup error during logout:', e);
+        }
+        console.log('Logged out successfully');
+      },
+
       clearError: () => set({ error: null }),
-      
-      clearPendingVerification: () => set({ pendingVerification: null }),
-      
       setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ token: state.token, userId: state.userId, isAuthenticated: state.isAuthenticated }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

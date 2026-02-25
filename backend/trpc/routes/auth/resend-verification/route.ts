@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 import { TRPCError } from "@trpc/server";
 import Database from "../../../../utils/database";
-import EmailService from "../../../../services/email";
+import { EmailService } from "../../../../services/email";
 
 const resendVerificationSchema = z.object({
   email: z.string().email(),
@@ -47,7 +47,7 @@ export default publicProcedure
     
     // Send new verification email
     try {
-      await EmailService.sendVerificationEmail(email, user.name, newVerificationCode);
+      await EmailService.sendEmailVerification(email, user.name, newVerificationCode);
       console.log(`New verification email sent to ${email}`);
     } catch (error) {
       console.error('Failed to send verification email:', error);

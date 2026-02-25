@@ -5,48 +5,15 @@ export default function LegalLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
+        headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.text,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-        contentStyle: {
-          backgroundColor: colors.background,
-        },
+        headerTitleStyle: { fontWeight: '700' as const },
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen 
-        name="index" 
-        options={{ 
-          title: "Legal Information",
-        }} 
-      />
-      <Stack.Screen 
-        name="impressum" 
-        options={{ 
-          title: "Impressum",
-        }} 
-      />
-      <Stack.Screen 
-        name="agb" 
-        options={{ 
-          title: "Terms and Conditions",
-        }} 
-      />
-      <Stack.Screen 
-        name="datenschutz" 
-        options={{ 
-          title: "Datenschutz",
-        }} 
-      />
-      <Stack.Screen 
-        name="privacy" 
-        options={{ 
-          title: "Privacy Policy",
-        }} 
-      />
+      <Stack.Screen name="index" options={{ title: 'Rechtliches' }} />
+      <Stack.Screen name="impressum" options={{ title: 'Impressum' }} />
+      <Stack.Screen name="datenschutz" options={{ title: 'Datenschutz' }} />
     </Stack>
   );
 }

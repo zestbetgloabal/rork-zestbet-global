@@ -1,19 +1,13 @@
 // Database connection and utilities
 // This file provides database connection and common operations
 
-import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { config } from '../config/environment';
-import * as schema from '../database/schema';
 
-// PostgreSQL connection pool
 const pool = new Pool({
   connectionString: config.database.url,
   ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
 });
-
-// Drizzle database instance
-export const db = drizzle(pool, { schema });
 
 // Test database connection
 export async function testConnection() {
